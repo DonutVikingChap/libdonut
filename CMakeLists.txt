@@ -1,0 +1,120 @@
+cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+project("libdonut"
+	VERSION 0.0.1
+	DESCRIPTION "Application framework for cross-platform game development"
+	LANGUAGES C CXX)
+
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+
+add_subdirectory(dependencies)
+
+add_library(donut
+	"include/donut/application/Application.hpp"
+	"include/donut/application/Error.hpp"
+	"include/donut/application/Event.hpp"
+	"include/donut/application/Input.hpp"
+	"include/donut/application/InputManager.hpp"
+
+	"include/donut/audio/Error.hpp"
+	"include/donut/audio/Sound.hpp"
+	"include/donut/audio/SoundStage.hpp"
+
+	"include/donut/graphics/AtlasPacker.hpp"
+	"include/donut/graphics/Buffer.hpp"
+	"include/donut/graphics/Error.hpp"
+	"include/donut/graphics/Font.hpp"
+	"include/donut/graphics/Framebuffer.hpp"
+	"include/donut/graphics/Handle.hpp"
+	"include/donut/graphics/Image.hpp"
+	"include/donut/graphics/ImageHDR.hpp"
+	"include/donut/graphics/ImageLDR.hpp"
+	"include/donut/graphics/Mesh.hpp"
+	"include/donut/graphics/opengl.hpp"
+	"include/donut/graphics/Renderer.hpp"
+	"include/donut/graphics/RenderPass.hpp"
+	"include/donut/graphics/Scene.hpp"
+	"include/donut/graphics/Shader.hpp"
+	"include/donut/graphics/Shader2D.hpp"
+	"include/donut/graphics/Shader3D.hpp"
+	"include/donut/graphics/SpriteAtlas.hpp"
+	"include/donut/graphics/Texture.hpp"
+	"include/donut/graphics/TexturedQuad.hpp"
+	"include/donut/graphics/VertexArray.hpp"
+
+	"include/donut/File.hpp"
+	"include/donut/InputFileStream.hpp"
+	"include/donut/OutputFileStream.hpp"
+	"include/donut/reflection.hpp"
+	"include/donut/Resource.hpp"
+	"include/donut/shapes.hpp"
+	"include/donut/utf8.hpp"
+	
+	"src/application/Application.cpp"
+	"src/application/InputManager.cpp"
+
+	"src/audio/Error.cpp"
+	"src/audio/Sound.cpp"
+	"src/audio/SoundStage.cpp"
+
+	"src/graphics/Buffer.cpp"
+	"src/graphics/Font.cpp"
+	"src/graphics/Framebuffer.cpp"
+	"src/graphics/Image.cpp"
+	"src/graphics/ImageHDR.cpp"
+	"src/graphics/ImageLDR.cpp"
+	"src/graphics/Mesh.cpp"
+	"src/graphics/obj.cpp"
+	"src/graphics/obj.hpp"
+	"src/graphics/Renderer.cpp"
+	"src/graphics/RenderPass.cpp"
+	"src/graphics/Scene.cpp"
+	"src/graphics/Shader.cpp"
+	"src/graphics/Shader2D.cpp"
+	"src/graphics/Shader3D.cpp"
+	"src/graphics/Texture.cpp"
+	"src/graphics/VertexArray.cpp"
+
+	"src/File.cpp"
+	"src/InputFileStream.cpp"
+	"src/OutputFileStream.cpp")
+
+add_library(donut::donut ALIAS donut)
+
+target_include_directories(donut PUBLIC
+	$<INSTALL_INTERFACE:include>
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+
+target_compile_features(donut PRIVATE cxx_std_20)
+
+target_compile_options(donut PRIVATE
+	$<$<CXX_COMPILER_ID:GNU>:   -std=c++20  -Wall -Wextra   -Wpedantic                      $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
+	$<$<CXX_COMPILER_ID:Clang>: -std=c++20  -Wall -Wextra   -Wpedantic                      $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
+	$<$<CXX_COMPILER_ID:MSVC>:  /std:c++20  /W3             /permissive-    /wd4996 /utf-8  $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>  $<$<CONFIG:MinSizeRel>:/Os>   $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
+
+target_link_libraries(donut
+	INTERFACE
+		${DONUT_INTERFACE_DEPENDENCIES}
+	PUBLIC
+		${DONUT_PUBLIC_DEPENDENCIES}
+	PRIVATE
+		${DONUT_PRIVATE_DEPENDENCIES})
+
+if(BUILD_SHARED_LIBS)
+	target_link_libraries(donut PRIVATE ${CMAKE_DL_LIBS})
+	add_custom_command(TARGET donut
+		POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			$<TARGET_FILE:fmt>
+			$<TARGET_FILE:physfs>
+			$<TARGET_FILE:SDL2>
+			$<TARGET_FILE_DIR:donut>)
+endif()
+
+include(GNUInstallDirs)
+
+set_target_properties(donut PROPERTIES
+	SOVERSION "${PROJECT_VERSION_MAJOR}"
+	VERSION "${PROJECT_VERSION}"
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
+	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_INSTALL_BINDIR}")
