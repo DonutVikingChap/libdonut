@@ -158,14 +158,14 @@ namespace application {
 	X(CONTROLLER_AXIS_RIGHT_TRIGGER, "controller_axis_right_trigger", "Right Trigger")
 
 enum class Input : std::uint8_t {
-#define X(name, identifier, string) name,
+#define X(name, id, str) name,
 	DONUT_ENUM_INPUTS(X)
 #undef X
 };
 
 static constexpr std::size_t INPUT_COUNT = [] {
 	std::size_t result = 0;
-#define X(name, identifier, string) ++result;
+#define X(name, id, str) ++result;
 	DONUT_ENUM_INPUTS(X)
 #undef X
 	return result;
