@@ -16,6 +16,7 @@ public:
 	Framebuffer();
 
 	void attachTexture2D(Texture& texture);
+	void detachTexture2D();
 
 	[[nodiscard]] Handle get() const noexcept {
 		return fbo.get();

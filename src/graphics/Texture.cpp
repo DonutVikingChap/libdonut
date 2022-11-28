@@ -311,6 +311,8 @@ void Texture::fill2D(Renderer& renderer, glm::vec4 color) {
 	renderPass.setBackgroundColor(color);
 
 	renderer.render(framebuffer, renderPass, {}, {});
+
+	framebuffer.detachTexture2D();
 }
 
 void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<glm::vec4> backgroundColor) {
@@ -330,6 +332,8 @@ void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHe
 		{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
 		glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
 
+	framebuffer.detachTexture2D();
+
 	newTexture.setOptions2D(options);
 	*this = std::move(newTexture);
 }
@@ -346,6 +350,8 @@ Texture Texture::copy2D(Renderer& renderer) const {
 		renderPass,
 		{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
 		glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
+
+	framebuffer.detachTexture2D();
 
 	newTexture.setOptions2D(options);
 	return newTexture;

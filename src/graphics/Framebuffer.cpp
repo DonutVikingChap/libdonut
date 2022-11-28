@@ -31,6 +31,16 @@ void Framebuffer::attachTexture2D(Texture& texture) {
 	glBindFramebuffer(GL_FRAMEBUFFER, oldFramebufferBinding);
 }
 
+void Framebuffer::detachTexture2D() {
+	GLint oldFramebufferBinding = 0;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebufferBinding);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo.get());
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, oldFramebufferBinding);
+}
+
 void Framebuffer::FramebufferDeleter::operator()(Handle handle) const noexcept {
 	glDeleteFramebuffers(1, &handle);
 }
