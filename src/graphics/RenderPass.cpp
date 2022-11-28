@@ -129,7 +129,7 @@ void RenderPass::draw(Text&& text) {
 	}
 }
 
-void RenderPass::clear() noexcept {
+void RenderPass::reset() noexcept {
 	backgroundColor.reset();
 
 	std::erase_if(modelInstancesSortedByShaderAndScene, [](const ModelInstances& models) -> bool { return models.shader.use_count() <= 1 || models.scene.use_count() <= 1; });

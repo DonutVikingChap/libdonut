@@ -129,7 +129,7 @@ public:
 		});
 	}
 
-	void clear() noexcept;
+	void reset() noexcept;
 
 private:
 	friend Renderer;
