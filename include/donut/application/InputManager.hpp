@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <glm/glm.hpp>
 #include <optional>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -48,6 +49,7 @@ public:
 	void handleEvent(const application::Event& event);
 
 	void bind(Input input, Outputs outputs);
+	void addBinding(Input input, Outputs outputs);
 	void unbind(Input input);
 	void unbindAll() noexcept;
 
@@ -113,6 +115,71 @@ public:
 	[[nodiscard]] bool isPressed(Input input) const noexcept;
 	[[nodiscard]] bool justPressed(Input input) const noexcept;
 	[[nodiscard]] bool justReleased(Input input) const noexcept;
+
+	template <typename Action>
+	void bind(Input input, Action action) requires(std::is_enum_v<Action>) {
+		bind(input, Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))));
+	}
+
+	template <typename Action>
+	void addBinding(Input input, Action action) requires(std::is_enum_v<Action>) {
+		addBinding(input, Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))));
+	}
+
+	template <typename Action>
+	void press(Action action) noexcept requires(std::is_enum_v<Action>) {
+		press(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))));
+	}
+
+	template <typename Action>
+	void release(Action action) noexcept requires(std::is_enum_v<Action>) {
+		release(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))));
+	}
+
+	template <typename Action>
+	void set(Action action, float value = 1.0f) noexcept requires(std::is_enum_v<Action>) {
+		set(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))), value);
+	}
+
+	template <typename Action>
+	void move(Action action, float offset = 0.0f) noexcept requires(std::is_enum_v<Action>) {
+		move(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))), offset);
+	}
+
+	template <typename Action>
+	void moveTo(Action action, float value, float offset) noexcept requires(std::is_enum_v<Action>) {
+		moveTo(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))), value, offset);
+	}
+
+	template <typename Action>
+	void reset(Action action) noexcept requires(std::is_enum_v<Action>) {
+		reset(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))));
+	}
+
+	template <typename Action>
+	[[nodiscard]] bool isPressed(Action action) const noexcept requires(std::is_enum_v<Action>) {
+		return isPressed(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
+	}
+
+	template <typename Action>
+	[[nodiscard]] bool justPressed(Action action) const noexcept requires(std::is_enum_v<Action>) {
+		return justPressed(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
+	}
+
+	template <typename Action>
+	[[nodiscard]] bool justReleased(Action action) const noexcept requires(std::is_enum_v<Action>) {
+		return justReleased(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
+	}
+
+	template <typename Action>
+	[[nodiscard]] float getAbsoluteValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
+		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
+	}
+
+	template <typename Action>
+	[[nodiscard]] float getRelativeValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
+		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
+	}
 
 private:
 	struct ControllerDeleter final {

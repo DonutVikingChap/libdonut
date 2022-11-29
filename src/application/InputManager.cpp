@@ -283,6 +283,12 @@ void InputManager::bind(Input input, Outputs outputs) {
 	bindings.insert_or_assign(input, outputs);
 }
 
+void InputManager::addBinding(Input input, Outputs outputs) {
+	if (const auto [it, inserted] = bindings.emplace(input, outputs); !inserted) {
+		it->second |= outputs;
+	}
+}
+
 void InputManager::unbind(Input input) {
 	bindings.erase(input);
 }
