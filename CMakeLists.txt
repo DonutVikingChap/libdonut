@@ -41,6 +41,7 @@ add_library(donut
 	"include/donut/graphics/TexturedQuad.hpp"
 	"include/donut/graphics/VertexArray.hpp"
 
+	"include/donut/base64.hpp"
 	"include/donut/File.hpp"
 	"include/donut/InputFileStream.hpp"
 	"include/donut/OutputFileStream.hpp"
@@ -74,6 +75,7 @@ add_library(donut
 	"src/graphics/Texture.cpp"
 	"src/graphics/VertexArray.cpp"
 
+	"src/base64.cpp"
 	"src/File.cpp"
 	"src/InputFileStream.cpp"
 	"src/OutputFileStream.cpp")
