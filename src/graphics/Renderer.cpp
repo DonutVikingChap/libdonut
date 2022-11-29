@@ -5,6 +5,7 @@
 #include <donut/graphics/SpriteAtlas.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
+#include <donut/graphics/Viewport.hpp>
 #include <donut/graphics/opengl.hpp>
 
 #include <cassert>

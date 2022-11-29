@@ -7,6 +7,7 @@
 #include <donut/graphics/Shader3D.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
+#include <donut/graphics/Viewport.hpp>
 
 #include <array>
 #include <glm/glm.hpp>
@@ -16,11 +17,6 @@ namespace donut {
 namespace graphics {
 
 class Renderer;
-
-struct Viewport {
-	glm::ivec2 position;
-	glm::ivec2 size;
-};
 
 struct RendererOptions {
 	std::string_view defaultVertexShaderSourceCode = Shader2D::vertexShaderSourceCodeInstancedTexturedQuad;
