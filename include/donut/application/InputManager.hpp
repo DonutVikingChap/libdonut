@@ -116,14 +116,18 @@ public:
 	[[nodiscard]] bool justPressed(Input input) const noexcept;
 	[[nodiscard]] bool justReleased(Input input) const noexcept;
 
-	template <typename Action>
-	void bind(Input input, Action action) requires(std::is_enum_v<Action>) {
-		bind(input, Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))));
+	template <typename... Actions>
+	void bind(Input input, Actions... actions) requires(std::is_enum_v<Actions>&&...) {
+		Outputs outputs{};
+		(outputs.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Actions>>(actions))), ...);
+		bind(input, outputs);
 	}
 
-	template <typename Action>
-	void addBinding(Input input, Action action) requires(std::is_enum_v<Action>) {
-		addBinding(input, Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))));
+	template <typename... Actions>
+	void addBinding(Input input, Actions... actions) requires(std::is_enum_v<Actions>&&...) {
+		Outputs outputs{};
+		(outputs.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Actions>>(actions))), ...);
+		addBinding(input, outputs);
 	}
 
 	template <typename Action>
