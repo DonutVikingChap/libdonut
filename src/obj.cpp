@@ -284,14 +284,18 @@ private:
 
 } // namespace
 
-Scene::Scene(std::string_view objString) {
-	Parser{objString}.parseScene(*this);
+Scene Scene::parse(std::string_view objString) {
+	Scene result{};
+	Parser{objString}.parseScene(result);
+	return result;
 }
 
 namespace mtl {
 
-Library::Library(std::string_view mtlString) {
-	Parser{mtlString}.parseMtlLibrary(*this);
+Library Library::parse(std::string_view mtlString) {
+	Library result{};
+	Parser{mtlString}.parseMtlLibrary(result);
+	return result;
 }
 
 } // namespace mtl

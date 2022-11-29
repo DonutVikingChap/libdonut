@@ -45,13 +45,13 @@ struct Object {
 };
 
 struct Scene {
+	[[nodiscard]] static Scene parse(std::string_view objString);
+
 	std::vector<std::string> materialLibraryFilenames{};
 	std::vector<glm::vec3> vertices{};
 	std::vector<glm::vec2> textureCoordinates{};
 	std::vector<glm::vec3> normals{};
 	std::vector<Object> objects{};
-
-	explicit Scene(std::string_view objString);
 };
 
 namespace mtl {
@@ -91,9 +91,9 @@ struct Material {
 };
 
 struct Library {
-	std::vector<Material> materials;
+	[[nodiscard]] static Library parse(std::string_view mtlString);
 
-	explicit Library(std::string_view mtlString);
+	std::vector<Material> materials;
 };
 
 } // namespace mtl

@@ -145,7 +145,7 @@ void loadScene(Scene& output, const obj::Scene& scene) {
 	std::vector<obj::mtl::Library> materialLibraries{};
 	materialLibraries.reserve(scene.materialLibraryFilenames.size());
 	for (const std::string& materialLibraryFilename : scene.materialLibraryFilenames) {
-		materialLibraries.emplace_back(InputFileStream::open(materialLibraryFilename.c_str()).readAllIntoString());
+		materialLibraries.push_back(obj::mtl::Library::parse(InputFileStream::open(materialLibraryFilename.c_str()).readAllIntoString()));
 	}
 
 	IndexMap indexMap{scene.vertices.size()};
@@ -224,7 +224,7 @@ Scene::Scene(const char* filepath) {
 	const std::string fileContents = InputFileStream::open(filepath).readAllIntoString();
 	const std::string_view objString = fileContents;
 	try {
-		loadScene(*this, obj::Scene{objString});
+		loadScene(*this, obj::Scene::parse(objString));
 	} catch (const obj::Error& e) {
 		throw Error{fmt::format("Failed to load scene \"{}\": Error at file position {}: {}", filepath, e.position - objString.begin(), e.what())};
 	} catch (const Error& e) {

@@ -37,10 +37,10 @@ struct Element {
 };
 
 struct Document {
+	[[nodiscard]] static Document parse(std::string_view xmlString);
+
 	std::unique_ptr<Element> declaration{};
 	std::unique_ptr<Element> root{};
-
-	explicit Document(std::string_view xmlString);
 };
 
 } // namespace xml

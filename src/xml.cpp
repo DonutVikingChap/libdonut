@@ -317,12 +317,14 @@ private:
 
 } // namespace
 
-Document::Document(std::string_view xmlString) {
+Document Document::parse(std::string_view xmlString) {
+	Document result{};
 	Parser parser{xmlString};
 	parser.skipWhitespace();
-	declaration = parser.parseXMLDeclarationIfPresent();
+	result.declaration = parser.parseXMLDeclarationIfPresent();
 	parser.skipWhitespace();
-	root = parser.parseElement();
+	result.root = parser.parseElement();
+	return result;
 }
 
 } // namespace xml
