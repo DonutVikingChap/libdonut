@@ -50,6 +50,7 @@ add_library(donut
 	"include/donut/Resource.hpp"
 	"include/donut/shapes.hpp"
 	"include/donut/utf8.hpp"
+	"include/donut/xml.hpp"
 	
 	"src/application/Application.cpp"
 	"src/application/InputManager.cpp"
@@ -78,7 +79,8 @@ add_library(donut
 	"src/File.cpp"
 	"src/InputFileStream.cpp"
 	"src/obj.cpp"
-	"src/OutputFileStream.cpp")
+	"src/OutputFileStream.cpp"
+	"src/xml.cpp")
 
 add_library(donut::donut ALIAS donut)
 
