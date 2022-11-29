@@ -44,6 +44,7 @@ add_library(donut
 	"include/donut/base64.hpp"
 	"include/donut/File.hpp"
 	"include/donut/InputFileStream.hpp"
+	"include/donut/obj.hpp"
 	"include/donut/OutputFileStream.hpp"
 	"include/donut/reflection.hpp"
 	"include/donut/Resource.hpp"
@@ -64,8 +65,6 @@ add_library(donut
 	"src/graphics/ImageHDR.cpp"
 	"src/graphics/ImageLDR.cpp"
 	"src/graphics/Mesh.cpp"
-	"src/graphics/obj.cpp"
-	"src/graphics/obj.hpp"
 	"src/graphics/Renderer.cpp"
 	"src/graphics/RenderPass.cpp"
 	"src/graphics/Scene.cpp"
@@ -78,6 +77,7 @@ add_library(donut
 	"src/base64.cpp"
 	"src/File.cpp"
 	"src/InputFileStream.cpp"
+	"src/obj.cpp"
 	"src/OutputFileStream.cpp")
 
 add_library(donut::donut ALIAS donut)

@@ -1,5 +1,5 @@
-#ifndef DONUT_GRAPHICS_OBJ_HPP
-#define DONUT_GRAPHICS_OBJ_HPP
+#ifndef DONUT_OBJ_HPP
+#define DONUT_OBJ_HPP
 
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -9,7 +9,6 @@
 #include <vector>
 
 namespace donut {
-namespace graphics {
 namespace obj {
 
 struct Error : std::runtime_error {
@@ -99,7 +98,6 @@ struct Library {
 
 } // namespace mtl
 } // namespace obj
-} // namespace graphics
 } // namespace donut
 
 #endif

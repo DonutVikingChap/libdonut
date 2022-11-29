@@ -1,9 +1,8 @@
-#include "obj.hpp"
+#include <donut/obj.hpp>
 
 #include <cstddef>
 
 namespace donut {
-namespace graphics {
 namespace obj {
 
 namespace {
@@ -297,5 +296,4 @@ Library::Library(std::string_view mtlString) {
 
 } // namespace mtl
 } // namespace obj
-} // namespace graphics
 } // namespace donut

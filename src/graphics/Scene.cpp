@@ -5,8 +5,7 @@
 #include <donut/graphics/Mesh.hpp>
 #include <donut/graphics/Scene.hpp>
 #include <donut/graphics/Texture.hpp>
-
-#include "obj.hpp"
+#include <donut/obj.hpp>
 
 #include <algorithm>
 #include <array>
