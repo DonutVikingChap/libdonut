@@ -1,5 +1,5 @@
-#ifndef DONUT_UTILITIES_BASE64_HPP
-#define DONUT_UTILITIES_BASE64_HPP
+#ifndef DONUT_BASE64_HPP
+#define DONUT_BASE64_HPP
 
 #include <string>
 #include <string_view>
