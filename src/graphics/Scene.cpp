@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <exception>
 #include <fmt/format.h>
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
@@ -221,14 +222,14 @@ void loadScene(Scene& output, const obj::Scene& scene) {
 } // namespace
 
 Scene::Scene(const char* filepath) {
-	const std::string fileContents = InputFileStream::open(filepath).readAllIntoString();
-	const std::string_view objString = fileContents;
 	try {
-		loadScene(*this, obj::Scene::parse(objString));
+		loadScene(*this, obj::Scene::parse(InputFileStream::open(filepath).readAllIntoString()));
 	} catch (const obj::Error& e) {
-		throw Error{fmt::format("Failed to load scene \"{}\": Error at file position {}: {}", filepath, e.position - objString.begin(), e.what())};
-	} catch (const Error& e) {
+		throw Error{fmt::format("Failed to load scene \"{}\": Line {}: {}", filepath, e.lineNumber, e.what())};
+	} catch (const std::exception& e) {
 		throw Error{fmt::format("Failed to load scene \"{}\": {}", filepath, e.what())};
+	} catch (...) {
+		throw Error{fmt::format("Failed to load scene \"{}\".", filepath)};
 	}
 }
 

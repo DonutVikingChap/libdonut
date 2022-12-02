@@ -1,6 +1,7 @@
 #ifndef DONUT_OBJ_HPP
 #define DONUT_OBJ_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <stdexcept>
@@ -13,14 +14,17 @@ namespace obj {
 
 struct Error : std::runtime_error {
 	std::string_view::iterator position;
+	std::size_t lineNumber;
 
-	Error(const std::string& message, std::string_view::iterator position)
+	Error(const std::string& message, std::string_view::iterator position, std::size_t lineNumber)
 		: std::runtime_error(message)
-		, position(position) {}
+		, position(position)
+		, lineNumber(lineNumber) {}
 
-	Error(const char* message, std::string_view::iterator position)
+	Error(const char* message, std::string_view::iterator position, std::size_t lineNumber)
 		: std::runtime_error(message)
-		, position(position) {}
+		, position(position)
+		, lineNumber(lineNumber) {}
 };
 
 struct FaceVertex {

@@ -5,6 +5,7 @@ project("libdonut"
 	LANGUAGES C CXX)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+option(DONUT_ENABLE_TESTING "Enable test suite" OFF)
 
 add_subdirectory(dependencies)
 
@@ -44,12 +45,14 @@ add_library(donut
 	"include/donut/base64.hpp"
 	"include/donut/File.hpp"
 	"include/donut/InputFileStream.hpp"
+	"include/donut/json.hpp"
 	"include/donut/obj.hpp"
 	"include/donut/OutputFileStream.hpp"
 	"include/donut/reflection.hpp"
 	"include/donut/Resource.hpp"
 	"include/donut/shapes.hpp"
-	"include/donut/utf8.hpp"
+	"include/donut/unicode.hpp"
+	"include/donut/Variant.hpp"
 	"include/donut/xml.hpp"
 	
 	"src/application/Application.cpp"
@@ -78,6 +81,7 @@ add_library(donut
 	"src/base64.cpp"
 	"src/File.cpp"
 	"src/InputFileStream.cpp"
+	"src/json.cpp"
 	"src/obj.cpp"
 	"src/OutputFileStream.cpp"
 	"src/xml.cpp")
@@ -88,12 +92,17 @@ target_include_directories(donut PUBLIC
 	$<INSTALL_INTERFACE:include>
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
-target_compile_features(donut PRIVATE cxx_std_20)
+target_compile_features(donut PUBLIC cxx_std_20)
 
-target_compile_options(donut PRIVATE
-	$<$<CXX_COMPILER_ID:GNU>:   -std=c++20  -Wall -Wextra   -Wpedantic                      $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
-	$<$<CXX_COMPILER_ID:Clang>: -std=c++20  -Wall -Wextra   -Wpedantic                      $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
-	$<$<CXX_COMPILER_ID:MSVC>:  /std:c++20  /W3             /permissive-    /wd4996 /utf-8  $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>  $<$<CONFIG:MinSizeRel>:/Os>   $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
+target_compile_options(donut
+	PUBLIC
+		$<$<CXX_COMPILER_ID:GNU>:   -std=c++20>
+		$<$<CXX_COMPILER_ID:Clang>: -std=c++20>
+		$<$<CXX_COMPILER_ID:MSVC>:  /std:c++20  /utf-8>
+	PRIVATE
+		$<$<CXX_COMPILER_ID:GNU>:   -Wall   -Wextra -Wpedantic              $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
+		$<$<CXX_COMPILER_ID:Clang>: -Wall   -Wextra -Wpedantic              $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
+		$<$<CXX_COMPILER_ID:MSVC>:  /W3             /permissive-    /wd4996 $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>  $<$<CONFIG:MinSizeRel>:/Os>   $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
 
 target_link_libraries(donut
 	INTERFACE
@@ -122,3 +131,8 @@ set_target_properties(donut PROPERTIES
 	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
 	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_INSTALL_BINDIR}")
+
+if(DONUT_ENABLE_TESTING)
+	enable_testing()
+	add_subdirectory(test)
+endif()

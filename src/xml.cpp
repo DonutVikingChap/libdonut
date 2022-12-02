@@ -1,9 +1,11 @@
+#include <donut/unicode.hpp>
 #include <donut/xml.hpp>
 
-#include <array>
+#include <charconv>
 #include <cstdint>
-#include <limits>
-#include <optional>
+#include <memory>
+#include <string_view>
+#include <system_error>
 #include <utility>
 
 namespace donut {
@@ -25,66 +27,62 @@ public:
 		return isNameStartCharacter(ch) || ch == '-' || ch == '.' || (ch >= '0' && ch <= '9');
 	}
 
-	[[nodiscard]] static constexpr bool isValidCodePoint(std::uint32_t value) noexcept {
-		return value <= 0x10FFFF && (value < 0xD800 || value > 0xDFFF);
-	}
-
-	[[nodiscard]] static constexpr int hexadecimalValue(char ch) noexcept {
-		return (ch >= 'A') ? (ch >= 'a') ? ch - 'a' + 10 : ch - 'A' + 10 : ch - '0';
-	}
-
-	[[nodiscard]] static constexpr std::optional<std::uint32_t> parseCodePoint(std::string_view bytes, int radix) {
-		std::int64_t prefix = 1;
-		std::uint32_t result = 0;
-		for (std::size_t i = bytes.size(); i-- > 0;) {
-			const char ch = bytes[i];
-			const int digit = hexadecimalValue(ch);
-			if (digit < 0 || digit > radix) {
-				return std::nullopt;
-			}
-			const std::int64_t digitValue = static_cast<std::int64_t>(digit) * prefix;
-			if (digitValue > static_cast<std::int64_t>(std::numeric_limits<std::uint32_t>::max() - result)) {
-				return std::nullopt;
-			}
-			result += static_cast<std::uint32_t>(digitValue);
-			prefix *= radix;
-		}
-		if (!isValidCodePoint(result)) {
-			return std::nullopt;
-		}
-		return result;
-	}
-
-	[[nodiscard]] static constexpr std::array<char, 5> codePointToUTF8(std::uint32_t codePoint) {
-		std::array<char, 5> result{};
-		if (codePoint <= 0x7F) {
-			result[0] = static_cast<char>(codePoint);
-		} else if (codePoint <= 0x7FF) {
-			result[0] = static_cast<char>((codePoint >> 6) + 192);
-			result[1] = static_cast<char>((codePoint & 63) + 128);
-		} else if (codePoint <= 0xFFFF) {
-			result[0] = static_cast<char>((codePoint >> 12) + 224);
-			result[1] = static_cast<char>(((codePoint >> 6) & 63) + 128);
-			result[2] = static_cast<char>((codePoint & 63) + 128);
-		} else {
-			result[0] = static_cast<char>((codePoint >> 18) + 240);
-			result[1] = static_cast<char>(((codePoint >> 12) & 63) + 128);
-			result[2] = static_cast<char>(((codePoint >> 6) & 63) + 128);
-			result[3] = static_cast<char>((codePoint & 63) + 128);
-		}
-		return result;
-	}
-
-	explicit Parser(std::string_view string) noexcept
+	Parser(std::string_view string, std::size_t lineNumber) noexcept
 		: it(string.begin())
-		, end(string.end()) {}
+		, end(string.end())
+		, lineNumber(lineNumber) {}
+
+	[[nodiscard]] std::unique_ptr<Element> parseXMLDeclarationIfPresent() {
+		if (const std::string_view tag = (read("<?xml")) ? "?xml" : (read("<?XML")) ? "?XML" : ""; !tag.empty()) {
+			Element declaration{.tag = std::string{tag}};
+			parseAttributes(declaration);
+			if (!read("?>")) {
+				throw Error{"Invalid XML declaration end.", it, lineNumber};
+			}
+			return std::make_unique<Element>(std::move(declaration));
+		}
+		return nullptr;
+	}
+
+	[[nodiscard]] std::unique_ptr<Element> parseElement() {
+		if (!read('<')) {
+			throw Error{"Missing element.", it, lineNumber};
+		}
+		Element result{};
+		result.tag = parseName();
+		parseAttributes(result);
+		if (!read("/>")) {
+			if (read("?>")) {
+				throw Error{"Invalid element tag end.", it, lineNumber};
+			}
+			if (!read('>')) {
+				throw Error{"Invalid tag end.", it, lineNumber};
+			}
+			parseContent(result);
+		}
+		return std::make_unique<Element>(std::move(result));
+	}
 
 	void skipWhitespace() {
-		while (it != end && isWhitespace(*it)) {
-			++it;
+		while (it != end) {
+			if (*it == '\n') {
+				++it;
+				++lineNumber;
+			} else if (*it == '\r') {
+				++it;
+				if (it != end && *it == '\n') {
+					++it;
+				}
+				++lineNumber;
+			} else if (*it == ' ' || *it == '\t') {
+				++it;
+			} else {
+				break;
+			}
 		}
 	}
 
+private:
 	[[nodiscard]] bool read(char ch) {
 		if (it != end && *it == ch) {
 			++it;
@@ -111,31 +109,45 @@ public:
 			++it;
 		}
 		if (it == begin) {
-			throw Error{"Missing name", it};
+			throw Error{"Missing name.", it, lineNumber};
 		}
 		return std::string{begin, it};
 	}
 
 	void parseReference(std::string& output) {
 		if (it == end || *it != '&') {
-			throw Error{"Missing reference", it};
+			throw Error{"Missing reference.", it, lineNumber};
 		}
 		++it;
 		if (read('#')) {
+			const std::string_view::iterator codePointStringBegin = it;
 			int radix = 10;
 			if (read('x')) {
 				radix = 16;
 			}
-			const std::string_view::iterator codePointBegin = it;
+			const char* const codePointBegin = std::to_address(it);
 			while (it != end && *it != ';') {
-				++it;
+				if (*it == '\n') {
+					++it;
+					++lineNumber;
+				} else if (*it == '\r') {
+					++it;
+					if (it != end && *it == '\n') {
+						++it;
+					}
+					++lineNumber;
+				} else {
+					++it;
+				}
 			}
-			const std::string_view::iterator codePointEnd = it;
-			const std::optional<std::uint32_t> codePoint = parseCodePoint(std::string_view{codePointBegin, codePointEnd}, radix);
-			if (!codePoint) {
-				throw Error{"Invalid code point", codePointBegin};
+			const char* const codePointEnd = std::to_address(it);
+			std::uint32_t codePointValue = 0;
+			if (const std::from_chars_result parseResult = std::from_chars(codePointBegin, codePointEnd, codePointValue, radix);
+				parseResult.ec != std::errc{} || parseResult.ptr != codePointEnd || !unicode::isValidCodePoint(codePointValue)) {
+				throw Error{"Invalid code point.", codePointStringBegin, lineNumber};
 			}
-			output.append(codePointToUTF8(*codePoint).data());
+			const unicode::UTF8FromCodePointResult codePointUTF8 = unicode::getUTF8FromCodePoint(static_cast<char32_t>(codePointValue));
+			output.append(std::string_view{reinterpret_cast<const char*>(codePointUTF8.codeUnits.data()), codePointUTF8.size});
 		} else {
 			char character{};
 			if (read("amp;")) {
@@ -149,7 +161,7 @@ public:
 			} else if (read("quot;")) {
 				character = '\"';
 			} else {
-				throw Error{"Unknown reference", it};
+				throw Error{"Unknown reference.", it, lineNumber};
 			}
 			output.push_back(character);
 		}
@@ -157,7 +169,7 @@ public:
 
 	[[nodiscard]] std::string parseQuotedString() {
 		if (it == end || (*it != '\'' && *it != '\"')) {
-			throw Error{"Missing quote", it};
+			throw Error{"Missing quote.", it, lineNumber};
 		}
 		const char quoteCharacter = *it;
 		++it;
@@ -165,9 +177,17 @@ public:
 		while (it != end && !read(quoteCharacter)) {
 			if (*it == '&') {
 				parseReference(result);
+			} else if (*it == '\n') {
+				result.push_back(*it++);
+				++lineNumber;
+			} else if (*it == '\r') {
+				result.push_back(*it++);
+				if (it != end && *it == '\n') {
+					result.push_back(*it++);
+				}
+				++lineNumber;
 			} else {
-				result.push_back(*it);
-				++it;
+				result.push_back(*it++);
 			}
 		}
 		return result;
@@ -204,25 +224,6 @@ public:
 		}
 	}
 
-	[[nodiscard]] std::unique_ptr<Element> parseElement() {
-		if (!read('<')) {
-			throw Error{"Missing element.", it};
-		}
-		Element result{};
-		result.tag = parseName();
-		parseAttributes(result);
-		if (!read("/>")) {
-			if (read("?>")) {
-				throw Error{"Invalid element tag end.", it};
-			}
-			if (!read('>')) {
-				throw Error{"Invalid tag end.", it};
-			}
-			parseContent(result);
-		}
-		return std::make_unique<Element>(std::move(result));
-	}
-
 	void commitContent(std::string& content, Element& element, std::unique_ptr<Element>*& nextChild) {
 		while (!content.empty() && isWhitespace(content.back())) {
 			content.pop_back();
@@ -251,7 +252,7 @@ public:
 		while (true) {
 			if (it == end) {
 				if (!element.tag.empty()) {
-					throw Error{"Missing end tag", it};
+					throw Error{"Missing end tag.", it, lineNumber};
 				}
 				commitContent(content, element, nextChild);
 				break;
@@ -262,16 +263,16 @@ public:
 					const std::string tag = parseName();
 					skipWhitespace();
 					if (!read('>')) {
-						throw Error{"Invalid end tag", it};
+						throw Error{"Invalid end tag.", it, lineNumber};
 					}
 					if (tag != element.tag) {
-						throw Error{"Incorrect end tag", it};
+						throw Error{"Incorrect end tag.", it, lineNumber};
 					}
 					break;
 				}
 
 				if (read('?')) {
-					throw Error{"Unknown processing instruction", it};
+					throw Error{"Unknown processing instruction.", it, lineNumber};
 				}
 
 				if (read('!')) {
@@ -282,7 +283,7 @@ public:
 						skipWhitespace();
 						continue;
 					}
-					throw Error{"Unknown declaration", it};
+					throw Error{"Unknown declaration.", it, lineNumber};
 				}
 
 				--it;
@@ -298,28 +299,16 @@ public:
 		}
 	}
 
-	[[nodiscard]] std::unique_ptr<Element> parseXMLDeclarationIfPresent() {
-		if (const std::string_view tag = (read("<?xml")) ? "?xml" : (read("<?XML")) ? "?XML" : ""; !tag.empty()) {
-			Element declaration{.tag = std::string{tag}};
-			parseAttributes(declaration);
-			if (!read("?>")) {
-				throw Error{"Invalid XML declaration end", it};
-			}
-			return std::make_unique<Element>(std::move(declaration));
-		}
-		return nullptr;
-	}
-
-private:
 	std::string_view::iterator it;
 	std::string_view::iterator end;
+	std::size_t lineNumber;
 };
 
 } // namespace
 
 Document Document::parse(std::string_view xmlString) {
 	Document result{};
-	Parser parser{xmlString};
+	Parser parser{xmlString, 1};
 	parser.skipWhitespace();
 	result.declaration = parser.parseXMLDeclarationIfPresent();
 	parser.skipWhitespace();

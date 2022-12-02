@@ -3,7 +3,7 @@
 #include <donut/graphics/Font.hpp>
 #include <donut/graphics/Renderer.hpp>
 #include <donut/graphics/Texture.hpp>
-#include <donut/utf8.hpp>
+#include <donut/unicode.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -100,7 +100,7 @@ Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize
 	};
 	glm::vec2 offset{0.0f, 0.0f};
 	const float xBegin = offset.x;
-	const UTF8View codePoints{string};
+	const unicode::UTF8View codePoints{string};
 	for (auto it = codePoints.begin(); it != codePoints.end();) {
 		if (const char32_t codePoint = *it++; codePoint == '\n') {
 			offset.x = xBegin;

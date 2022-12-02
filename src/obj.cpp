@@ -17,10 +17,96 @@ public:
 		return ch >= '0' && ch <= '9';
 	}
 
-	explicit Parser(std::string_view string) noexcept
+	Parser(std::string_view string, std::size_t lineNumber) noexcept
 		: it(string.begin())
-		, end(string.end()) {}
+		, end(string.end())
+		, lineNumber(lineNumber) {}
 
+	void parseScene(Scene& output) {
+		output.objects.push_back(Object{.groups{Group{}}});
+		do {
+			skipWhitespace();
+			if (it == end) {
+				break;
+			}
+			if (*it == '#') {
+				++it;
+			} else if (readCommand("mtllib")) {
+				output.materialLibraryFilenames.push_back(parseString());
+			} else if (readCommand("usemtl")) {
+				output.objects.back().materialName = parseString();
+			} else if (readCommand("o")) {
+				if (!output.objects.back().name.empty()) {
+					output.objects.push_back(Object{.name = parseString(), .groups{Group{}}});
+				} else {
+					output.objects.back().name = parseString();
+				}
+			} else if (readCommand("g")) {
+				output.objects.back().groups.push_back(Group{.name = parseString()});
+			} else if (readCommand("v")) {
+				output.vertices.push_back(parseVec3());
+			} else if (readCommand("vt")) {
+				output.textureCoordinates.push_back(parseVec2());
+			} else if (readCommand("vn")) {
+				output.normals.push_back(parseVec3());
+			} else if (readCommand("f")) {
+				output.objects.back().groups.back().faces.push_back(parseFace(output.vertices.size(), output.textureCoordinates.size(), output.normals.size()));
+			}
+			skipLine();
+		} while (it != end);
+	}
+
+	void parseMtlLibrary(mtl::Library& output) {
+		output.materials.push_back(mtl::Material{});
+		do {
+			skipWhitespace();
+			if (it == end) {
+				break;
+			}
+			if (*it == '#') {
+				++it;
+			} else if (readCommand("newmtl")) {
+				if (!output.materials.back().name.empty()) {
+					output.materials.push_back(mtl::Material{.name = parseString()});
+				} else {
+					output.materials.back().name = parseString();
+				}
+			} else if (readCommand("map_Ka")) {
+				output.materials.back().ambientMapName = parseString();
+			} else if (readCommand("map_Kd")) {
+				output.materials.back().diffuseMapName = parseString();
+			} else if (readCommand("map_Ks")) {
+				output.materials.back().specularMapName = parseString();
+			} else if (readCommand("map_Ke")) {
+				output.materials.back().emissiveMapName = parseString();
+			} else if (readCommand("map_Ns")) {
+				output.materials.back().specularExponentMapName = parseString();
+			} else if (readCommand("map_d")) {
+				output.materials.back().dissolveFactorMapName = parseString();
+			} else if (readCommand("map_bump") || readCommand("bump")) {
+				output.materials.back().bumpMapName = parseString();
+			} else if (readCommand("Ka")) {
+				output.materials.back().ambientColor = parseVec3();
+			} else if (readCommand("Kd")) {
+				output.materials.back().diffuseColor = parseVec3();
+			} else if (readCommand("Ks")) {
+				output.materials.back().specularColor = parseVec3();
+			} else if (readCommand("Ke")) {
+				output.materials.back().emissiveColor = parseVec3();
+			} else if (readCommand("Ns")) {
+				output.materials.back().specularExponent = parseFloat();
+			} else if (readCommand("d")) {
+				output.materials.back().dissolveFactor = parseFloat();
+			} else if (readCommand("Tr")) {
+				output.materials.back().dissolveFactor = 1.0f - parseFloat();
+			} else if (readCommand("illum")) {
+				output.materials.back().illuminationModel = parseIlluminationModel();
+			}
+			skipLine();
+		} while (it != end);
+	}
+
+private:
 	void skipWhitespace() {
 		while (it != end && isWhitespace(*it)) {
 			++it;
@@ -34,10 +120,12 @@ public:
 				if (it != end && *it == '\n') {
 					++it;
 				}
+				++lineNumber;
 				break;
 			}
 			if (*it == '\n') {
 				++it;
+				++lineNumber;
 				break;
 			}
 			++it;
@@ -71,7 +159,7 @@ public:
 			++it;
 		}
 		if (it == begin) {
-			throw Error{"Missing string.", it};
+			throw Error{"Missing string.", it, lineNumber};
 		}
 		return std::string{begin, it};
 	}
@@ -188,105 +276,21 @@ public:
 	[[nodiscard]] mtl::IlluminationModel parseIlluminationModel() {
 		const std::uint8_t illum = parseUnsignedInteger<std::uint8_t>();
 		if (illum > static_cast<std::uint8_t>(mtl::IlluminationModel::count)) {
-			throw Error{"Invalid illumination model.", it};
+			throw Error{"Invalid illumination model.", it, lineNumber};
 		}
 		return static_cast<mtl::IlluminationModel>(illum);
 	}
 
-	void parseScene(Scene& output) {
-		output.objects.push_back(Object{.groups{Group{}}});
-		do {
-			skipWhitespace();
-			if (it == end) {
-				break;
-			}
-			if (*it == '#') {
-				++it;
-			} else if (readCommand("mtllib")) {
-				output.materialLibraryFilenames.push_back(parseString());
-			} else if (readCommand("usemtl")) {
-				output.objects.back().materialName = parseString();
-			} else if (readCommand("o")) {
-				if (!output.objects.back().name.empty()) {
-					output.objects.push_back(Object{.name = parseString(), .groups{Group{}}});
-				} else {
-					output.objects.back().name = parseString();
-				}
-			} else if (readCommand("g")) {
-				output.objects.back().groups.push_back(Group{.name = parseString()});
-			} else if (readCommand("v")) {
-				output.vertices.push_back(parseVec3());
-			} else if (readCommand("vt")) {
-				output.textureCoordinates.push_back(parseVec2());
-			} else if (readCommand("vn")) {
-				output.normals.push_back(parseVec3());
-			} else if (readCommand("f")) {
-				output.objects.back().groups.back().faces.push_back(parseFace(output.vertices.size(), output.textureCoordinates.size(), output.normals.size()));
-			}
-			skipLine();
-		} while (it != end);
-	}
-
-	void parseMtlLibrary(mtl::Library& output) {
-		output.materials.push_back(mtl::Material{});
-		do {
-			skipWhitespace();
-			if (it == end) {
-				break;
-			}
-			if (*it == '#') {
-				++it;
-			} else if (readCommand("newmtl")) {
-				if (!output.materials.back().name.empty()) {
-					output.materials.push_back(mtl::Material{.name = parseString()});
-				} else {
-					output.materials.back().name = parseString();
-				}
-			} else if (readCommand("map_Ka")) {
-				output.materials.back().ambientMapName = parseString();
-			} else if (readCommand("map_Kd")) {
-				output.materials.back().diffuseMapName = parseString();
-			} else if (readCommand("map_Ks")) {
-				output.materials.back().specularMapName = parseString();
-			} else if (readCommand("map_Ke")) {
-				output.materials.back().emissiveMapName = parseString();
-			} else if (readCommand("map_Ns")) {
-				output.materials.back().specularExponentMapName = parseString();
-			} else if (readCommand("map_d")) {
-				output.materials.back().dissolveFactorMapName = parseString();
-			} else if (readCommand("map_bump") || readCommand("bump")) {
-				output.materials.back().bumpMapName = parseString();
-			} else if (readCommand("Ka")) {
-				output.materials.back().ambientColor = parseVec3();
-			} else if (readCommand("Kd")) {
-				output.materials.back().diffuseColor = parseVec3();
-			} else if (readCommand("Ks")) {
-				output.materials.back().specularColor = parseVec3();
-			} else if (readCommand("Ke")) {
-				output.materials.back().emissiveColor = parseVec3();
-			} else if (readCommand("Ns")) {
-				output.materials.back().specularExponent = parseFloat();
-			} else if (readCommand("d")) {
-				output.materials.back().dissolveFactor = parseFloat();
-			} else if (readCommand("Tr")) {
-				output.materials.back().dissolveFactor = 1.0f - parseFloat();
-			} else if (readCommand("illum")) {
-				output.materials.back().illuminationModel = parseIlluminationModel();
-			}
-			skipLine();
-		} while (it != end);
-	}
-
-private:
 	std::string_view::iterator it;
 	std::string_view::iterator end;
+	std::size_t lineNumber;
 };
 
 } // namespace
 
 Scene Scene::parse(std::string_view objString) {
 	Scene result{};
-	Parser{objString}.parseScene(result);
+	Parser{objString, 1}.parseScene(result);
 	return result;
 }
 
@@ -294,7 +298,7 @@ namespace mtl {
 
 Library Library::parse(std::string_view mtlString) {
 	Library result{};
-	Parser{mtlString}.parseMtlLibrary(result);
+	Parser{mtlString, 1}.parseMtlLibrary(result);
 	return result;
 }
 

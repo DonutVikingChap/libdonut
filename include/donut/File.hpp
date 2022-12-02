@@ -5,9 +5,9 @@
 
 #include <cstddef>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <stdexcept>
 
 namespace donut {
 
@@ -21,7 +21,7 @@ public:
 			: std::runtime_error(message) {}
 	};
 
-	static constexpr std::size_t NPOS = static_cast<std::size_t>(-1);
+	static constexpr std::size_t NPOS = -1;
 
 	static void createDirectory(const char* filepath);
 
