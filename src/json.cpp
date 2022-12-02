@@ -25,14 +25,7 @@ template <typename It>
 Lexer<It>::Lexer(unicode::UTF8Iterator<It> it, unicode::UTF8Sentinel end, const SourceLocation& source)
 	: it(std::move(it))
 	, end(end)
-	, source(source) {
-	if (this->it == this->end) {
-		currentCodePoint = std::nullopt;
-	} else {
-		currentCodePoint = *this->it;
-		++this->it;
-	}
-}
+	, source(source) {}
 
 template <typename It>
 Token<It> Lexer<It>::scan() {
@@ -129,27 +122,31 @@ void Lexer<It>::skipLineTerminatorSequence() {
 
 template <typename It>
 void Lexer<It>::advance() {
-	if (it != end) {
-		currentCodePoint = *it;
+	if (!currentCodePoint) {
 		++it;
-	} else {
-		currentCodePoint = std::nullopt;
 	}
+	currentCodePoint.reset();
 	++source.columnNumber;
 }
 
 template <typename It>
 bool Lexer<It>::hasReachedEnd() const noexcept {
-	return !currentCodePoint;
+	return it == end && !currentCodePoint;
 }
 
 template <typename It>
 char32_t Lexer<It>::peek() const {
+	if (!currentCodePoint) {
+		currentCodePoint = *it++;
+	}
 	return *currentCodePoint;
 }
 
 template <typename It>
 std::optional<char32_t> Lexer<It>::lookahead() const {
+	if (!currentCodePoint) {
+		currentCodePoint = *it++;
+	}
 	if (it != end) {
 		return *it;
 	}
@@ -158,7 +155,7 @@ std::optional<char32_t> Lexer<It>::lookahead() const {
 
 template <typename It>
 Token<It> Lexer<It>::scanPunctuator() {
-	String string{static_cast<char>(*it)};
+	String string{static_cast<char>(peek())};
 	TokenType type{};
 	switch (peek()) {
 		case ',': type = TokenType::PUNCTUATOR_COMMA; break;
@@ -408,7 +405,7 @@ void Lexer<It>::scanNumericEscapeSequence(String& output, std::size_t minDigitCo
 	const char* const digitsEnd = digitsBegin + digits.size();
 	std::uint32_t codePointValue = 0;
 	if (const std::from_chars_result parseResult = std::from_chars(digitsBegin, digitsEnd, codePointValue, radix);
-		parseResult.ec != std::errc{} || parseResult.ptr != digitsEnd || !unicode::isValidCodePoint(codePointValue)) {
+		parseResult.ec != std::errc{} || parseResult.ptr != digitsEnd || !unicode::isValidCodePoint(static_cast<char32_t>(codePointValue))) {
 		throw Error{"Invalid code point value.", escapeSequenceSource};
 	}
 	const unicode::UTF8FromCodePointResult codePointUTF8 = unicode::getUTF8FromCodePoint(static_cast<char32_t>(codePointValue));
@@ -416,12 +413,11 @@ void Lexer<It>::scanNumericEscapeSequence(String& output, std::size_t minDigitCo
 }
 
 template class Lexer<const char8_t*>;
-template class Lexer<std::istream_iterator<char>>;
+template class Lexer<std::istreambuf_iterator<char>>;
 
 template <typename It>
 Parser<It>::Parser(Lexer<It> lexer)
-	: lexer(std::move(lexer))
-	, currentToken(this->lexer.scan()) {}
+	: lexer(std::move(lexer)) {}
 
 template <typename It>
 Value Parser<It>::parseFile() {
@@ -523,18 +519,27 @@ std::pair<Value, SourceLocation> Parser<It>::parseValue() {
 
 template <typename It>
 void Parser<It>::advance() {
-	currentToken = lexer.scan();
+	if (!currentToken) {
+		lexer.scan();
+	}
+	currentToken.reset();
 }
 
 template <typename It>
 const Token<It>& Parser<It>::peek() const noexcept {
-	return currentToken;
+	if (!currentToken) {
+		currentToken = lexer.scan();
+	}
+	return *currentToken;
 }
 
 template <typename It>
 Token<It> Parser<It>::eat() {
-	Token<It> result = std::move(currentToken);
-	currentToken = lexer.scan();
+	if (!currentToken) {
+		currentToken = lexer.scan();
+	}
+	Token<It> result = std::move(*currentToken);
+	currentToken.reset();
 	return result;
 }
 
@@ -657,7 +662,7 @@ Array Parser<It>::parseArrayContents() {
 }
 
 template class Parser<const char8_t*>;
-template class Parser<std::istream_iterator<char>>;
+template class Parser<std::istreambuf_iterator<char>>;
 
 } // namespace detail
 

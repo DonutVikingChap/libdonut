@@ -143,7 +143,7 @@ private:
 			const char* const codePointEnd = std::to_address(it);
 			std::uint32_t codePointValue = 0;
 			if (const std::from_chars_result parseResult = std::from_chars(codePointBegin, codePointEnd, codePointValue, radix);
-				parseResult.ec != std::errc{} || parseResult.ptr != codePointEnd || !unicode::isValidCodePoint(codePointValue)) {
+				parseResult.ec != std::errc{} || parseResult.ptr != codePointEnd || !unicode::isValidCodePoint(static_cast<char32_t>(codePointValue))) {
 				throw Error{"Invalid code point.", codePointStringBegin, lineNumber};
 			}
 			const unicode::UTF8FromCodePointResult codePointUTF8 = unicode::getUTF8FromCodePoint(static_cast<char32_t>(codePointValue));

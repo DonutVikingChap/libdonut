@@ -395,7 +395,7 @@ public:
 
 	Lexer(unicode::UTF8Iterator<It> it, unicode::UTF8Sentinel end, const SourceLocation& source);
 
-	[[nodiscard]] Token<It> scan();
+	Token<It> scan();
 
 private:
 	void skipWhitespace();
@@ -416,10 +416,10 @@ private:
 
 	void scanNumericEscapeSequence(String& output, std::size_t minDigitCount, std::size_t maxDigitCount, int radix, bool (*isDigit)(char32_t) noexcept);
 
-	unicode::UTF8Iterator<It> it;
+	mutable unicode::UTF8Iterator<It> it;
 	unicode::UTF8Sentinel end;
 	SourceLocation source;
-	std::optional<char32_t> currentCodePoint;
+	mutable std::optional<char32_t> currentCodePoint{};
 };
 
 template <typename It>
@@ -449,8 +449,8 @@ private:
 	[[nodiscard]] Object parseObjectContents();
 	[[nodiscard]] Array parseArrayContents();
 
-	Lexer<It> lexer;
-	Token<It> currentToken;
+	mutable Lexer<It> lexer;
+	mutable std::optional<Token<It>> currentToken{};
 };
 
 template <typename T>
@@ -748,10 +748,9 @@ private:
 struct DeserializationState {
 private:
 	using TokenType = detail::TokenType;
-	using Token = detail::Token<std::istream_iterator<char>>;
+	using Token = detail::Token<std::istreambuf_iterator<char>>;
 
-	std::istream stream;
-	detail::Parser<std::istream_iterator<char>> parser;
+	detail::Parser<std::istreambuf_iterator<char>> parser;
 
 public:
 	DeserializationOptions options;
@@ -957,8 +956,7 @@ private:
 	friend void deserialize(std::istream& stream, T& value, const DeserializationOptions& options);
 
 	DeserializationState(std::istream& stream, const DeserializationOptions& options)
-		: stream(stream.rdbuf())
-		, parser({{{this->stream >> std::noskipws}, {}}, {}, {.lineNumber = 1, .columnNumber = 1}})
+		: parser({{{stream}, {}}, {}, {.lineNumber = 1, .columnNumber = 1}})
 		, options(options) {}
 };
 
@@ -972,7 +970,6 @@ template <typename T>
 inline void deserialize(std::istream& stream, T& value, const DeserializationOptions& options) {
 	DeserializationState state{stream, options};
 	state.deserialize(value);
-	stream.setstate(state.stream.rdstate() & ~std::istream::failbit);
 }
 
 namespace detail {

@@ -26,11 +26,14 @@ namespace {
 }
 
 [[nodiscard]] json::Value parseJSONValueFromInputStream(std::string jsonString) {
+	jsonString.append("Can't-touch-this");
 	std::istringstream stream{std::move(jsonString)};
 	stream.exceptions(std::istringstream::failbit | std::istringstream::badbit);
 	try {
 		json::Value result{};
-		stream >> result;
+		std::string subsequentString{};
+		stream >> result >> subsequentString;
+		CHECK(subsequentString == "Can't-touch-this");
 		return result;
 	} catch (const json::Error& e) {
 		throw std::runtime_error{fmt::format("Line {}, Column {}: {}", e.source.lineNumber, e.source.columnNumber, e.what())};
