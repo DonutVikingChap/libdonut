@@ -15,7 +15,7 @@ inline constexpr char32_t CODE_POINT_ERROR{0xFFFFFFFF};
 
 struct UTF8Sentinel {};
 
-template <typename It>
+template <typename It, typename Sentinel = It>
 class UTF8Iterator {
 public:
 	using difference_type = std::ptrdiff_t;
@@ -27,7 +27,7 @@ public:
 
 	constexpr UTF8Iterator() noexcept = default;
 
-	constexpr UTF8Iterator(It it, It end) noexcept
+	constexpr UTF8Iterator(It it, Sentinel end) noexcept
 		: it(it)
 		, next(it)
 		, end(end) {
@@ -137,7 +137,7 @@ private:
 
 	It it = nullptr;
 	It next = nullptr;
-	It end = nullptr;
+	Sentinel end = nullptr;
 	char32_t codePoint = 0;
 };
 
