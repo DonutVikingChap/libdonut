@@ -1,0 +1,6 @@
+newmtl carrot_cake
+illum 2
+map_Kd textures/carrot_cake_diffuse.jpg
+map_Ns textures/carrot_cake_specular.hdr
+map_bump textures/carrot_cake_normal.hdr
+Ns 92

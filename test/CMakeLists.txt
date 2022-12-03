@@ -16,7 +16,7 @@ target_link_libraries(donut-test-base INTERFACE
 	donut::donut
 	doctest::doctest
 	fmt)
-	
+
 add_executable(donut-test-json "test_json.cpp")
 target_link_libraries(donut-test-json PRIVATE donut-test-base)
 add_test(NAME donut-test-json COMMAND donut-test-json)

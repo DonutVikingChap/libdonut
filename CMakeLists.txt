@@ -5,6 +5,7 @@ project("libdonut"
 	LANGUAGES C CXX)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+option(DONUT_ENABLE_EXAMPLES "Enable building examples" OFF)
 option(DONUT_ENABLE_TESTING "Enable test suite" OFF)
 
 add_subdirectory(dependencies)
@@ -131,6 +132,10 @@ set_target_properties(donut PROPERTIES
 	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
 	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_INSTALL_BINDIR}")
+
+if(DONUT_ENABLE_EXAMPLES)
+	add_subdirectory(examples)
+endif()
 
 if(DONUT_ENABLE_TESTING)
 	enable_testing()

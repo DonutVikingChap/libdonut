@@ -1,0 +1,22 @@
+{
+    "key_return": "confirm",
+    "key_space": "confirm",
+    "key_escape": "cancel",
+    "key_w": "move_up",
+    "key_s": "move_down",
+    "key_a": "move_left",
+    "key_d": "move_right",
+    "key_arrow_up": "move_up",
+    "key_arrow_down": "move_down",
+    "key_arrow_left": "move_left",
+    "key_arrow_right": "move_right",
+    "key_lshift": "sprint",
+    "mouse_motion_up": "aim_up",
+    "mouse_motion_down": "aim_down",
+    "mouse_motion_left": "aim_left",
+    "mouse_motion_right": "aim_right",
+    "mouse_button_left": ["attack", "confirm"],
+    "mouse_button_right": "cancel",
+    "mouse_scroll_up": "scroll_up",
+    "mouse_scroll_down": "scroll_down"
+}
