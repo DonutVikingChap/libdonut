@@ -683,16 +683,16 @@ public:
 
 	template <typename T>
 	void writeAggregate(const T& value) {
-		if constexpr (aggregate_size_v<T> == 0) {
+		if constexpr (reflection::aggregate_size_v<T> == 0) {
 			write("[]");
-		} else if constexpr (aggregate_size_v<T> == 1) {
+		} else if constexpr (reflection::aggregate_size_v<T> == 1) {
 			const auto& [v] = value;
 			serialize(v);
 		} else if (options.prettyPrint) {
 			if (detail::getRecursiveSize(value) <= 4) {
 				write("[");
 				bool successor = false;
-				tupleForEach(fields(value), [&](const auto& v) {
+				reflection::forEach(reflection::fields(value), [&](const auto& v) {
 					if (successor) {
 						write(", ");
 					}
@@ -704,7 +704,7 @@ public:
 				write("[\n");
 				options.indentation += options.relativeIndentation;
 				bool successor = false;
-				tupleForEach(fields(value), [&](const auto& v) {
+				reflection::forEach(reflection::fields(value), [&](const auto& v) {
 					if (successor) {
 						write(",\n");
 					}
@@ -720,7 +720,7 @@ public:
 		} else {
 			write("[");
 			bool successor = false;
-			tupleForEach(fields(value), [&](const auto& v) {
+			reflection::forEach(reflection::fields(value), [&](const auto& v) {
 				if (successor) {
 					write(",");
 				}
@@ -918,7 +918,7 @@ public:
 	template <typename T>
 	SourceLocation readAggregate(T& value) {
 		const SourceLocation source = parser.peek().source;
-		if constexpr (aggregate_size_v<T> == 1) {
+		if constexpr (reflection::aggregate_size_v<T> == 1) {
 			auto& [v] = value;
 			deserialize(v);
 		} else {
@@ -926,7 +926,7 @@ public:
 				throw Error{"Expected an array.", token.source};
 			}
 			bool successor = false;
-			tupleForEach(fields(value), [&](auto& v) -> void {
+			reflection::forEach(reflection::fields(value), [&](auto& v) -> void {
 				if (successor) {
 					if (const Token token = parser.eat(); token.type != TokenType::PUNCTUATOR_COMMA) {
 						throw Error{"Expected a comma.", token.source};
@@ -1082,7 +1082,7 @@ inline std::size_t getRecursiveSize(const T& value) {
 			}
 		}
 		std::size_t result = 1;
-		tupleForEach(fields(value), [&](const auto& v) -> void { result += getRecursiveSize(v); });
+		reflection::forEach(reflection::fields(value), [&](const auto& v) -> void { result += getRecursiveSize(v); });
 		return result;
 	} else {
 		return 1;

@@ -151,7 +151,7 @@ public:
 		const detail::MeshStatePreserver preserver{};
 		detail::bindVertexArray(vao.get());
 		bufferVertexData(verticesUsage, vertices, 0);
-		bufferInstanceData(instancesUsage, instances, static_cast<std::uint32_t>(aggregate_size_v<Vertex>));
+		bufferInstanceData(instancesUsage, instances, static_cast<std::uint32_t>(reflection::aggregate_size_v<Vertex>));
 	}
 
 	Mesh(MeshBufferUsage verticesUsage, MeshBufferUsage indicesUsage, MeshBufferUsage instancesUsage, std::span<const Vertex> vertices, std::span<const Index> indices,
@@ -160,7 +160,7 @@ public:
 		detail::bindVertexArray(vao.get());
 		bufferVertexData(verticesUsage, vertices, 0);
 		bufferIndexData(indicesUsage, indices);
-		bufferInstanceData(instancesUsage, instances, static_cast<std::uint32_t>(aggregate_size_v<Vertex>));
+		bufferInstanceData(instancesUsage, instances, static_cast<std::uint32_t>(reflection::aggregate_size_v<Vertex>));
 	}
 
 	void setVertices(MeshBufferUsage verticesUsage, std::span<const Vertex> vertices) noexcept requires(!IS_INDEXED) {
@@ -202,7 +202,7 @@ private:
 		detail::bindArrayBuffer(vbo.get());
 		detail::bufferArrayBufferData(sizeof(Vertex) * vertices.size(), vertices.data(), usage);
 		Vertex dummyVertex{};
-		tupleForEach(fields(dummyVertex), [&dummyVertex, &attributeOffset]<typename T>(T& dummyField) {
+		reflection::forEach(reflection::fields(dummyVertex), [&dummyVertex, &attributeOffset]<typename T>(T& dummyField) {
 			const std::byte* const basePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyVertex));
 			const std::byte* const attributePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyField));
 			const std::uintptr_t offset = static_cast<std::uintptr_t>(attributePtr - basePtr);
@@ -221,7 +221,7 @@ private:
 		detail::bindArrayBuffer(ibo.get());
 		detail::bufferArrayBufferData(sizeof(Instance) * instances.size(), instances.data(), usage);
 		Instance dummyInstance{};
-		tupleForEach(fields(dummyInstance), [&dummyInstance, &attributeOffset]<typename T>(T& dummyField) {
+		reflection::forEach(reflection::fields(dummyInstance), [&dummyInstance, &attributeOffset]<typename T>(T& dummyField) {
 			const std::byte* const basePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyInstance));
 			const std::byte* const attributePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyField));
 			const std::uintptr_t offset = static_cast<std::uintptr_t>(attributePtr - basePtr);
