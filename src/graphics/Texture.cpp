@@ -303,7 +303,7 @@ void Texture::pasteImage2DArray(const ImageHDRView& image, std::size_t x, std::s
 	pasteImage2DArray(image.getWidth(), image.getHeight(), 1, getPixelFormat(image.getChannelCount()), TextureComponentType::F32, image.getPixels(), x, y, z);
 }
 
-void Texture::fill2D(Renderer& renderer, glm::vec4 color) {
+void Texture::fill2D(Renderer& renderer, Color color) {
 	Framebuffer framebuffer{};
 	framebuffer.attachTexture2D(*this);
 
@@ -315,7 +315,7 @@ void Texture::fill2D(Renderer& renderer, glm::vec4 color) {
 	framebuffer.detachTexture2D();
 }
 
-void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<glm::vec4> backgroundColor) {
+void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<Color> backgroundColor) {
 	assert(newWidth >= width);
 	assert(newHeight >= height);
 

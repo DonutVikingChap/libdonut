@@ -44,6 +44,7 @@ add_library(donut
 	"include/donut/graphics/VertexArray.hpp"
 
 	"include/donut/base64.hpp"
+	"include/donut/Color.hpp"
 	"include/donut/File.hpp"
 	"include/donut/InputFileStream.hpp"
 	"include/donut/json.hpp"

@@ -143,7 +143,8 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 
 	// Clear framebuffer color.
 	if (renderPass.backgroundColor) {
-		glClearColor(renderPass.backgroundColor->x, renderPass.backgroundColor->y, renderPass.backgroundColor->z, renderPass.backgroundColor->w);
+		const glm::vec4 backgroundColor = *renderPass.backgroundColor;
+		glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
 		glClear(GL_COLOR_BUFFER_BIT);
 	}
 

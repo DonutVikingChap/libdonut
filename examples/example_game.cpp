@@ -1,3 +1,4 @@
+#include <donut/Color.hpp>
 #include <donut/File.hpp>
 #include <donut/InputFileStream.hpp>
 #include <donut/application/Application.hpp>
@@ -40,6 +41,7 @@ namespace app = donut::application;
 namespace audio = donut::audio;
 namespace gfx = donut::graphics;
 namespace json = donut::json;
+using Color = donut::Color;
 using File = donut::File;
 using InputFileStream = donut::InputFileStream;
 
@@ -145,7 +147,6 @@ private:
 			movementInput /= glm::sqrt(movementInputLengthSquared);
 		}
 		const float carrotCakeSpeed = 2.0f * sprintInput;
-		;
 		carrotCakePosition.x += movementInput.x * carrotCakeSpeed * frameInfo.deltaTime;
 		carrotCakePosition.y += movementInput.y * carrotCakeSpeed * frameInfo.deltaTime;
 
@@ -172,7 +173,7 @@ private:
 
 	void display(const app::FrameInfo& frameInfo) override {
 		renderPass.reset();
-		renderPass.setBackgroundColor(glm::vec4{0.1f, 0.0f, 0.1f, 1.0f});
+		renderPass.setBackgroundColor(Color::PURPLE * 0.25f);
 		drawBackground(frameInfo);
 		renderer.render(gfx::Framebuffer::getDefault(), renderPass, worldViewport, worldProjectionViewMatrix);
 
@@ -211,10 +212,7 @@ private:
 			if (!bindingsValue.is<json::Object>()) {
 				throw std::runtime_error{"Invalid bindings type."};
 			}
-
-			const json::Object& bindings = bindingsValue.as<json::Object>();
-
-			for (const auto& [inputIdentifier, actions] : bindings) {
+			for (const auto& [inputIdentifier, actions] : bindingsValue.as<json::Object>()) {
 				const std::optional<app::Input> input = app::findInput(inputIdentifier);
 				if (!input) {
 					throw std::runtime_error{fmt::format("Invalid input identifier \"{}\".", inputIdentifier)};
@@ -330,9 +328,10 @@ private:
 				"HWILA PÅ MJUKA TUVOR QXZ\n"
 				"0123456789\n"
 				"\n"
-				"+!\"#%&/()=?`@${[]}\\\n~\'<>|,.-;:_"),
+				"+!\"#%&/()=?`@${[]}\\\n"
+				"~\'<>|,.-;:_"),
 			.position{410.0f, 64.0f},
-			.color{0.2f, 0.8f, 0.0f, 1.0f},
+			.color = Color::LIME,
 		});
 
 		renderPass.draw(gfx::Text{
@@ -345,31 +344,17 @@ private:
 					carrotCakePosition.z,
 					carrotCakeScale.x,
 					carrotCakeScale.y)),
-			.position{410.0f, 210.0f},
+			.position{410.0f, 170.0f},
 		});
 	}
 
 	void drawFpsCounter() {
 		const unsigned fps = getLatestMeasuredFps();
-		glm::vec4 fpsColor;
-		if (fps < 60) {
-			fpsColor = {1.0f, 0.0f, 0.0f, 1.0f};
-		} else if (fps < 120) {
-			fpsColor = {1.0f, 1.0f, 0.0f, 1.0f};
-		} else if (fps < 240) {
-			fpsColor = {0.5f, 0.5f, 0.5f, 1.0f};
-		} else if (fps < 1000) {
-			fpsColor = {0.5f, 0.5f, 0.5f, 1.0f};
-		} else {
-			fpsColor = {0.0f, 1.0f, 0.0f, 1.0f};
-		}
+		const gfx::Font::ShapedText fpsText = mainFont->shapeText(renderer, 16, fmt::format("FPS: {}", fps));
 		const glm::vec2 fpsPosition{static_cast<float>(worldViewport.position.x) + 2.0f, static_cast<float>(worldViewport.position.y) + 20.0f};
-		renderPass.draw(gfx::Text{
-			.font = mainFont,
-			.text = mainFont->shapeText(renderer, 16, fmt::format("FPS: {}", fps)),
-			.position = fpsPosition,
-			.color = fpsColor,
-		});
+		const Color fpsColor = (fps < 60) ? Color::RED : (fps < 120) ? Color::YELLOW : (fps < 240) ? Color::GRAY : Color::LIME;
+		renderPass.draw(gfx::Text{.font = mainFont, .text = fpsText, .position = fpsPosition + glm::vec2{1.0f, 1.0f}, .color = Color::BLACK});
+		renderPass.draw(gfx::Text{.font = mainFont, .text = fpsText, .position = fpsPosition, .color = fpsColor});
 	}
 
 	gfx::Renderer renderer{};

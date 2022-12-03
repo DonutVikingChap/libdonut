@@ -1,6 +1,7 @@
 #ifndef DONUT_GRAPHICS_TEXTURE_HPP
 #define DONUT_GRAPHICS_TEXTURE_HPP
 
+#include <donut/Color.hpp>
 #include <donut/Resource.hpp>
 #include <donut/graphics/Handle.hpp>
 
@@ -96,9 +97,9 @@ public:
 	void pasteImage2DArray(const ImageLDRView& image, std::size_t x, std::size_t y, std::size_t z);
 	void pasteImage2DArray(const ImageHDRView& image, std::size_t x, std::size_t y, std::size_t z);
 
-	void fill2D(Renderer& renderer, glm::vec4 color);
+	void fill2D(Renderer& renderer, Color color);
 
-	void grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<glm::vec4> backgroundColor = std::nullopt);
+	void grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<Color> backgroundColor = std::nullopt);
 
 	[[nodiscard]] Texture copy2D(Renderer& renderer) const;
 

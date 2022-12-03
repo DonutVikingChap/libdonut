@@ -1,6 +1,7 @@
 #ifndef DONUT_GRAPHICS_RENDER_PASS_HPP
 #define DONUT_GRAPHICS_RENDER_PASS_HPP
 
+#include <donut/Color.hpp>
 #include <donut/graphics/Font.hpp>
 #include <donut/graphics/Scene.hpp>
 #include <donut/graphics/Shader2D.hpp>
@@ -25,7 +26,7 @@ struct Model {
 	std::shared_ptr<Shader3D> shader{};
 	std::shared_ptr<Scene> scene;
 	glm::mat4 transformation = glm::identity<glm::mat4>();
-	glm::vec4 tintColor{1.0f, 1.0f, 1.0f, 1.0f};
+	Color tintColor = Color::WHITE;
 };
 
 struct TransientTexture {
@@ -36,7 +37,7 @@ struct TransientTexture {
 	glm::vec2 origin{0.0f, 0.0f};
 	glm::vec2 textureOffset{0.0f, 0.0f};
 	glm::vec2 textureScale{1.0f, 1.0f};
-	glm::vec4 tintColor{1.0f, 1.0f, 1.0f, 1.0f};
+	Color tintColor = Color::WHITE;
 };
 
 struct Rectangle {
@@ -47,7 +48,7 @@ struct Rectangle {
 	glm::vec2 origin{0.0f, 0.0f};
 	glm::vec2 textureOffset{0.0f, 0.0f};
 	glm::vec2 textureScale{1.0f, 1.0f};
-	glm::vec4 tintColor{1.0f, 1.0f, 1.0f, 1.0f};
+	Color tintColor = Color::WHITE;
 };
 
 struct ImageSizedRectangle {
@@ -58,7 +59,7 @@ struct ImageSizedRectangle {
 	glm::vec2 origin{0.0f, 0.0f};
 	glm::vec2 textureOffset{0.0f, 0.0f};
 	glm::vec2 textureScale{1.0f, 1.0f};
-	glm::vec4 tintColor{1.0f, 1.0f, 1.0f, 1.0f};
+	Color tintColor = Color::WHITE;
 };
 
 struct Quad {
@@ -67,7 +68,7 @@ struct Quad {
 	glm::mat4 transformation = glm::identity<glm::mat4>();
 	glm::vec2 textureOffset{0.0f, 0.0f};
 	glm::vec2 textureScale{1.0f, 1.0f};
-	glm::vec4 tintColor{1.0f, 1.0f, 1.0f, 1.0f};
+	Color tintColor = Color::WHITE;
 };
 
 struct Sprite {
@@ -77,19 +78,19 @@ struct Sprite {
 	glm::vec2 scale{1.0f, 1.0f};
 	float angle = 0.0f;
 	glm::vec2 origin{0.0f, 0.0f};
-	glm::vec4 tintColor{1.0f, 1.0f, 1.0f, 1.0f};
+	Color tintColor = Color::WHITE;
 };
 
 struct Text {
 	std::shared_ptr<Font> font;
 	Font::ShapedText text;
 	glm::vec2 position;
-	glm::vec4 color{1.0f, 1.0f, 1.0f, 1.0f};
+	Color color = Color::WHITE;
 };
 
 class RenderPass {
 public:
-	void setBackgroundColor(std::optional<glm::vec4> color) {
+	void setBackgroundColor(std::optional<Color> color) {
 		backgroundColor = color;
 	}
 
@@ -193,7 +194,7 @@ private:
 		}
 	};
 
-	std::optional<glm::vec4> backgroundColor{};
+	std::optional<Color> backgroundColor{};
 	std::vector<ModelInstances> modelInstancesSortedByShaderAndScene{};
 	std::vector<TransientTextureInstance> transientTextureInstances{};
 	std::vector<QuadInstances> quadInstancesSortedByShaderAndTexture{};
