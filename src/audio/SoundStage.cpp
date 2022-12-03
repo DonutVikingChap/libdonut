@@ -45,14 +45,51 @@ SoundStage::SoundInstanceId SoundStage::playSoundInBackground(const Sound& sound
 	return id;
 }
 
-bool SoundStage::isSoundPlaying(SoundInstanceId id) const noexcept {
+SoundStage::SoundInstanceId SoundStage::createPausedSoundInBackground(const Sound& sound, float volume) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	return soloud.isValidVoiceHandle(id);
+	const SoLoud::handle id = soloud.playBackground(*static_cast<SoLoud::Wav*>(sound.get()), volume, true);
+	soloud.setProtectVoice(id, true);
+	return id;
+}
+
+bool SoundStage::isSoundPaused(SoundInstanceId id) const noexcept {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	return soloud.getPause(id);
+}
+
+bool SoundStage::isSoundStopped(SoundInstanceId id) const noexcept {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	return !soloud.isValidVoiceHandle(id);
 }
 
 void SoundStage::stopSound(SoundInstanceId id) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	soloud.stop(id);
+}
+
+void SoundStage::pauseSound(SoundInstanceId id) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.setPause(id, true);
+}
+
+void SoundStage::resumeSound(SoundInstanceId id) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.setPause(id, false);
+}
+
+void SoundStage::scheduleSoundStop(SoundInstanceId id, float timePointInSound) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.scheduleStop(id, timePointInSound);
+}
+
+void SoundStage::scheduleSoundPause(SoundInstanceId id, float timePointInSound) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.schedulePause(id, timePointInSound);
+}
+
+void SoundStage::seekToSoundTime(SoundInstanceId id, float timePointInSound) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.seek(id, timePointInSound);
 }
 
 void SoundStage::setVolume(float volume) {

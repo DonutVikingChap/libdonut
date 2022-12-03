@@ -27,9 +27,17 @@ public:
 	SoundInstanceId playSound(const Sound& sound, float volume = -1.0f, glm::vec3 position = {0.0f, 0.0f, 0.0f}, glm::vec3 velocity = {0.0f, 0.0f, 0.0f});
 	SoundInstanceId playSoundInBackground(const Sound& sound, float volume = -1.0f);
 
-	[[nodiscard]] bool isSoundPlaying(SoundInstanceId id) const noexcept;
+	SoundInstanceId createPausedSoundInBackground(const Sound& sound, float volume = -1.0f);
+
+	[[nodiscard]] bool isSoundPaused(SoundInstanceId id) const noexcept;
+	[[nodiscard]] bool isSoundStopped(SoundInstanceId id) const noexcept;
 
 	void stopSound(SoundInstanceId id);
+	void pauseSound(SoundInstanceId id);
+	void resumeSound(SoundInstanceId id);
+	void scheduleSoundStop(SoundInstanceId id, float timePointInSound);
+	void scheduleSoundPause(SoundInstanceId id, float timePointInSound);
+	void seekToSoundTime(SoundInstanceId id, float timePointInSound);
 
 	void setVolume(float volume);
 	void setMaxSimultaneousSounds(unsigned maxSimultaneousSounds);
