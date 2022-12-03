@@ -24,8 +24,8 @@ public:
 
 	void beginFrame(float deltaTime, glm::vec3 listenerPosition);
 
-	SoundInstanceId playSound(const Sound& sound, float volume = 1.0f, glm::vec3 position = {0.0f, 0.0f, 0.0f}, glm::vec3 velocity = {0.0f, 0.0f, 0.0f});
-	SoundInstanceId playSoundInBackground(const Sound& sound, float volume = 1.0f);
+	SoundInstanceId playSound(const Sound& sound, float volume = -1.0f, glm::vec3 position = {0.0f, 0.0f, 0.0f}, glm::vec3 velocity = {0.0f, 0.0f, 0.0f});
+	SoundInstanceId playSoundInBackground(const Sound& sound, float volume = -1.0f);
 
 	[[nodiscard]] bool isSoundPlaying(SoundInstanceId id) const noexcept;
 
