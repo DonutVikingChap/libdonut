@@ -229,8 +229,10 @@ private:
 					inputManager.addBinding(*input, it->second);
 				}
 			}
+		} catch (const json::Error& e) {
+			throw std::runtime_error{fmt::format("{}:{}:{}: {}", BINDINGS_CONFIGURATION_FILEPATH, e.source.lineNumber, e.source.columnNumber, e.what())};
 		} catch (const std::exception& e) {
-			throw std::runtime_error{fmt::format("Error in {}: {}", BINDINGS_CONFIGURATION_FILEPATH, e.what())};
+			throw std::runtime_error{fmt::format("{}: {}", BINDINGS_CONFIGURATION_FILEPATH, e.what())};
 		}
 	}
 
