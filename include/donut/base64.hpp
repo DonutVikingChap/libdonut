@@ -5,10 +5,12 @@
 #include <string_view>
 
 namespace donut {
+namespace base64 {
 
-std::string base64Encode(std::string_view data);
-std::string base64Decode(std::string_view data);
+std::string encode(std::string_view data);
+std::string decode(std::string_view data);
 
+} // namespace base64
 } // namespace donut
 
 #endif

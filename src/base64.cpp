@@ -6,11 +6,12 @@
 #include <stdexcept>
 
 namespace donut {
+namespace base64 {
 
 namespace {
 
 // clang-format off
-constexpr std::array<char, 64> BASE64_ENCODING_TABLE{ 
+constexpr std::array<char, 64> ENCODING_TABLE{ 
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
     'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
     'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
@@ -23,7 +24,7 @@ constexpr std::array<char, 64> BASE64_ENCODING_TABLE{
 // clang-format on
 
 // clang-format off
-constexpr std::array<unsigned char, 256> BASE64_DECODING_TABLE{
+constexpr std::array<unsigned char, 256> DECODING_TABLE{
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3E, 0x00, 0x00, 0x00, 0x3F,
@@ -45,7 +46,7 @@ constexpr std::array<unsigned char, 256> BASE64_DECODING_TABLE{
 
 } // namespace
 
-std::string base64Encode(std::string_view data) {
+std::string encode(std::string_view data) {
 	constexpr std::array<std::size_t, 3> PADDING_MOD_TABLE{0, 2, 1};
 
 	const std::size_t size = data.size();
@@ -59,10 +60,10 @@ std::string base64Encode(std::string_view data) {
 		const unsigned char octetB = i < size ? static_cast<unsigned char>(data[i++]) : 0;
 		const unsigned char octetC = i < size ? static_cast<unsigned char>(data[i++]) : 0;
 		const std::uint32_t triple = (static_cast<std::uint32_t>(octetA) << 16) | (static_cast<std::uint32_t>(octetB) << 8) | static_cast<std::uint32_t>(octetC);
-		result.push_back(BASE64_ENCODING_TABLE[(triple >> 3 * 6) & 0x3F]);
-		result.push_back(BASE64_ENCODING_TABLE[(triple >> 2 * 6) & 0x3F]);
-		result.push_back(BASE64_ENCODING_TABLE[(triple >> 1 * 6) & 0x3F]);
-		result.push_back(BASE64_ENCODING_TABLE[(triple >> 0 * 6) & 0x3F]);
+		result.push_back(ENCODING_TABLE[(triple >> 3 * 6) & 0x3F]);
+		result.push_back(ENCODING_TABLE[(triple >> 2 * 6) & 0x3F]);
+		result.push_back(ENCODING_TABLE[(triple >> 1 * 6) & 0x3F]);
+		result.push_back(ENCODING_TABLE[(triple >> 0 * 6) & 0x3F]);
 	}
 
 	const std::size_t padding = PADDING_MOD_TABLE[size % 3];
@@ -73,7 +74,7 @@ std::string base64Encode(std::string_view data) {
 	return result;
 }
 
-std::string base64Decode(std::string_view data) {
+std::string decode(std::string_view data) {
 	const std::size_t size = data.size();
 	if (size % 4 != 0) {
 		throw std::invalid_argument{"Invalid base64 data length."};
@@ -86,10 +87,10 @@ std::string base64Decode(std::string_view data) {
 	result.reserve(decodedSize);
 
 	for (std::size_t i = 0; i < size;) {
-		const unsigned char sextetA = BASE64_DECODING_TABLE[static_cast<unsigned char>(data[i++])];
-		const unsigned char sextetB = BASE64_DECODING_TABLE[static_cast<unsigned char>(data[i++])];
-		const unsigned char sextetC = BASE64_DECODING_TABLE[static_cast<unsigned char>(data[i++])];
-		const unsigned char sextetD = BASE64_DECODING_TABLE[static_cast<unsigned char>(data[i++])];
+		const unsigned char sextetA = DECODING_TABLE[static_cast<unsigned char>(data[i++])];
+		const unsigned char sextetB = DECODING_TABLE[static_cast<unsigned char>(data[i++])];
+		const unsigned char sextetC = DECODING_TABLE[static_cast<unsigned char>(data[i++])];
+		const unsigned char sextetD = DECODING_TABLE[static_cast<unsigned char>(data[i++])];
 		const std::uint32_t triple = (static_cast<std::uint32_t>(sextetA) << 3 * 6) + (static_cast<std::uint32_t>(sextetB) << 2 * 6) +
 			(static_cast<std::uint32_t>(sextetC) << 1 * 6) + (static_cast<std::uint32_t>(sextetD) << 0 * 6);
 		if (result.size() < decodedSize) {
@@ -106,4 +107,5 @@ std::string base64Decode(std::string_view data) {
 	return result;
 }
 
+} // namespace base64
 } // namespace donut
