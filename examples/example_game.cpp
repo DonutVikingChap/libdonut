@@ -65,6 +65,15 @@ struct GameOptions {
 
 class Game final : public app::Application {
 public:
+	Game(const char* programFilepath, const GameOptions& options)
+		: app::Application(programFilepath, options.applicationOptions)
+		, verticalFieldOfView(2.0f * glm::atan((3.0f / 4.0f) * glm::tan(glm::radians(options.fieldOfView) * 0.5f))) {
+		loadBindingsConfiguration();
+		initializeSoundStage();
+		playMainMenuMusic(options.mainMenuMusicFilepath);
+	}
+
+private:
 	enum class Action {
 		CONFIRM,
 		CANCEL,
@@ -82,16 +91,6 @@ public:
 		SCROLL_DOWN,
 	};
 
-	Game(const char* programFilepath, const GameOptions& options)
-		: app::Application(programFilepath, options.applicationOptions)
-		, mainFont(std::make_shared<gfx::Font>("fonts/unscii/unscii-8.ttf"))
-		, verticalFieldOfView(2.0f * glm::atan((3.0f / 4.0f) * glm::tan(glm::radians(options.fieldOfView) * 0.5f))) {
-		loadBindingsConfiguration();
-		initializeSoundStage();
-		playMainMenuMusic(options.mainMenuMusicFilepath);
-	}
-
-private:
 	void resize(glm::ivec2 newWindowSize) override {
 		screenViewport.size = newWindowSize;
 
@@ -369,7 +368,7 @@ private:
 	std::shared_ptr<gfx::Scene> carrotCakeModel = std::make_shared<gfx::Scene>("models/carrot_cake.obj");
 	std::shared_ptr<gfx::SpriteAtlas> spriteAtlas = std::make_shared<gfx::SpriteAtlas>();
 	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas->insert(renderer, gfx::ImageLDR{"textures/test.png"});
-	std::shared_ptr<gfx::Font> mainFont;
+	std::shared_ptr<gfx::Font> mainFont = std::make_shared<gfx::Font>("fonts/unscii/unscii-8.ttf");
 	app::InputManager inputManager{};
 	std::optional<audio::SoundStage> soundStage{};
 	std::optional<audio::Sound> music{};
