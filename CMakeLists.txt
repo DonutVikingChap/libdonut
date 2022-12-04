@@ -50,6 +50,7 @@ add_library(donut
 	"include/donut/json.hpp"
 	"include/donut/obj.hpp"
 	"include/donut/OutputFileStream.hpp"
+	"include/donut/random.hpp"
 	"include/donut/reflection.hpp"
 	"include/donut/Resource.hpp"
 	"include/donut/shapes.hpp"
