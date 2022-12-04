@@ -1,7 +1,7 @@
 #ifndef DONUT_RESOURCE_HPP
 #define DONUT_RESOURCE_HPP
 
-#include <utility>
+#include <utility> // std::exchange
 
 namespace donut {
 

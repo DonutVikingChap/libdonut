@@ -1,3 +1,4 @@
+#include <donut/Color.hpp>
 #include <donut/InputFileStream.hpp>
 #include <donut/graphics/Error.hpp>
 #include <donut/graphics/Font.hpp>
@@ -5,15 +6,15 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/unicode.hpp>
 
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
-#include <fmt/format.h>
-#include <glm/glm.hpp>
-#include <schrift.h>
-#include <string_view>
-#include <vector>
+#include <algorithm>    // std::min, std::max
+#include <cmath>        // std::floor, std::round
+#include <cstddef>      // std::size_t, std::byte
+#include <cstdint>      // std::uint32_t
+#include <fmt/format.h> // fmt::format
+#include <glm/glm.hpp>  // glm::...
+#include <schrift.h>    // SFT..., sft_...
+#include <string_view>  // std::string_view, std::u8string_view
+#include <vector>       // std::vector
 
 namespace donut {
 namespace graphics {
@@ -143,7 +144,7 @@ Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize
 void Font::prepareAtlasTexture(Renderer& renderer, bool resized) {
 	if (atlasTexture) {
 		if (resized) {
-			atlasTexture.grow2D(renderer, atlasPacker.getResolution(), atlasPacker.getResolution(), glm::vec4{0.0f, 0.0f, 0.0f, 0.0f});
+			atlasTexture.grow2D(renderer, atlasPacker.getResolution(), atlasPacker.getResolution(), Color::INVISIBLE);
 			const glm::vec2 textureSize = atlasTexture.getSize();
 			for (auto& [codePoint, glyph] : glyphs) {
 				glyph.textureOffset = glyph.position / textureSize;
@@ -157,7 +158,7 @@ void Font::prepareAtlasTexture(Renderer& renderer, bool resized) {
 			atlasPacker.getResolution(),
 			{.repeat = false, .useLinearFiltering = true, .useMipmap = false},
 		};
-		atlasTexture.fill2D(renderer, glm::vec4{0.0f, 0.0f, 0.0f, 0.0f});
+		atlasTexture.fill2D(renderer, Color::INVISIBLE);
 	}
 }
 

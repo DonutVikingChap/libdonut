@@ -1,13 +1,13 @@
 #ifndef DONUT_OBJ_HPP
 #define DONUT_OBJ_HPP
 
-#include <cstddef>
-#include <cstdint>
-#include <glm/glm.hpp>
-#include <stdexcept>
-#include <string>
-#include <string_view>
-#include <vector>
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint32_t
+#include <glm/glm.hpp> // glm::...
+#include <stdexcept>   // std::runtime_error
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <vector>      // std::vector
 
 namespace donut {
 namespace obj {

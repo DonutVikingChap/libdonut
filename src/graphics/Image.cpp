@@ -3,12 +3,11 @@
 #include <donut/graphics/Error.hpp>
 #include <donut/graphics/Image.hpp>
 
-#include <cstddef>
-#include <fmt/format.h>
-#include <physfs.h>
-#include <span>
-#include <stb_image.h>
-#include <stb_image_write.h>
+#include <cstddef>           // std::size_t, std::ptrdiff_t, std::byte
+#include <fmt/format.h>      // fmt::format
+#include <span>              // std::span, std::as_writable_bytes
+#include <stb_image.h>       // stbi_...
+#include <stb_image_write.h> // stbi_..., stbi_write_...
 
 namespace donut {
 namespace graphics {
@@ -37,7 +36,7 @@ void imageFileOutputCallback(void* context, void* data, int size) noexcept {
 
 } // namespace
 
-void Image::savePng(ImageView image, const char* filepath, const ImageSavePngOptions& options) {
+void Image::savePng(const ImageView& image, const char* filepath, const ImageSavePngOptions& options) {
 	OutputFileStream file = OutputFileStream::create(filepath);
 	stbi_flip_vertically_on_write(options.flipVertically ? 1 : 0);
 	stbi_write_png_compression_level = options.compressionLevel;
@@ -50,7 +49,7 @@ void Image::savePng(ImageView image, const char* filepath, const ImageSavePngOpt
 	}
 }
 
-void Image::saveBmp(ImageView image, const char* filepath, const ImageSaveBmpOptions& options) {
+void Image::saveBmp(const ImageView& image, const char* filepath, const ImageSaveBmpOptions& options) {
 	OutputFileStream file = OutputFileStream::create(filepath);
 	stbi_flip_vertically_on_write(options.flipVertically ? 1 : 0);
 	const int width = static_cast<int>(image.getWidth());
@@ -62,7 +61,7 @@ void Image::saveBmp(ImageView image, const char* filepath, const ImageSaveBmpOpt
 	}
 }
 
-void Image::saveTga(ImageView image, const char* filepath, const ImageSaveTgaOptions& options) {
+void Image::saveTga(const ImageView& image, const char* filepath, const ImageSaveTgaOptions& options) {
 	OutputFileStream file = OutputFileStream::create(filepath);
 	stbi_flip_vertically_on_write(options.flipVertically ? 1 : 0);
 	stbi_write_tga_with_rle = (options.useRleCompression) ? 1 : 0;
@@ -75,7 +74,7 @@ void Image::saveTga(ImageView image, const char* filepath, const ImageSaveTgaOpt
 	}
 }
 
-void Image::saveJpg(ImageView image, const char* filepath, const ImageSaveJpgOptions& options) {
+void Image::saveJpg(const ImageView& image, const char* filepath, const ImageSaveJpgOptions& options) {
 	OutputFileStream file = OutputFileStream::create(filepath);
 	stbi_flip_vertically_on_write(options.flipVertically ? 1 : 0);
 	const int width = static_cast<int>(image.getWidth());
@@ -87,7 +86,7 @@ void Image::saveJpg(ImageView image, const char* filepath, const ImageSaveJpgOpt
 	}
 }
 
-void Image::saveHdr(ImageView image, const char* filepath, const ImageSaveHdrOptions& options) {
+void Image::saveHdr(const ImageView& image, const char* filepath, const ImageSaveHdrOptions& options) {
 	OutputFileStream file = OutputFileStream::create(filepath);
 	stbi_flip_vertically_on_write(options.flipVertically ? 1 : 0);
 	const int width = static_cast<int>(image.getWidth());

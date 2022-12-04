@@ -16,26 +16,24 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/json.hpp>
 
-#include <algorithm>
-#include <charconv>
-#include <concepts>
-#include <cstddef>
-#include <cstdio>
-#include <cstdlib>
-#include <exception>
-#include <fmt/format.h>
-#include <glm/ext/matrix_clip_space.hpp>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtx/norm.hpp>
-#include <memory>
-#include <optional>
-#include <span>
-#include <stdexcept>
-#include <string>
-#include <string_view>
-#include <system_error>
-#include <unordered_map>
+#include <algorithm>                     // std::clamp
+#include <charconv>                      // std::from_chars_result, std::from_chars
+#include <concepts>                      // std::integral
+#include <cstdio>                        // stderr
+#include <exception>                     // std::exception
+#include <fmt/format.h>                  // fmt::format, fmt::print
+#include <glm/ext/matrix_clip_space.hpp> // glm::ortho, glm::perspective
+#include <glm/ext/matrix_transform.hpp>  // glm::identity, glm::translate, glm::rotate, glm::scale
+#include <glm/glm.hpp>                   // glm::...
+#include <glm/gtx/norm.hpp>              // glm::length2
+#include <memory>                        // std::shared_ptr, std::make_shared
+#include <optional>                      // std::optional
+#include <span>                          // std::span
+#include <stdexcept>                     // std::runtime_error
+#include <string>                        // std::string
+#include <string_view>                   // std::string_view
+#include <system_error>                  // std::errc
+#include <unordered_map>                 // std::unordered_map
 
 namespace app = donut::application;
 namespace audio = donut::audio;

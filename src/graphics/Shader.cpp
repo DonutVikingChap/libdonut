@@ -3,10 +3,10 @@
 #include <donut/graphics/Shader.hpp>
 #include <donut/graphics/opengl.hpp>
 
-#include <array>
-#include <exception>
-#include <string>
-#include <string_view>
+#include <array>       // std::array
+#include <cstddef>     // std::size_t
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace donut {
 namespace graphics {
@@ -27,8 +27,8 @@ ShaderStage::ShaderStage(ShaderStageType type, std::string_view sourceCode) {
 #else
 	constexpr std::string_view header{"#version 330 core\n"};
 #endif
-	const std::array sourceStrings{static_cast<const GLchar*>(header.data()), static_cast<const GLchar*>(sourceCode.data())};
-	const std::array sourceLengths{static_cast<GLint>(header.size()), static_cast<GLint>(sourceCode.size())};
+	const std::array<const GLchar*, 2> sourceStrings{static_cast<const GLchar*>(header.data()), static_cast<const GLchar*>(sourceCode.data())};
+	const std::array<GLint, 2> sourceLengths{static_cast<GLint>(header.size()), static_cast<GLint>(sourceCode.size())};
 	glShaderSource(shader.get(), sourceStrings.size(), sourceStrings.data(), sourceLengths.data());
 	glCompileShader(shader.get());
 

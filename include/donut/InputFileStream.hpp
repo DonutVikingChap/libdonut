@@ -3,10 +3,10 @@
 
 #include <donut/File.hpp>
 
-#include <cstddef>
-#include <span>
-#include <string>
-#include <vector>
+#include <cstddef> // std::size_t, std::ptrdiff_t, std::byte
+#include <span>    // std::span
+#include <string>  // std::string
+#include <vector>  // std::vector
 
 namespace donut {
 

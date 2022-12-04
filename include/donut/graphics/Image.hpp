@@ -3,8 +3,8 @@
 
 #include <donut/Resource.hpp>
 
-#include <cstddef>
-#include <utility>
+#include <cstddef> // std::size_t
+#include <utility> // std::move
 
 namespace donut {
 namespace graphics {
@@ -77,11 +77,11 @@ struct ImageSaveHdrOptions {
 
 class Image {
 public:
-	static void savePng(ImageView image, const char* filepath, const ImageSavePngOptions& options = {});
-	static void saveBmp(ImageView image, const char* filepath, const ImageSaveBmpOptions& options = {});
-	static void saveTga(ImageView image, const char* filepath, const ImageSaveTgaOptions& options = {});
-	static void saveJpg(ImageView image, const char* filepath, const ImageSaveJpgOptions& options = {});
-	static void saveHdr(ImageView image, const char* filepath, const ImageSaveHdrOptions& options = {});
+	static void savePng(const ImageView& image, const char* filepath, const ImageSavePngOptions& options = {});
+	static void saveBmp(const ImageView& image, const char* filepath, const ImageSaveBmpOptions& options = {});
+	static void saveTga(const ImageView& image, const char* filepath, const ImageSaveTgaOptions& options = {});
+	static void saveJpg(const ImageView& image, const char* filepath, const ImageSaveJpgOptions& options = {});
+	static void saveHdr(const ImageView& image, const char* filepath, const ImageSaveHdrOptions& options = {});
 
 	Image() noexcept = default;
 

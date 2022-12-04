@@ -1,7 +1,7 @@
 #ifndef DONUT_COLOR_HPP
 #define DONUT_COLOR_HPP
 
-#include <glm/glm.hpp>
+#include <glm/glm.hpp> // glm::...
 
 namespace donut {
 

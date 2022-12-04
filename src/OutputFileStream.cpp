@@ -1,9 +1,9 @@
 #include <donut/OutputFileStream.hpp>
 
-#include <cstddef>
-#include <fmt/format.h>
-#include <physfs.h>
-#include <span>
+#include <cstddef>      // std::size_t, std::byte
+#include <fmt/format.h> // fmt::format
+#include <physfs.h>     // PHYSFS_...
+#include <span>         // std::span
 
 namespace donut {
 

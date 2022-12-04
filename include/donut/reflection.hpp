@@ -1,11 +1,10 @@
 #ifndef DONUT_REFLECTION_HPP
 #define DONUT_REFLECTION_HPP
 
-#include <bits/utility.h>
-#include <cstddef>
-#include <tuple>
-#include <type_traits>
-#include <utility>
+#include <cstddef>     // std::size_t
+#include <tuple>       // std::tuple_size_v, std::make_tuple, std::tie, std::get(std::tuple)
+#include <type_traits> // std::is_aggregate_v, std::integral_constant, std::remove_cvref_t
+#include <utility>     // std::index_sequence, std::make_index_sequence
 
 namespace donut {
 namespace reflection {

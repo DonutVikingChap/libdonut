@@ -5,28 +5,27 @@
 #include <donut/reflection.hpp>
 #include <donut/unicode.hpp>
 
-#include <algorithm>
-#include <array>
-#include <compare>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <initializer_list>
-#include <ios>
-#include <istream>
-#include <iterator>
-#include <limits>
-#include <numeric>
-#include <ostream>
-#include <span>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <string_view>
-#include <tuple>
-#include <type_traits>
-#include <utility>
-#include <vector>
+#include <algorithm>        // std::sort, std::equal_range, std::lower_bound, std::upper_bound
+#include <array>            // std::array
+#include <compare>          // std::partial_ordering
+#include <cstddef>          // std::size_t, std::nullptr_t
+#include <cstdint>          // std::uint8_t
+#include <cstring>          // std::memcpy
+#include <initializer_list> // std::initializer_list
+#include <istream>          // std::istream
+#include <iterator>         // std::begin, std::end, std::istreambuf_iterator
+#include <numeric>          // std::accumulate
+#include <optional>         // std::optional
+#include <ostream>          // std::ostream
+#include <span>             // std::span, std::as_bytes
+#include <sstream>          // std::istringstream, std::ostringstream
+#include <stdexcept>        // std::runtime_error, std::out_of_range
+#include <string>           // std::...string
+#include <string_view>      // std::...string_view
+#include <tuple>            // std::forward_as_tuple
+#include <type_traits>      // std::is_same_v, std::is_arithmetic_v, std::is_pointer_v, std::is_aggregate_v, std::is_constructible_v, std::remove_cvref_t
+#include <utility>          // std::pair, std::move, std::forward, std::piecewise_construct
+#include <vector>           // std::vector, std::erase(std::vector), std::erase_if(std::vector)
 
 namespace donut {
 namespace json {
@@ -168,8 +167,8 @@ public:
 	[[nodiscard]] bool operator==(const Object& other) const noexcept;
 	[[nodiscard]] std::partial_ordering operator<=>(const Object& other) const noexcept;
 
-	template <typename Pred>
-	friend size_type erase_if(Object& c, Pred pred);
+	template <typename Predicate>
+	friend size_type erase_if(Object& container, Predicate predicate);
 
 private:
 	struct Compare {
@@ -247,10 +246,10 @@ public:
 	[[nodiscard]] std::partial_ordering operator<=>(const Array& other) const noexcept;
 
 	template <typename U>
-	friend size_type erase(Array& c, const U& value);
+	friend size_type erase(Array& container, const U& value);
 
-	template <typename Pred>
-	friend size_type erase_if(Array& c, Pred pred);
+	template <typename Predicate>
+	friend size_type erase_if(Array& container, Predicate predicate);
 
 	void clear() noexcept;
 	void reserve(size_type newCap);
@@ -1554,9 +1553,9 @@ inline std::partial_ordering Object::operator<=>(const Object& other) const noex
 	return membersSortedByName <=> other.membersSortedByName;
 }
 
-template <typename Pred>
-inline Object::size_type erase_if(Object& c, Pred pred) {
-	return std::erase_if(c.membersSortedByName, pred);
+template <typename Predicate>
+inline Object::size_type erase_if(Object& container, Predicate predicate) {
+	return std::erase_if(container.membersSortedByName, predicate);
 }
 
 inline bool Object::Compare::operator()(const value_type& a, const value_type& b) const noexcept {
@@ -1723,13 +1722,13 @@ inline std::partial_ordering Array::operator<=>(const Array& other) const noexce
 }
 
 template <typename U>
-inline Array::size_type erase(Array& c, const U& value) {
-	return std::erase(c.values, value);
+inline Array::size_type erase(Array& container, const U& value) {
+	return std::erase(container.values, value);
 }
 
-template <typename Pred>
-inline Array::size_type erase_if(Array& c, Pred pred) {
-	return std::erase_if(c.values, pred);
+template <typename Predicate>
+inline Array::size_type erase_if(Array& container, Predicate predicate) {
+	return std::erase_if(container.values, predicate);
 }
 
 inline void Array::clear() noexcept {

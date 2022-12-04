@@ -3,7 +3,7 @@
 
 #include <donut/Resource.hpp>
 
-#include <glm/glm.hpp>
+#include <glm/glm.hpp> // glm::...
 
 namespace donut {
 namespace audio {

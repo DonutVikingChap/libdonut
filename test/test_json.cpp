@@ -1,17 +1,17 @@
 #include <donut/json.hpp>
 
-#include <cmath>
-#include <fmt/format.h>
-#include <limits>
-#include <optional>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <string_view>
-#include <utility>
+#include <cmath>        // std::isinf, std::isnan, std::signbit
+#include <fmt/format.h> // fmt::format
+#include <limits>       // std::numeric_limits
+#include <optional>     // std::optional
+#include <sstream>      // std::istringstream, std::ostringstream
+#include <stdexcept>    // std::runtime_error
+#include <string>       // std::string
+#include <string_view>  // std::string_view, std::u8string_view
+#include <utility>      // std::move
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include <doctest/doctest.h>
+#include <doctest/doctest.h> // TEST_SUITE, TEST_CASE, SUBCASE, CHECK
 
 namespace json = donut::json;
 
@@ -592,7 +592,7 @@ TEST_SUITE("JSON") {
 		}
 
 		SUBCASE("Null optional aggregate") {
-			const std::optional<Aggregate> input = std::nullopt;
+			const std::optional<Aggregate> input{};
 			std::ostringstream stream{};
 			json::serialize(stream, input, {});
 			const std::string string = std::move(stream).str();
@@ -838,7 +838,7 @@ TEST_SUITE("JSON") {
 		}
 
 		SUBCASE("Null optional aggregate") {
-			const std::optional<Aggregate> valueA = std::nullopt;
+			const std::optional<Aggregate> valueA{};
 			std::ostringstream streamA{};
 			json::serialize(streamA, valueA, {.prettyPrint = true});
 			std::istringstream streamB{std::move(streamA).str()};
@@ -1088,7 +1088,7 @@ TEST_SUITE("JSON") {
 		}
 
 		SUBCASE("Null optional aggregate") {
-			const std::optional<Aggregate> valueA = std::nullopt;
+			const std::optional<Aggregate> valueA{};
 			std::ostringstream streamA{};
 			json::serialize(streamA, valueA, {.prettyPrint = false});
 			std::istringstream streamB{std::move(streamA).str()};

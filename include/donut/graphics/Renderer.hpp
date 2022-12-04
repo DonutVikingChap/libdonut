@@ -9,9 +9,10 @@
 #include <donut/graphics/TexturedQuad.hpp>
 #include <donut/graphics/Viewport.hpp>
 
-#include <array>
-#include <glm/glm.hpp>
-#include <string_view>
+#include <array>       // std::array
+#include <cstddef>     // std::byte
+#include <glm/glm.hpp> // glm::...
+#include <string_view> // std::string_view
 
 namespace donut {
 namespace graphics {

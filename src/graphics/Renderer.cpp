@@ -8,10 +8,12 @@
 #include <donut/graphics/Viewport.hpp>
 #include <donut/graphics/opengl.hpp>
 
-#include <cassert>
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <span>
+#include <cassert>              // assert
+#include <cstddef>              // std::size_t
+#include <glm/glm.hpp>          // glm::...
+#include <glm/gtc/type_ptr.hpp> // glm::value_ptr
+#include <span>                 // std::span
+#include <vector>               // std::vector
 
 namespace donut {
 namespace graphics {

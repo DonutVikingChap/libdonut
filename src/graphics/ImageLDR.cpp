@@ -1,8 +1,8 @@
 #include <donut/graphics/ImageLDR.hpp>
 
-#include <cstddef>
-#include <cstring>
-#include <stdlib.h> // NOLINT(modernize-deprecated-headers)
+#include <cstddef>  // std::size_t
+#include <cstring>  // std::memcpy
+#include <stdlib.h> // malloc // NOLINT(modernize-deprecated-headers)
 
 namespace donut {
 namespace graphics {

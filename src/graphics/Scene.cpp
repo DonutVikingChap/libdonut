@@ -7,19 +7,17 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/obj.hpp>
 
-#include <algorithm>
-#include <array>
-#include <cstddef>
-#include <exception>
-#include <fmt/format.h>
-#include <glm/fwd.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtx/norm.hpp>
-#include <numbers>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
+#include <algorithm>        // std::find_if
+#include <cstddef>          // std::size_t
+#include <exception>        // std::exception
+#include <fmt/format.h>     // fmt::format
+#include <glm/glm.hpp>      // glm::...
+#include <glm/gtx/norm.hpp> // glm::length2
+#include <numbers>          // std::numbers_pi_v
+#include <span>             // std::span
+#include <string>           // std::string
+#include <utility>          // std::move
+#include <vector>           // std::vector
 
 namespace donut {
 namespace graphics {

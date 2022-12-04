@@ -2,11 +2,12 @@
 #include <donut/audio/Error.hpp>
 #include <donut/audio/Sound.hpp>
 
-#include <fmt/format.h>
-#include <soloud.h>
-#include <soloud_file.h>
-#include <soloud_wav.h>
-#include <span>
+#include <cstddef>       // std::size_t
+#include <fmt/format.h>  // fmt::format
+#include <soloud.h>      // SoLoud::...
+#include <soloud_file.h> // SoLoud::File
+#include <soloud_wav.h>  // SoLoud::Wav
+#include <span>          // std::span, std::as_writable_bytes
 
 namespace donut {
 namespace audio {

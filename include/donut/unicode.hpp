@@ -1,14 +1,13 @@
 #ifndef DONUT_UNICODE_HPP
 #define DONUT_UNICODE_HPP
 
-#include <array>
-#include <cstddef>
-#include <iterator>
-#include <memory>
-#include <optional>
-#include <string_view>
-#include <type_traits>
-#include <utility>
+#include <array>       // std::array
+#include <cstddef>     // std::size_t, std::ptrdiff_t
+#include <iterator>    // std::iterator_traits, std::input_iterator_tag, std::forward_iterator_tag
+#include <optional>    // std::optional
+#include <string_view> // std::string_view, std::u8string_view
+#include <type_traits> // std::is_same_v
+#include <utility>     // std::pair
 
 namespace donut {
 namespace unicode {

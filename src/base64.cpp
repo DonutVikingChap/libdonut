@@ -1,9 +1,11 @@
 #include <donut/base64.hpp>
 
-#include <array>
-#include <cstddef>
-#include <cstdint>
-#include <stdexcept>
+#include <array>       // std::array
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint32_t
+#include <stdexcept>   // std::invalid_argument
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace donut {
 namespace base64 {

@@ -1,15 +1,13 @@
 #ifndef DONUT_RANDOM_HPP
 #define DONUT_RANDOM_HPP
 
-#include <algorithm>
-#include <array>
-#include <bit>
-#include <cstdint>
-#include <istream>
-#include <limits>
-#include <ostream>
-#include <random>
-#include <type_traits>
+#include <algorithm> // std::generate
+#include <array>     // std::array
+#include <bit>       // std::rotl
+#include <cstdint>   // std::uint64_t
+#include <istream>   // std::basic_istream
+#include <limits>    // std::numeric_limits
+#include <ostream>   // std::basic_ostream
 
 namespace donut {
 namespace random {

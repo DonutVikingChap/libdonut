@@ -1,12 +1,12 @@
 #include <donut/graphics/RenderPass.hpp>
 
-#include <algorithm>
-#include <cstddef>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_inverse.hpp>
-#include <utility>
-#include <vector>
+#include <algorithm>                    // std::lower_bound
+#include <cstddef>                      // std::size_t
+#include <glm/ext/matrix_transform.hpp> // glm::identity, glm::translate, glm::rotate, glm::scale
+#include <glm/glm.hpp>                  // glm::...
+#include <glm/gtc/matrix_inverse.hpp>   // glm::inverseTranspose
+#include <utility>                      // std::move
+#include <vector>                       // std::vector, std::erase_if(std::vector)
 
 namespace donut {
 namespace graphics {

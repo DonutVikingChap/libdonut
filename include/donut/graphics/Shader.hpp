@@ -4,12 +4,12 @@
 #include <donut/Resource.hpp>
 #include <donut/graphics/Handle.hpp>
 
-#include <array>
-#include <cstddef>
-#include <cstdint>
-#include <string>
-#include <string_view>
-#include <utility>
+#include <array>       // std::array
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::int32_t
+#include <string>      // std::string, std::to_string
+#include <string_view> // std::string_view
+#include <utility>     // std::index_sequence, std::make_index_sequence
 
 namespace donut {
 namespace graphics {

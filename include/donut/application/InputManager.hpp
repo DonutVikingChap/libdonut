@@ -5,14 +5,14 @@
 #include <donut/application/Event.hpp>
 #include <donut/application/Input.hpp>
 
-#include <array>
-#include <bitset>
-#include <cstddef>
-#include <glm/glm.hpp>
-#include <optional>
-#include <type_traits>
-#include <unordered_map>
-#include <vector>
+#include <array>         // std::array
+#include <bitset>        // std::bitset
+#include <cstddef>       // std::size_t
+#include <glm/glm.hpp>   // glm::...
+#include <optional>      // std::optional
+#include <type_traits>   // std::is_enum_v, std::underlying_type_t
+#include <unordered_map> // std::unordered_map
+#include <vector>        // std::vector
 
 namespace donut {
 namespace application {
@@ -199,12 +199,12 @@ private:
 	float controllerLeftTriggerDeadzone;
 	float controllerRightTriggerDeadzone;
 	float mouseCoordinateScale = 1.0f;
-	std::optional<glm::vec2> mousePosition = std::nullopt;
+	std::optional<glm::vec2> mousePosition{};
 	Controller controller{};
-	std::optional<glm::vec2> controllerLeftStickPosition = std::nullopt;
-	std::optional<glm::vec2> controllerRightStickPosition = std::nullopt;
-	std::optional<float> controllerLeftTriggerPosition = std::nullopt;
-	std::optional<float> controllerRightTriggerPosition = std::nullopt;
+	std::optional<glm::vec2> controllerLeftStickPosition{};
+	std::optional<glm::vec2> controllerRightStickPosition{};
+	std::optional<float> controllerLeftTriggerPosition{};
+	std::optional<float> controllerRightTriggerPosition{};
 	Outputs currentPersistentOutputs{};
 	Outputs previousPersistentOutputs{};
 	Outputs transientOutputs{};

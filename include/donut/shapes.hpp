@@ -1,7 +1,7 @@
 #ifndef DONUT_SHAPES_HPP
 #define DONUT_SHAPES_HPP
 
-#include <glm/glm.hpp>
+#include <glm/glm.hpp> // glm::...
 
 namespace donut {
 
@@ -11,7 +11,8 @@ struct Circle {
 	T radius;
 
 	[[nodiscard]] constexpr bool contains(const glm::vec<2, T>& point) const noexcept {
-		return square(center - point) < square(radius);
+		const glm::vec<2, T> difference = center - point;
+		return glm::dot(difference, difference) < radius * radius;
 	}
 };
 
@@ -42,7 +43,9 @@ struct Rectangle {
 
 template <typename T>
 [[nodiscard]] constexpr bool intersects(const Circle<T>& a, const Circle<T>& b) noexcept {
-	return square(a.center - b.center) < square(a.radius + b.radius);
+	const glm::vec<2, T> difference = a.center - b.center;
+	const T combinedRadius = a.radius + b.radius;
+	return glm::dot(difference, difference) < combinedRadius * combinedRadius;
 }
 
 template <glm::length_t L, typename T>

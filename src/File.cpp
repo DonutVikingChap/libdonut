@@ -1,7 +1,7 @@
 #include <donut/File.hpp>
 
-#include <fmt/format.h>
-#include <physfs.h>
+#include <fmt/format.h> // fmt::format
+#include <physfs.h>     // PHYSFS_...
 
 namespace donut {
 

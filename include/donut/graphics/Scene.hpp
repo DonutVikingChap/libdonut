@@ -4,10 +4,10 @@
 #include <donut/graphics/Mesh.hpp>
 #include <donut/graphics/Texture.hpp>
 
-#include <cstddef>
-#include <cstdint>
-#include <glm/fwd.hpp>
-#include <vector>
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::int32_t, std::uint32_t
+#include <glm/glm.hpp> // glm::...
+#include <vector>      // std::vector
 
 namespace donut {
 namespace graphics {

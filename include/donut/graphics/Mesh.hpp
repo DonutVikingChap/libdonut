@@ -6,13 +6,13 @@
 #include <donut/graphics/VertexArray.hpp>
 #include <donut/reflection.hpp>
 
-#include <cstddef>
-#include <cstdint>
-#include <glm/glm.hpp>
-#include <memory>
-#include <span>
-#include <stdexcept>
-#include <type_traits>
+#include <cstddef>     // std::size_t, std::byte
+#include <cstdint>     // std::int32_t, std::uint32_t, std::uintptr_t
+#include <glm/glm.hpp> // glm::...
+#include <memory>      // std::addressof
+#include <span>        // std::span
+#include <stdexcept>   // std::invalid_argument
+#include <type_traits> // std::is_same_v, std::is_aggregate_v, std::is_standard_layout_v, std::conditional_t
 
 namespace donut {
 namespace graphics {
@@ -80,7 +80,7 @@ inline void enableVertexAttribute(std::uint32_t index) {
 }
 
 template <bool IsInstance, typename T>
-inline void setupVertexAttribute(std::uint32_t& index, std::size_t stride, std::uintptr_t offset) {
+[[nodiscard]] inline std::uint32_t setupVertexAttribute(std::uint32_t index, std::size_t stride, std::uintptr_t offset) {
 	if constexpr (std::is_same_v<T, std::uint32_t>) {
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerUint(index++, 1, stride, offset);
@@ -120,6 +120,7 @@ inline void setupVertexAttribute(std::uint32_t& index, std::size_t stride, std::
 	} else {
 		throw std::invalid_argument{"Invalid vertex attribute type!"};
 	}
+	return index;
 }
 
 } // namespace detail
@@ -206,7 +207,7 @@ private:
 			const std::byte* const basePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyVertex));
 			const std::byte* const attributePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyField));
 			const std::uintptr_t offset = static_cast<std::uintptr_t>(attributePtr - basePtr);
-			detail::setupVertexAttribute<false, T>(attributeOffset, sizeof(Vertex), offset);
+			attributeOffset = detail::setupVertexAttribute<false, T>(attributeOffset, sizeof(Vertex), offset);
 		});
 	}
 
@@ -225,7 +226,7 @@ private:
 			const std::byte* const basePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyInstance));
 			const std::byte* const attributePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyField));
 			const std::uintptr_t offset = static_cast<std::uintptr_t>(attributePtr - basePtr);
-			detail::setupVertexAttribute<true, T>(attributeOffset, sizeof(Instance), offset);
+			attributeOffset = detail::setupVertexAttribute<true, T>(attributeOffset, sizeof(Instance), offset);
 		});
 	}
 

@@ -1,7 +1,7 @@
 #ifndef DONUT_GRAPHICS_VIEWPORT_HPP
 #define DONUT_GRAPHICS_VIEWPORT_HPP
 
-#include <glm/glm.hpp>
+#include <glm/glm.hpp> // glm::...
 
 namespace donut {
 namespace graphics {

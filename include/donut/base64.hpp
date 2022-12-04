@@ -1,8 +1,8 @@
 #ifndef DONUT_BASE64_HPP
 #define DONUT_BASE64_HPP
 
-#include <string>
-#include <string_view>
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace donut {
 namespace base64 {

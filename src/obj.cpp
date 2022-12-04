@@ -1,6 +1,9 @@
 #include <donut/obj.hpp>
 
-#include <cstddef>
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::int64_t, std::uint8_t, std::uint32_t
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace donut {
 namespace obj {

@@ -1,11 +1,11 @@
 #include <donut/InputFileStream.hpp>
 
-#include <cstddef>
-#include <fmt/format.h>
-#include <physfs.h>
-#include <span>
-#include <string>
-#include <vector>
+#include <cstddef>      // std::size_t, std::ptrdiff_t, std::byte
+#include <fmt/format.h> // fmt::format
+#include <physfs.h>     // PHYSFS_...
+#include <span>         // std::span
+#include <string>       // std::string
+#include <vector>       // std::vector
 
 namespace donut {
 

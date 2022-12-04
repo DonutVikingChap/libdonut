@@ -1,10 +1,10 @@
 #ifndef DONUT_APPLICATION_INPUT_HPP
 #define DONUT_APPLICATION_INPUT_HPP
 
-#include <cstddef>
-#include <cstdint>
-#include <optional>
-#include <string_view>
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint8_t
+#include <optional>    // std::optional
+#include <string_view> // std::string_view
 
 namespace donut {
 namespace application {
@@ -202,7 +202,7 @@ static constexpr std::size_t INPUT_COUNT = [] {
 	}
 	DONUT_ENUM_INPUTS(X)
 #undef X
-	return std::nullopt;
+	return {};
 }
 
 #undef DONUT_ENUM_INPUTS

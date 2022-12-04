@@ -3,6 +3,8 @@
 
 #include <donut/graphics/Shader.hpp>
 
+#include <string_view> // std::string_view
+
 namespace donut {
 namespace graphics {
 

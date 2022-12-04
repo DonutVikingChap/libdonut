@@ -1,8 +1,8 @@
 #ifndef DONUT_APPLICATION_ERROR_HPP
 #define DONUT_APPLICATION_ERROR_HPP
 
-#include <stdexcept>
-#include <string>
+#include <stdexcept> // std::runtime_error
+#include <string>    // std::string
 
 namespace donut {
 namespace application {

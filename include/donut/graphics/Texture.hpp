@@ -5,10 +5,10 @@
 #include <donut/Resource.hpp>
 #include <donut/graphics/Handle.hpp>
 
-#include <cstddef>
-#include <cstdint>
-#include <glm/glm.hpp>
-#include <optional>
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::int32_t, std::uint32_t
+#include <glm/glm.hpp> // glm::...
+#include <optional>    // std::optional
 
 namespace donut {
 namespace graphics {
@@ -99,7 +99,7 @@ public:
 
 	void fill2D(Renderer& renderer, Color color);
 
-	void grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<Color> backgroundColor = std::nullopt);
+	void grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<Color> backgroundColor = {});
 
 	[[nodiscard]] Texture copy2D(Renderer& renderer) const;
 

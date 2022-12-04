@@ -3,7 +3,7 @@
 
 #include <donut/graphics/Image.hpp>
 
-#include <cstddef>
+#include <cstddef> // std::size_t, std::byte
 
 namespace donut {
 namespace graphics {

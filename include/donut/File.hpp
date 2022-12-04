@@ -3,11 +3,9 @@
 
 #include <donut/Resource.hpp>
 
-#include <cstddef>
-#include <span>
-#include <stdexcept>
-#include <string>
-#include <vector>
+#include <cstddef>   // std::size_t
+#include <stdexcept> // std::runtime_error
+#include <string>    // std::string
 
 namespace donut {
 

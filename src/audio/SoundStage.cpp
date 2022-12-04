@@ -2,9 +2,9 @@
 #include <donut/audio/Sound.hpp>
 #include <donut/audio/SoundStage.hpp>
 
-#include <glm/glm.hpp>
-#include <soloud.h>
-#include <soloud_wav.h>
+#include <glm/glm.hpp>  // glm::...
+#include <soloud.h>     // SoLoud::...
+#include <soloud_wav.h> // SoLoud::Wav
 
 namespace donut {
 namespace audio {

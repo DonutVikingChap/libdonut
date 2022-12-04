@@ -3,26 +3,27 @@
 #include <donut/graphics/opengl.hpp>
 
 //
-#include <SDL.h>
+#include <SDL.h> // SDL...
 #ifdef __EMSCRIPTEN__
-#include <SDL_opengles.h>
+#include <SDL_opengles.h> // SDL_GL_...
 #else
-#include <SDL_opengl.h>
+#include <SDL_opengl.h> // SDL_GL_...
 #endif
 //
 #ifdef __EMSCRIPTEN__
-#include <emscripten.h>
+#include <emscripten.h> // emscripten_...
 #endif
 //
 
-#include <algorithm>
-#include <cmath>
-#include <cstdint>
-#include <cstdio>
-#include <exception>
-#include <fmt/format.h>
-#include <glm/glm.hpp>
-#include <physfs.h>
+#include <algorithm>    // std::min
+#include <cmath>        // std::ceil
+#include <cstdint>      // std::uint64_t, std::uint32_t
+#include <cstdio>       // stderr
+#include <exception>    // std::exception
+#include <fmt/format.h> // fmt::format, fmt::print
+#include <glm/glm.hpp>  // glm::
+#include <physfs.h>     // PHYSFS_...
+#include <string_view>  // std::string_view
 
 namespace donut {
 namespace application {
@@ -49,7 +50,7 @@ Application::Application(const char* programFilepath, const ApplicationOptions& 
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, options.msaaLevel > 0);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, options.msaaLevel);
 
-	Uint32 windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
+	std::uint32_t windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
 	if (options.windowResizable) {
 		windowFlags |= SDL_WINDOW_RESIZABLE;
 	}
@@ -121,7 +122,7 @@ bool Application::isRunning() const noexcept {
 }
 
 bool Application::isWindowFullscreen() const noexcept {
-	const Uint32 flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(window.get()));
+	const std::uint32_t flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(window.get()));
 	return (flags & SDL_WINDOW_FULLSCREEN) != 0 || (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
 }
 

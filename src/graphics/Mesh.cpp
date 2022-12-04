@@ -2,8 +2,8 @@
 #include <donut/graphics/Mesh.hpp>
 #include <donut/graphics/opengl.hpp>
 
-#include <cstddef>
-#include <cstdint>
+#include <cstddef> // std::size_t
+#include <cstdint> // std::int32_t, std::uint32_t, std::uintptr_t
 
 namespace donut {
 namespace graphics {

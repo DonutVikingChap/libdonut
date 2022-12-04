@@ -1,13 +1,14 @@
 #ifndef DONUT_GRAPHICS_SPRITE_ATLAS_HPP
 #define DONUT_GRAPHICS_SPRITE_ATLAS_HPP
 
+#include <donut/Color.hpp>
 #include <donut/graphics/AtlasPacker.hpp>
 #include <donut/graphics/ImageLDR.hpp>
 #include <donut/graphics/Texture.hpp>
 
-#include <cstddef>
-#include <glm/glm.hpp>
-#include <vector>
+#include <cstddef>     // std::size_t
+#include <glm/glm.hpp> // glm::...
+#include <vector>      // std::vector
 
 namespace donut {
 namespace graphics {
@@ -64,7 +65,7 @@ private:
 	void prepareAtlasTexture(Renderer& renderer, bool resized) {
 		if (atlasTexture) {
 			if (resized) {
-				atlasTexture.grow2D(renderer, atlasPacker.getResolution(), atlasPacker.getResolution(), glm::vec4{0.0f, 0.0f, 0.0f, 0.0f});
+				atlasTexture.grow2D(renderer, atlasPacker.getResolution(), atlasPacker.getResolution(), Color::INVISIBLE);
 				const glm::vec2 textureSize = atlasTexture.getSize();
 				for (Sprite& sprite : sprites) {
 					sprite.textureOffset = sprite.position / textureSize;
@@ -78,7 +79,7 @@ private:
 				atlasPacker.getResolution(),
 				{.repeat = false, .useLinearFiltering = false, .useMipmap = false},
 			};
-			atlasTexture.fill2D(renderer, glm::vec4{0.0f, 0.0f, 0.0f, 0.0f});
+			atlasTexture.fill2D(renderer, Color::INVISIBLE);
 		}
 	}
 

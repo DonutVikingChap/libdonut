@@ -2,14 +2,16 @@
 #include <donut/application/Input.hpp>
 #include <donut/application/InputManager.hpp>
 
-#include <SDL.h>
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <cstddef>
-#include <fmt/format.h>
-#include <glm/glm.hpp>
-#include <vector>
+#include <SDL.h>        // SDL...
+#include <algorithm>    // std::min, std::max
+#include <array>        // std::array
+#include <cmath>        // std::abs
+#include <cstddef>      // std::size_t
+#include <cstdint>      // std::int16_t
+#include <fmt/format.h> // fmt::format
+#include <glm/glm.hpp>  // glm::...
+#include <optional>     // std::optional
+#include <vector>       // std::vector
 
 namespace donut {
 namespace application {
@@ -150,7 +152,7 @@ constexpr std::array<Input, SDL_CONTROLLER_BUTTON_MAX> CONTROLLER_BUTTON_MAP = [
 
 constexpr float DIAGONAL_RATIO = 0.41421356237f; // sqrt(2) - 1
 
-[[nodiscard]] constexpr float getAxisValue(Sint16 value) noexcept {
+[[nodiscard]] constexpr float getAxisValue(std::int16_t value) noexcept {
 	return (static_cast<float>(value) + 0.5f) / 32767.5f;
 }
 
@@ -407,9 +409,9 @@ void InputManager::reset(Outputs outputs) noexcept {
 }
 
 void InputManager::resetAll() noexcept {
-	mousePosition = std::nullopt;
-	controllerLeftStickPosition = std::nullopt;
-	controllerRightStickPosition = std::nullopt;
+	mousePosition = {};
+	controllerLeftStickPosition = {};
+	controllerRightStickPosition = {};
 	currentPersistentOutputs = {};
 	transientOutputs = {};
 	outputAbsoluteValues.fill(0.0f);

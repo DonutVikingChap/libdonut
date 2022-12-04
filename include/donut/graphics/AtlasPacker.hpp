@@ -1,8 +1,8 @@
 #ifndef DONUT_GRAPHICS_ATLAS_PACKER_HPP
 #define DONUT_GRAPHICS_ATLAS_PACKER_HPP
 
-#include <cstddef>
-#include <vector>
+#include <cstddef> // std::size_t
+#include <vector>  // std::vector
 
 namespace donut {
 namespace graphics {

@@ -1,20 +1,20 @@
 #include <donut/json.hpp>
 #include <donut/unicode.hpp>
 
-#include <charconv>
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
-#include <fmt/format.h>
-#include <fmt/ostream.h>
-#include <iterator>
-#include <limits>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <system_error>
-#include <utility>
+#include <charconv>      // std::from_chars_result, std::from_chars
+#include <cmath>         // std::isnan, std::isinf, std::signbit
+#include <cstddef>       // std::size_t
+#include <cstdint>       // std::uint32_t
+#include <cstdlib>       // std::strtoull, std::strtod
+#include <fmt/format.h>  // fmt::print
+#include <fmt/ostream.h> // fmt::print(std::ostream)
+#include <iterator>      // std::istreambuf_iterator
+#include <limits>        // std::numeric_limits
+#include <optional>      // std::optional
+#include <string>        // std::string
+#include <string_view>   // std::string_view, std::u8string_view
+#include <system_error>  // std::errc
+#include <utility>       // std::pair, std::move
 
 namespace donut {
 namespace json {
@@ -150,7 +150,7 @@ std::optional<char32_t> Lexer<It>::lookahead() const {
 	if (it != end) {
 		return *it;
 	}
-	return std::nullopt;
+	return {};
 }
 
 template <typename It>

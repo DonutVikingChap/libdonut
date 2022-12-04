@@ -1,8 +1,8 @@
 #ifndef DONUT_GRAPHICS_ERROR_HPP
 #define DONUT_GRAPHICS_ERROR_HPP
 
-#include <stdexcept>
-#include <string>
+#include <stdexcept> // std::runtime_error
+#include <string>    // std::string
 
 namespace donut {
 namespace graphics {

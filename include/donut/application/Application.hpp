@@ -4,8 +4,8 @@
 #include <donut/Resource.hpp>
 #include <donut/application/Event.hpp>
 
-#include <cstdint>
-#include <glm/glm.hpp>
+#include <cstdint>     // std::uint64_t
+#include <glm/glm.hpp> // glm::...
 
 namespace donut {
 namespace application {

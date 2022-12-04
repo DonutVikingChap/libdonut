@@ -1,9 +1,9 @@
 #ifndef DONUT_AUDIO_ERROR_HPP
 #define DONUT_AUDIO_ERROR_HPP
 
-#include <stdexcept>
-#include <string>
-#include <string_view>
+#include <stdexcept>   // std::runtime_error
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace donut {
 namespace audio {

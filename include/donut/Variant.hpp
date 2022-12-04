@@ -1,20 +1,19 @@
 #ifndef DONUT_VARIANT_HPP
 #define DONUT_VARIANT_HPP
 
-#include <algorithm>
-#include <cassert>
-#include <compare>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <exception>
-#include <functional>
-#include <initializer_list>
-#include <memory>
-#include <new>
-#include <optional>
-#include <type_traits>
-#include <utility>
+#include <algorithm>        // std::max
+#include <cassert>          // assert
+#include <compare>          // std::strong_ordering, std::common_comparison_category_t, std::compare_three_way_result_t
+#include <cstddef>          // std::size_t, std::byte
+#include <cstdint>          // std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t
+#include <exception>        // std::exception
+#include <functional>       // std::hash, std::invoke
+#include <initializer_list> // std::initializer_list
+#include <memory>           // std::construct_at, std::destroy_at
+#include <new>              // std::launder
+#include <optional>         // std::optional
+#include <type_traits>      // std::is_..._v, std::false_type, std::true_type, std::integral_constant, std::remove_..._t, std::common_type_t, std::contitional_t
+#include <utility>          // std::move, std::forward, std::swap, std::in_place_type_t, std::in_place_index_t, std::index_sequence, std::make_index_sequence
 
 namespace donut {
 

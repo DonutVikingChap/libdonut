@@ -10,14 +10,14 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
 
-#include <cassert>
-#include <compare>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/glm.hpp>
-#include <memory>
-#include <optional>
-#include <utility>
-#include <vector>
+#include <cassert>                      // assert
+#include <compare>                      // std::strong_ordering
+#include <glm/ext/matrix_transform.hpp> // glm::identity, glm::translate, glm::rotate, glm::scale
+#include <glm/glm.hpp>                  // glm::...
+#include <memory>                       // std::shared_ptr
+#include <optional>                     // std::optional
+#include <utility>                      // std::move
+#include <vector>                       // std::vector
 
 namespace donut {
 namespace graphics {

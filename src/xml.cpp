@@ -1,12 +1,14 @@
 #include <donut/unicode.hpp>
 #include <donut/xml.hpp>
 
-#include <charconv>
-#include <cstdint>
-#include <memory>
-#include <string_view>
-#include <system_error>
-#include <utility>
+#include <charconv>     // std::from_chars_result, std::from_chars
+#include <cstddef>      // std::size_t
+#include <cstdint>      // std::uint32_t
+#include <memory>       // std::unique_ptr, std::make_unique, std::to_address
+#include <string>       // std::string
+#include <string_view>  // std::string_view
+#include <system_error> // std::errc
+#include <utility>      // std::move
 
 namespace donut {
 namespace xml {

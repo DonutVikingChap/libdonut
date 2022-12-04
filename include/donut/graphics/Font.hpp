@@ -4,12 +4,12 @@
 #include <donut/graphics/AtlasPacker.hpp>
 #include <donut/graphics/Texture.hpp>
 
-#include <cstddef>
-#include <cstdint>
-#include <glm/glm.hpp>
-#include <string_view>
-#include <unordered_map>
-#include <vector>
+#include <cstddef>       // std::size_t, std::byte
+#include <cstdint>       // std::uint32_t, std::uint64_t
+#include <glm/glm.hpp>   // glm::...
+#include <string_view>   // std::string_view
+#include <unordered_map> // std::unordered_map
+#include <vector>        // std::vector
 
 namespace donut {
 namespace graphics {

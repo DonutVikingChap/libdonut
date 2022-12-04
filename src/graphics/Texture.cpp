@@ -6,14 +6,12 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/opengl.hpp>
 
-#include <cassert>
-#include <cstddef>
-#include <fmt/format.h>
-#include <glm/ext/matrix_clip_space.hpp>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/glm.hpp>
-#include <memory>
-#include <utility>
+#include <cassert>                       // assert
+#include <cstddef>                       // std::size_t
+#include <fmt/format.h>                  // fmt::format
+#include <glm/ext/matrix_clip_space.hpp> // glm::ortho
+#include <optional>                      // std::optional
+#include <utility>                       // std::move
 
 namespace donut {
 namespace graphics {

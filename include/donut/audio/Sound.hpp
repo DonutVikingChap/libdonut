@@ -3,7 +3,7 @@
 
 #include <donut/Resource.hpp>
 
-#include <limits>
+#include <limits> // std::numeric_limits
 
 namespace donut {
 namespace audio {

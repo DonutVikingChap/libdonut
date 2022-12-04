@@ -3,8 +3,9 @@
 
 #include <donut/graphics/Mesh.hpp>
 
-#include <array>
-#include <glm/glm.hpp>
+#include <array>       // std::array
+#include <cstdint>     // std::int32_t
+#include <glm/glm.hpp> // glm::...
 
 namespace donut {
 namespace graphics {
