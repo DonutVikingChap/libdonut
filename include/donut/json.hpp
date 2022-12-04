@@ -756,12 +756,12 @@ public:
 	DeserializationOptions options;
 
 	SourceLocation readNull() {
-		auto [null, source] = parser.parseNull();
+		const auto [null, source] = parser.parseNull();
 		return source;
 	}
 
 	SourceLocation readBoolean(Boolean& value) {
-		auto [boolean, source] = parser.parseBoolean();
+		const auto [boolean, source] = parser.parseBoolean();
 		value = boolean;
 		return source;
 	}
@@ -810,7 +810,7 @@ public:
 	}
 
 	SourceLocation readNumber(Number& value) {
-		auto [number, source] = parser.parseNumber();
+		const auto [number, source] = parser.parseNumber();
 		value = number;
 		return source;
 	}
