@@ -39,7 +39,7 @@ public:
 		}
 	}
 
-	[[nodiscard]] std::size_t insert(std::size_t vertexIndex, const obj::FaceVertex& newVertex) {
+	[[nodiscard]] Scene::Object::Index insert(Scene::Object::Index vertexIndex, const obj::FaceVertex& newVertex) {
 		for (obj::FaceVertex& vertex : std::span{vertices}.subspan(newVertex.vertexIndex * MAX_DUPLICATE_VERTICES, MAX_DUPLICATE_VERTICES)) {
 			if (vertex.vertexIndex == static_cast<decltype(vertex.vertexIndex)>(-1)) {
 				vertex.vertexIndex = vertexIndex;
@@ -162,7 +162,7 @@ void loadScene(Scene& output, const obj::Scene& scene) {
 					for (std::size_t faceVertexIndex = 1; faceVertexIndex + 1 < face.vertices.size(); ++faceVertexIndex) {
 						for (const std::size_t faceVertexIndex : {std::size_t{0}, faceVertexIndex, faceVertexIndex + 1}) {
 							const obj::FaceVertex& faceVertex = face.vertices[faceVertexIndex];
-							const std::size_t newVertexIndex = indexMap.insert(vertices.size(), faceVertex);
+							const Scene::Object::Index newVertexIndex = indexMap.insert(static_cast<Scene::Object::Index>(vertices.size()), faceVertex);
 							if (newVertexIndex == vertices.size()) {
 								vertices.push_back({
 									.position = (faceVertex.vertexIndex < scene.vertices.size()) ? scene.vertices[faceVertex.vertexIndex] : glm::vec3{0.0f, 0.0f, 0.0f},

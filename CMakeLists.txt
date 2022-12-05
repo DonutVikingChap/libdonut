@@ -103,9 +103,9 @@ target_compile_options(donut
 		$<$<CXX_COMPILER_ID:Clang>: -std=c++20>
 		$<$<CXX_COMPILER_ID:MSVC>:  /std:c++20  /utf-8>
 	PRIVATE
-		$<$<CXX_COMPILER_ID:GNU>:   -Wall   -Wextra -Wpedantic              $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
-		$<$<CXX_COMPILER_ID:Clang>: -Wall   -Wextra -Wpedantic              $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
-		$<$<CXX_COMPILER_ID:MSVC>:  /W3             /permissive-    /wd4996 $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>  $<$<CONFIG:MinSizeRel>:/Os>   $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
+		$<$<CXX_COMPILER_ID:GNU>:   -Wall   -Wextra -Wconversion    -Wpedantic              $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
+		$<$<CXX_COMPILER_ID:Clang>: -Wall   -Wextra -Wconversion    -Wpedantic              $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
+		$<$<CXX_COMPILER_ID:MSVC>:  /W4                             /permissive-    /wd4996 $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>  $<$<CONFIG:MinSizeRel>:/Os>   $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
 
 target_link_libraries(donut
 	INTERFACE
