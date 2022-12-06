@@ -177,7 +177,7 @@ public:
         std::uint64_t>>>;
 	// clang-format on
 
-	static constexpr index_type npos = -1;
+	static constexpr index_type npos = static_cast<index_type>(-1);
 
 	Variant() noexcept(std::is_nothrow_default_constructible_v<FirstAlternative>) requires(HAS_DEFAULT_CONSTRUCTOR)
 		: activeTypeIndex(0) {
@@ -497,9 +497,9 @@ public:
 
 	template <typename Visitor, typename V>
 	static constexpr decltype(auto) visit(Visitor&& visitor, V&& variant) {
-		constexpr bool is_all_lvalue_reference = (std::is_lvalue_reference_v<decltype(std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Ts>()))> &&
+		constexpr bool IS_ALL_LVALUE_REFERENCE = (std::is_lvalue_reference_v<decltype(std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Ts>()))> &&
 			...);
-		constexpr bool is_any_const =
+		constexpr bool IS_ANY_CONST =
 			(std::is_const_v<std::remove_reference_t<decltype(std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Ts>()))>> || ...);
 		using R = std::common_type_t<decltype(std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Ts>()))...>;
 		if constexpr (std::is_void_v<R>) {
@@ -509,8 +509,8 @@ public:
 				}
 			}
 			(std::make_index_sequence<sizeof...(Ts)>{});
-		} else if constexpr (is_all_lvalue_reference) {
-			std::conditional_t<is_any_const, const R*, R*> result = nullptr;
+		} else if constexpr (IS_ALL_LVALUE_REFERENCE) {
+			std::conditional_t<IS_ANY_CONST, const R*, R*> result = nullptr;
 			[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
 				if (!(((variant.template is<Indices>()) ? ((result = &std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Indices>())), true) :
 														  false) ||

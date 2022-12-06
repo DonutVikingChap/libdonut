@@ -252,21 +252,21 @@ private:
 	}
 
 	void drawBackground(const app::FrameInfo& frameInfo) {
-		constexpr glm::vec3 backgroundOffset{0.0f, -3.5f, -10.0f};
-		constexpr glm::vec2 backgroundScale{18.0f, 18.0f};
-		constexpr float backgroundAngle = 30.0f;
-		constexpr float backgroundSpeed = 2.0f;
+		constexpr glm::vec3 BACKGROUND_OFFSET{0.0f, -3.5f, -10.0f};
+		constexpr glm::vec2 BACKGROUND_SCALE{18.0f, 18.0f};
+		constexpr float BACKGROUND_ANGLE = 30.0f;
+		constexpr float BACKGROUND_SPEED = 2.0f;
 
 		glm::mat4 backgroundTransform = glm::identity<glm::mat4>();
-		backgroundTransform = glm::translate(backgroundTransform, backgroundOffset);
-		backgroundTransform = glm::rotate(backgroundTransform, glm::radians(backgroundAngle), {1.0f, 0.0f, 0.0f});
-		backgroundTransform = glm::scale(backgroundTransform, {backgroundScale, 1.0f});
+		backgroundTransform = glm::translate(backgroundTransform, BACKGROUND_OFFSET);
+		backgroundTransform = glm::rotate(backgroundTransform, glm::radians(BACKGROUND_ANGLE), {1.0f, 0.0f, 0.0f});
+		backgroundTransform = glm::scale(backgroundTransform, {BACKGROUND_SCALE, 1.0f});
 		backgroundTransform = glm::translate(backgroundTransform, {-0.5f, -0.5f, 0.0f});
 		renderPass.draw(gfx::Quad{
 			.texture = testTexture,
 			.transformation = backgroundTransform,
-			.textureOffset{0.0f, -frameInfo.elapsedTime * backgroundSpeed},
-			.textureScale = 1000.0f * backgroundScale / testTexture->getSize(),
+			.textureOffset{0.0f, -frameInfo.elapsedTime * BACKGROUND_SPEED},
+			.textureScale = 1000.0f * BACKGROUND_SCALE / testTexture->getSize(),
 		});
 	}
 
