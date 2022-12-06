@@ -2,16 +2,16 @@
 #include <donut/application/Input.hpp>
 #include <donut/application/InputManager.hpp>
 
-#include <SDL.h>        // SDL...
-#include <algorithm>    // std::min, std::max
-#include <array>        // std::array
-#include <cmath>        // std::abs
-#include <cstddef>      // std::size_t
-#include <cstdint>      // std::int16_t
-#include <fmt/format.h> // fmt::format
-#include <glm/glm.hpp>  // glm::...
-#include <optional>     // std::optional
-#include <vector>       // std::vector
+#include <SDL.h>            // SDL...
+#include <algorithm>        // std::min, std::max
+#include <array>            // std::array
+#include <cstddef>          // std::size_t
+#include <cstdint>          // std::int16_t
+#include <fmt/format.h>     // fmt::format
+#include <glm/glm.hpp>      // glm::...
+#include <glm/gtx/norm.hpp> // glm::length2
+#include <optional>         // std::optional
+#include <vector>           // std::vector
 
 namespace donut {
 namespace application {
@@ -454,19 +454,22 @@ void InputManager::setControllerLeftStickPosition(glm::vec2 position) noexcept {
 	reset(Input::CONTROLLER_AXIS_LEFT_STICK_DOWN);
 	reset(Input::CONTROLLER_AXIS_LEFT_STICK_LEFT);
 	reset(Input::CONTROLLER_AXIS_LEFT_STICK_RIGHT);
-	if (position.x * position.x + position.y * position.y > controllerLeftStickDeadzone * controllerLeftStickDeadzone) {
-		if (std::abs(position.x / position.y) > DIAGONAL_RATIO) {
+	const float lengthSquared = glm::length2(position);
+	if (lengthSquared > controllerLeftStickDeadzone * controllerLeftStickDeadzone) {
+		const float length = glm::sqrt(lengthSquared);
+		const glm::vec2 adjustedPosition = position * ((length - controllerLeftStickDeadzone) / (length * (1.0f - controllerLeftStickDeadzone)));
+		if (glm::abs(position.x / position.y) > DIAGONAL_RATIO) {
 			if (position.x < 0.0f) {
-				set(Input::CONTROLLER_AXIS_LEFT_STICK_LEFT, -position.x);
+				set(Input::CONTROLLER_AXIS_LEFT_STICK_LEFT, -adjustedPosition.x);
 			} else {
-				set(Input::CONTROLLER_AXIS_LEFT_STICK_RIGHT, position.x);
+				set(Input::CONTROLLER_AXIS_LEFT_STICK_RIGHT, adjustedPosition.x);
 			}
 		}
-		if (std::abs(position.y / position.x) > DIAGONAL_RATIO) {
+		if (glm::abs(position.y / position.x) > DIAGONAL_RATIO) {
 			if (position.y < 0.0f) {
-				set(Input::CONTROLLER_AXIS_LEFT_STICK_UP, -position.x);
+				set(Input::CONTROLLER_AXIS_LEFT_STICK_UP, -adjustedPosition.x);
 			} else {
-				set(Input::CONTROLLER_AXIS_LEFT_STICK_DOWN, position.x);
+				set(Input::CONTROLLER_AXIS_LEFT_STICK_DOWN, adjustedPosition.x);
 			}
 		}
 	}
@@ -479,19 +482,22 @@ void InputManager::setControllerRightStickPosition(glm::vec2 position) noexcept 
 	reset(Input::CONTROLLER_AXIS_RIGHT_STICK_DOWN);
 	reset(Input::CONTROLLER_AXIS_RIGHT_STICK_LEFT);
 	reset(Input::CONTROLLER_AXIS_RIGHT_STICK_RIGHT);
-	if (position.x * position.x + position.y * position.y > controllerRightStickDeadzone * controllerRightStickDeadzone) {
+	const float lengthSquared = glm::length2(position);
+	if (lengthSquared > controllerRightStickDeadzone * controllerRightStickDeadzone) {
+		const float length = glm::sqrt(lengthSquared);
+		const glm::vec2 adjustedPosition = position * ((length - controllerRightStickDeadzone) / (length * (1.0f - controllerRightStickDeadzone)));
 		if (std::abs(position.x / position.y) > DIAGONAL_RATIO) {
 			if (position.x < 0.0f) {
-				set(Input::CONTROLLER_AXIS_RIGHT_STICK_LEFT, -position.x);
+				set(Input::CONTROLLER_AXIS_RIGHT_STICK_LEFT, -adjustedPosition.x);
 			} else {
-				set(Input::CONTROLLER_AXIS_RIGHT_STICK_RIGHT, position.x);
+				set(Input::CONTROLLER_AXIS_RIGHT_STICK_RIGHT, adjustedPosition.x);
 			}
 		}
 		if (std::abs(position.y / position.x) > DIAGONAL_RATIO) {
 			if (position.y < 0.0f) {
-				set(Input::CONTROLLER_AXIS_RIGHT_STICK_UP, -position.x);
+				set(Input::CONTROLLER_AXIS_RIGHT_STICK_UP, -adjustedPosition.x);
 			} else {
-				set(Input::CONTROLLER_AXIS_RIGHT_STICK_DOWN, position.x);
+				set(Input::CONTROLLER_AXIS_RIGHT_STICK_DOWN, adjustedPosition.x);
 			}
 		}
 	}
@@ -501,7 +507,7 @@ void InputManager::setControllerLeftTriggerPosition(float position) noexcept {
 	controllerLeftTriggerPosition = position;
 	controllerLeftTriggerTransientMotion = true;
 	if (position > controllerLeftTriggerDeadzone) {
-		set(Input::CONTROLLER_AXIS_LEFT_TRIGGER, position);
+		set(Input::CONTROLLER_AXIS_LEFT_TRIGGER, (position - controllerLeftTriggerDeadzone) / (1.0f - controllerLeftTriggerDeadzone));
 	} else {
 		reset(Input::CONTROLLER_AXIS_LEFT_TRIGGER);
 	}
@@ -511,7 +517,7 @@ void InputManager::setControllerRightTriggerPosition(float position) noexcept {
 	controllerRightTriggerPosition = position;
 	controllerRightTriggerTransientMotion = true;
 	if (position > controllerRightTriggerDeadzone) {
-		set(Input::CONTROLLER_AXIS_RIGHT_TRIGGER, position);
+		set(Input::CONTROLLER_AXIS_RIGHT_TRIGGER, (position - controllerRightTriggerDeadzone) / (1.0f - controllerRightTriggerDeadzone));
 	} else {
 		reset(Input::CONTROLLER_AXIS_RIGHT_TRIGGER);
 	}

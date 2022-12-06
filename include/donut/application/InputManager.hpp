@@ -19,10 +19,10 @@ namespace application {
 
 struct InputManagerOptions {
 	glm::vec2 mouseOrigin{0.0f, 0.0f};
-	float controllerLeftStickDeadzone = 0.05f;
-	float controllerRightStickDeadzone = 0.05f;
-	float controllerLeftTriggerDeadzone = 0.1f;
-	float controllerRightTriggerDeadzone = 0.1f;
+	float controllerLeftStickDeadzone = 0.2f;
+	float controllerRightStickDeadzone = 0.2f;
+	float controllerLeftTriggerDeadzone = 0.2f;
+	float controllerRightTriggerDeadzone = 0.2f;
 };
 
 class InputManager {
