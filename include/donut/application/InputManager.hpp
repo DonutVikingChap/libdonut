@@ -5,9 +5,10 @@
 #include <donut/application/Event.hpp>
 #include <donut/application/Input.hpp>
 
-#include <array>         // std::array
-#include <bitset>        // std::bitset
-#include <cstddef>       // std::size_t
+#include <array>   // std::array
+#include <bitset>  // std::bitset
+#include <cstddef> // std::size_t
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>   // glm::...
 #include <optional>      // std::optional
 #include <type_traits>   // std::is_enum_v, std::underlying_type_t
@@ -18,7 +19,9 @@ namespace donut {
 namespace application {
 
 struct InputManagerOptions {
-	glm::vec2 mouseOrigin{0.0f, 0.0f};
+	float mouseSensitivity = 0.005f;
+	float controllerLeftStickSensitivity = 1.0f;
+	float controllerRightStickSensitivity = 1.0f;
 	float controllerLeftStickDeadzone = 0.2f;
 	float controllerRightStickDeadzone = 0.2f;
 	float controllerLeftTriggerDeadzone = 0.2f;
@@ -44,7 +47,6 @@ public:
 	InputManager& operator=(const InputManager&) = delete;
 	InputManager& operator=(InputManager&&) = delete;
 
-	void resize(glm::ivec2 newWindowSize);
 	void beginFrame();
 	void handleEvent(const application::Event& event);
 
@@ -53,21 +55,14 @@ public:
 	void unbind(Input input);
 	void unbindAll() noexcept;
 
-	void press(Input input) noexcept;
-	void press(Outputs outputs) noexcept;
-	void release(Input input) noexcept;
-	void release(Outputs outputs) noexcept;
-	void set(Input input, float value = 1.0f) noexcept;
-	void set(Outputs outputs, float value = 1.0f) noexcept;
-	void move(Input input, float offset = 0.0f) noexcept;
-	void move(Outputs outputs, float offset = 0.0f) noexcept;
-	void moveTo(Input input, float value, float offset) noexcept;
-	void moveTo(Outputs outputs, float value, float offset) noexcept;
-	void reset(Input input) noexcept;
-	void reset(Outputs outputs) noexcept;
-	void resetAll() noexcept;
+	void press(Input input, glm::i32 offset = 32767) noexcept;
+	void release(Input input, glm::i32 offset = -32767) noexcept;
+	void move(Input input, glm::i32 offset) noexcept;
+	void resetAllInputs() noexcept;
 
-	void setMouseOrigin(glm::vec2 origin) noexcept;
+	void setMouseSensitivity(float sensitivity) noexcept;
+	void setControllerLeftStickSensitivity(float sensitivity) noexcept;
+	void setControllerRightStickSensitivity(float sensitivity) noexcept;
 	void setControllerLeftStickDeadzone(float deadzone) noexcept;
 	void setControllerRightStickDeadzone(float deadzone) noexcept;
 	void setControllerLeftTriggerDeadzone(float deadzone) noexcept;
@@ -109,8 +104,14 @@ public:
 	[[nodiscard]] bool isPressed(std::size_t output) const noexcept;
 	[[nodiscard]] bool justPressed(std::size_t output) const noexcept;
 	[[nodiscard]] bool justReleased(std::size_t output) const noexcept;
-	[[nodiscard]] float getAbsoluteValue(std::size_t output) const noexcept;
-	[[nodiscard]] float getRelativeValue(std::size_t output) const noexcept;
+	[[nodiscard]] glm::i32 getAbsoluteValue(std::size_t output) const noexcept;
+	[[nodiscard]] glm::i32 getRelativeValue(std::size_t output) const noexcept;
+	[[nodiscard]] float getAbsoluteVector(std::size_t outputPositive) const noexcept;
+	[[nodiscard]] float getRelativeVector(std::size_t outputPositive) const noexcept;
+	[[nodiscard]] float getAbsoluteVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept;
+	[[nodiscard]] float getRelativeVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept;
+	[[nodiscard]] glm::vec2 getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept;
+	[[nodiscard]] glm::vec2 getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept;
 
 	[[nodiscard]] bool isPressed(Input input) const noexcept;
 	[[nodiscard]] bool justPressed(Input input) const noexcept;
@@ -131,36 +132,6 @@ public:
 	}
 
 	template <typename Action>
-	void press(Action action) noexcept requires(std::is_enum_v<Action>) {
-		press(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))));
-	}
-
-	template <typename Action>
-	void release(Action action) noexcept requires(std::is_enum_v<Action>) {
-		release(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))));
-	}
-
-	template <typename Action>
-	void set(Action action, float value = 1.0f) noexcept requires(std::is_enum_v<Action>) {
-		set(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))), value);
-	}
-
-	template <typename Action>
-	void move(Action action, float offset = 0.0f) noexcept requires(std::is_enum_v<Action>) {
-		move(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))), offset);
-	}
-
-	template <typename Action>
-	void moveTo(Action action, float value, float offset) noexcept requires(std::is_enum_v<Action>) {
-		moveTo(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))), value, offset);
-	}
-
-	template <typename Action>
-	void reset(Action action) noexcept requires(std::is_enum_v<Action>) {
-		reset(Outputs{}.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action))));
-	}
-
-	template <typename Action>
 	[[nodiscard]] bool isPressed(Action action) const noexcept requires(std::is_enum_v<Action>) {
 		return isPressed(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
 	}
@@ -176,13 +147,53 @@ public:
 	}
 
 	template <typename Action>
-	[[nodiscard]] float getAbsoluteValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] glm::i32 getAbsoluteValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
 		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
 	}
 
 	template <typename Action>
-	[[nodiscard]] float getRelativeValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] glm::i32 getRelativeValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
 		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
+	}
+
+	template <typename Action>
+	[[nodiscard]] float getAbsoluteVector(Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+		return getAbsoluteVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
+	}
+
+	template <typename Action>
+	[[nodiscard]] float getRelativeVector(Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+		return getRelativeVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
+	}
+
+	template <typename Action>
+	[[nodiscard]] float getAbsoluteVector(Action actionNegative, Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+		return getAbsoluteVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegative)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
+	}
+
+	template <typename Action>
+	[[nodiscard]] float getRelativeVector(Action actionNegative, Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+		return getRelativeVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegative)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
+	}
+
+	template <typename Action>
+	[[nodiscard]] glm::vec2 getAbsoluteVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
+		requires(std::is_enum_v<Action>) {
+		return getAbsoluteVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveY)));
+	}
+
+	template <typename Action>
+	[[nodiscard]] glm::vec2 getRelativeVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
+		requires(std::is_enum_v<Action>) {
+		return getRelativeVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveY)));
 	}
 
 private:
@@ -193,12 +204,13 @@ private:
 	using Controller = Resource<void*, ControllerDeleter, nullptr>;
 
 	std::unordered_map<Input, Outputs> bindings{};
-	glm::vec2 mouseOrigin{0.0f, 0.0f};
+	float mouseSensitivity;
+	float controllerLeftStickSensitivity;
+	float controllerRightStickSensitivity;
 	float controllerLeftStickDeadzone;
 	float controllerRightStickDeadzone;
 	float controllerLeftTriggerDeadzone;
 	float controllerRightTriggerDeadzone;
-	float mouseCoordinateScale = 1.0f;
 	std::optional<glm::vec2> mousePosition{};
 	Controller controller{};
 	std::optional<glm::vec2> controllerLeftStickPosition{};
@@ -208,8 +220,9 @@ private:
 	Outputs currentPersistentOutputs{};
 	Outputs previousPersistentOutputs{};
 	Outputs transientOutputs{};
-	std::array<float, OUTPUT_COUNT> outputAbsoluteValues{};
-	std::array<float, OUTPUT_COUNT> outputRelativeValues{};
+	std::array<glm::i32, OUTPUT_COUNT> outputAbsoluteValues{};
+	std::array<glm::i32, OUTPUT_COUNT> outputRelativeValues{};
+	std::array<std::uint8_t, OUTPUT_COUNT> outputPersistentPresses{};
 	std::bitset<INPUT_COUNT> currentPersistentInputs{};
 	std::bitset<INPUT_COUNT> previousPersistentInputs{};
 	std::bitset<INPUT_COUNT> transientInputs{};

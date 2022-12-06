@@ -16,7 +16,6 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/json.hpp>
 
-#include <algorithm>                     // std::clamp
 #include <charconv>                      // std::from_chars_result, std::from_chars
 #include <concepts>                      // std::integral
 #include <cstdio>                        // stderr
@@ -92,8 +91,6 @@ private:
 	void resize(glm::ivec2 newWindowSize) override {
 		screenViewport.size = newWindowSize;
 
-		inputManager.resize(newWindowSize);
-
 		const glm::vec2 screenViewportPosition{static_cast<float>(screenViewport.position.x), static_cast<float>(screenViewport.position.y)};
 		const glm::vec2 screenViewportSize{static_cast<float>(screenViewport.size.x), static_cast<float>(screenViewport.size.y)};
 		screenProjectionViewMatrix = glm::ortho(
@@ -136,10 +133,7 @@ private:
 
 		const float sprintInput = (inputManager.isPressed(Action::SPRINT)) ? 4.0f : 1.0f;
 
-		glm::vec2 movementInput{
-			inputManager.getAbsoluteValue(Action::MOVE_RIGHT) - inputManager.getAbsoluteValue(Action::MOVE_LEFT),
-			inputManager.getAbsoluteValue(Action::MOVE_DOWN) - inputManager.getAbsoluteValue(Action::MOVE_UP),
-		};
+		glm::vec2 movementInput = inputManager.getAbsoluteVector(Action::MOVE_LEFT, Action::MOVE_RIGHT, Action::MOVE_UP, Action::MOVE_DOWN);
 		if (const float movementInputLengthSquared = glm::length2(movementInput); movementInputLengthSquared > 1.0f) {
 			movementInput /= glm::sqrt(movementInputLengthSquared);
 		}
@@ -148,15 +142,12 @@ private:
 		carrotCakePosition.y += movementInput.y * carrotCakeSpeed * frameInfo.deltaTime;
 
 		if (inputManager.isPressed(Action::CONFIRM)) {
-			const glm::vec2 aimInput{
-				inputManager.getRelativeValue(Action::AIM_RIGHT) - inputManager.getRelativeValue(Action::AIM_LEFT),
-				inputManager.getRelativeValue(Action::AIM_UP) - inputManager.getRelativeValue(Action::AIM_DOWN),
-			};
-			carrotCakeScale.x = std::clamp(carrotCakeScale.x + aimInput.x, 0.25f, 4.0f);
-			carrotCakeScale.y = std::clamp(carrotCakeScale.y + aimInput.y, 0.25f, 4.0f);
+			const glm::vec2 aimInput = inputManager.getRelativeVector(Action::AIM_LEFT, Action::AIM_RIGHT, Action::AIM_DOWN, Action::AIM_UP);
+			carrotCakeScale.x = glm::clamp(carrotCakeScale.x + aimInput.x, 0.25f, 4.0f);
+			carrotCakeScale.y = glm::clamp(carrotCakeScale.y + aimInput.y, 0.25f, 4.0f);
 		}
 
-		const float scrollInput = inputManager.getRelativeValue(Action::SCROLL_UP) - inputManager.getRelativeValue(Action::SCROLL_DOWN);
+		const float scrollInput = inputManager.getRelativeVector(Action::SCROLL_DOWN, Action::SCROLL_UP);
 		carrotCakePosition.z -= scrollInput * 0.25f * sprintInput;
 	}
 
@@ -345,6 +336,32 @@ private:
 					carrotCakeScale.y)),
 			.position{410.0f, 170.0f},
 		});
+
+		if (inputManager.isPressed(Action::MOVE_UP) || inputManager.justPressed(Action::MOVE_UP)) {
+			renderPass.draw(gfx::Text{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "^"), .position{590.0f, 160.0f}});
+		}
+		if (inputManager.isPressed(Action::MOVE_DOWN) || inputManager.justPressed(Action::MOVE_DOWN)) {
+			renderPass.draw(gfx::Text{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "v"), .position{590.0f, 180.0f}});
+		}
+		if (inputManager.isPressed(Action::MOVE_LEFT) || inputManager.justPressed(Action::MOVE_LEFT)) {
+			renderPass.draw(gfx::Text{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "<"), .position{580.0f, 170.0f}});
+		}
+		if (inputManager.isPressed(Action::MOVE_RIGHT) || inputManager.justPressed(Action::MOVE_RIGHT)) {
+			renderPass.draw(gfx::Text{.font = mainFont, .text = mainFont->shapeText(renderer, 8, ">"), .position{600.0f, 170.0f}});
+		}
+
+		if (inputManager.isPressed(Action::AIM_UP) || inputManager.justPressed(Action::AIM_UP)) {
+			renderPass.draw(gfx::Text{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "^"), .position{590.0f, 200.0f}});
+		}
+		if (inputManager.isPressed(Action::AIM_DOWN) || inputManager.justPressed(Action::AIM_DOWN)) {
+			renderPass.draw(gfx::Text{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "v"), .position{590.0f, 220.0f}});
+		}
+		if (inputManager.isPressed(Action::AIM_LEFT) || inputManager.justPressed(Action::AIM_LEFT)) {
+			renderPass.draw(gfx::Text{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "<"), .position{580.0f, 210.0f}});
+		}
+		if (inputManager.isPressed(Action::AIM_RIGHT) || inputManager.justPressed(Action::AIM_RIGHT)) {
+			renderPass.draw(gfx::Text{.font = mainFont, .text = mainFont->shapeText(renderer, 8, ">"), .position{600.0f, 210.0f}});
+		}
 	}
 
 	void drawFpsCounter() {
