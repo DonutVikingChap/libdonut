@@ -19,9 +19,10 @@
 namespace donut {
 namespace graphics {
 
-Font::Font(const char* filepath)
+Font::Font(const char* filepath, const FontOptions& options)
 	: fontFileContents(InputFileStream::open(filepath).readAll())
-	, font(sft_loadmem(fontFileContents.data(), fontFileContents.size())) {
+	, font(sft_loadmem(fontFileContents.data(), fontFileContents.size()))
+	, options(options) {
 	if (!font) {
 		throw Error{fmt::format("Failed to load font \"{}\".", filepath)};
 	}
@@ -156,7 +157,7 @@ void Font::prepareAtlasTexture(Renderer& renderer, bool resized) {
 			TextureInternalFormat::R8,
 			atlasPacker.getResolution(),
 			atlasPacker.getResolution(),
-			{.repeat = false, .useLinearFiltering = true, .useMipmap = false},
+			{.repeat = false, .useLinearFiltering = options.useLinearFiltering, .useMipmap = false},
 		};
 		atlasTexture.fill2D(renderer, Color::INVISIBLE);
 	}

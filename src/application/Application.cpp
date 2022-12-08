@@ -4,6 +4,7 @@
 
 //
 #include <SDL.h> // SDL...
+#include <SDL_video.h>
 #ifdef __EMSCRIPTEN__
 #include <SDL_opengles.h> // SDL_GL_...
 #else
@@ -150,10 +151,22 @@ void Application::setWindowResizable(bool resizable) {
 }
 
 void Application::setWindowFullscreen(bool fullscreen) {
+	if (fullscreen && SDL_GetWindowFlags(static_cast<SDL_Window*>(window.get())) & SDL_WINDOW_RESIZABLE) {
+		const int displayIndex = SDL_GetWindowDisplayIndex(static_cast<SDL_Window*>(window.get()));
+		if (displayIndex < 0) {
+			throw Error{fmt::format("Failed to get window display index: {}", SDL_GetError())};
+		}
+		SDL_DisplayMode desktopDisplayMode{};
+		if (SDL_GetDesktopDisplayMode(displayIndex, &desktopDisplayMode) != 0) {
+			throw Error{fmt::format("Failed to get desktop display mode: {}", SDL_GetError())};
+		}
+		if (SDL_SetWindowDisplayMode(static_cast<SDL_Window*>(window.get()), &desktopDisplayMode) != 0) {
+			throw Error{fmt::format("Failed to set window display mode: {}", SDL_GetError())};
+		}
+	}
 	if (SDL_SetWindowFullscreen(static_cast<SDL_Window*>(window.get()), (fullscreen) ? SDL_WINDOW_FULLSCREEN : 0) != 0) {
 		throw Error{fmt::format("Failed to set fullscreen: {}", SDL_GetError())};
 	}
-	resize(getWindowSize());
 }
 
 void Application::setWindowVSync(bool vSync) {
@@ -200,7 +213,7 @@ void Application::runFrame() {
 			switch (event.type) {
 				case SDL_QUIT: quit(); return;
 				case SDL_WINDOWEVENT:
-					if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+					if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
 						resize({event.window.data1, event.window.data2});
 					}
 					break;

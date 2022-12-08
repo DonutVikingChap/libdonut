@@ -20,8 +20,8 @@ MeshStatePreserver::MeshStatePreserver() noexcept {
 }
 
 MeshStatePreserver::~MeshStatePreserver() {
-	glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLint>(arrayBufferBinding));
-	glBindVertexArray(static_cast<GLint>(vertexArrayBinding));
+	glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(arrayBufferBinding));
+	glBindVertexArray(static_cast<GLuint>(vertexArrayBinding));
 }
 
 void bindVertexArray(Handle handle) {

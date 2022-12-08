@@ -16,6 +16,10 @@ namespace graphics {
 
 class Renderer;
 
+struct FontOptions {
+	bool useLinearFiltering = false;
+};
+
 class Font {
 public:
 	struct Glyph {
@@ -47,7 +51,7 @@ public:
 		float height;
 	};
 
-	explicit Font(const char* filepath);
+	explicit Font(const char* filepath, const FontOptions& options = {});
 	~Font() = default;
 
 	Font(const Font&) = delete;
@@ -93,6 +97,7 @@ private:
 	AtlasPacker atlasPacker{};
 	Texture atlasTexture{};
 	std::unordered_map<GlyphKey, Glyph> glyphs{};
+	FontOptions options;
 };
 
 } // namespace graphics

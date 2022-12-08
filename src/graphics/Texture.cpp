@@ -140,7 +140,7 @@ Texture::Texture(
 
 	setOptions2D(options);
 
-	glBindTexture(GL_TEXTURE_2D, oldTextureBinding2D);
+	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(oldTextureBinding2D));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
 }
 
@@ -176,7 +176,7 @@ Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::s
 
 	setOptions2DArray(options);
 
-	glBindTexture(GL_TEXTURE_2D_ARRAY, oldTextureBinding2DArray);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, static_cast<GLuint>(oldTextureBinding2DArray));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
 }
 
@@ -217,7 +217,7 @@ void Texture::setOptions2D(const TextureOptions& newOptions) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (options.useLinearFiltering) ? GL_LINEAR : GL_NEAREST);
 	}
 
-	glBindTexture(GL_TEXTURE_2D, oldTextureBinding2D);
+	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(oldTextureBinding2D));
 }
 
 void Texture::setOptions2DArray(const TextureOptions& newOptions) {
@@ -235,7 +235,7 @@ void Texture::setOptions2DArray(const TextureOptions& newOptions) {
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, (options.useLinearFiltering) ? GL_LINEAR : GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, (options.useLinearFiltering) ? GL_LINEAR : GL_NEAREST);
 
-	glBindTexture(GL_TEXTURE_2D_ARRAY, oldTextureBinding2DArray);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, static_cast<GLuint>(oldTextureBinding2DArray));
 }
 
 void Texture::pasteImage2D(std::size_t width, std::size_t height, TextureFormat format, TextureComponentType type, const void* pixels, std::size_t x, std::size_t y) {
@@ -256,7 +256,7 @@ void Texture::pasteImage2D(std::size_t width, std::size_t height, TextureFormat 
 		static_cast<GLenum>(type),
 		pixels);
 
-	glBindTexture(GL_TEXTURE_2D, oldTextureBinding2D);
+	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(oldTextureBinding2D));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
 }
 
@@ -289,7 +289,7 @@ void Texture::pasteImage2DArray(
 		static_cast<GLenum>(type),
 		pixels);
 
-	glBindTexture(GL_TEXTURE_2D_ARRAY, oldTextureBinding2DArray);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, static_cast<GLuint>(oldTextureBinding2DArray));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
 }
 

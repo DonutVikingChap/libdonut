@@ -55,8 +55,8 @@ const std::string_view Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLS
             vec3(0.8, 0.8, 0.8), // diffuse
             vec3(0.8, 0.8, 0.8), // specular
             1.0, // constantFalloff
-            0.06, // linearFalloff
-            0.018 // quadraticFalloff
+            0.04, // linearFalloff
+            0.012 // quadraticFalloff
         )
     );
 

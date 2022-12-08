@@ -14,6 +14,7 @@
 #include <donut/graphics/RenderPass.hpp>
 #include <donut/graphics/Renderer.hpp>
 #include <donut/graphics/Texture.hpp>
+#include <donut/graphics/Viewport.hpp>
 #include <donut/json.hpp>
 
 #include <charconv>                      // std::from_chars_result, std::from_chars
@@ -53,7 +54,7 @@ struct GameOptions {
 		.windowTitle = "Example Game",
 		.windowWidth = 640,
 		.windowHeight = 480,
-		.windowResizable = false,
+		.windowResizable = true,
 		.maxFps = 240.0f,
 	};
 	const char* mainMenuMusicFilepath = "sounds/music/donauwalzer.ogg";
@@ -89,15 +90,15 @@ private:
 	};
 
 	void resize(glm::ivec2 newWindowSize) override {
-		screenViewport.size = newWindowSize;
+		constexpr glm::ivec2 RENDER_RESOLUTION{640, 480};
+		constexpr glm::ivec2 WORLD_VIEWPORT_POSITION{15, 15};
+		constexpr glm::ivec2 WORLD_VIEWPORT_SIZE{380, 450};
 
-		const glm::vec2 screenViewportPosition{static_cast<float>(screenViewport.position.x), static_cast<float>(screenViewport.position.y)};
-		const glm::vec2 screenViewportSize{static_cast<float>(screenViewport.size.x), static_cast<float>(screenViewport.size.y)};
-		screenProjectionViewMatrix = glm::ortho(
-			screenViewportPosition.x, screenViewportPosition.x + screenViewportSize.x, screenViewportPosition.y + screenViewportSize.y, screenViewportPosition.y);
+		const auto [viewport, scale] = gfx::Viewport::createIntegerScaled(newWindowSize, RENDER_RESOLUTION);
+		screenViewport = viewport;
+		screenProjectionViewMatrix = glm::ortho(0.0f, static_cast<float>(RENDER_RESOLUTION.x), static_cast<float>(RENDER_RESOLUTION.y), 0.0f);
 
-		worldViewport = {.position{15, 15}, .size{380, 450}};
-
+		worldViewport = {.position = screenViewport.position + WORLD_VIEWPORT_POSITION * scale, .size = WORLD_VIEWPORT_SIZE * scale};
 		const float aspectRatio = static_cast<float>(worldViewport.size.x) / static_cast<float>(worldViewport.size.y);
 		worldProjectionViewMatrix = glm::perspective(-verticalFieldOfView, -aspectRatio, 0.1f, 100.0f);
 	}
@@ -367,7 +368,7 @@ private:
 	void drawFpsCounter() {
 		const unsigned fps = getLatestMeasuredFps();
 		const gfx::Font::ShapedText fpsText = mainFont->shapeText(renderer, 16, fmt::format("FPS: {}", fps));
-		const glm::vec2 fpsPosition{static_cast<float>(worldViewport.position.x) + 2.0f, static_cast<float>(worldViewport.position.y) + 20.0f};
+		const glm::vec2 fpsPosition{15.0f + 2.0f, 15.0f + 20.0f};
 		const Color fpsColor = (fps < 60) ? Color::RED : (fps < 120) ? Color::YELLOW : (fps < 240) ? Color::GRAY : Color::LIME;
 		renderPass.draw(gfx::Text{.font = mainFont, .text = fpsText, .position = fpsPosition + glm::vec2{1.0f, 1.0f}, .color = Color::BLACK});
 		renderPass.draw(gfx::Text{.font = mainFont, .text = fpsText, .position = fpsPosition, .color = fpsColor});
