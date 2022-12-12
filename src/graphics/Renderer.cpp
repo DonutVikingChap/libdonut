@@ -1,3 +1,4 @@
+#include <donut/Variant.hpp>
 #include <donut/graphics/Font.hpp>
 #include <donut/graphics/Framebuffer.hpp>
 #include <donut/graphics/Renderer.hpp>
@@ -22,6 +23,25 @@ namespace {
 
 void useShader(Shader3D& shader, const glm::mat4& projectionViewMatrix) {
 	glUseProgram(shader.program.get());
+
+	for (const auto& [location, value] : shader.program.getUniformUploadQueue()) {
+		match(value)([location = location](float v) -> void { glUniform1f(location, v); },
+			[location = location](glm::vec2 v) -> void { glUniform2f(location, v.x, v.y); },
+			[location = location](glm::vec3 v) -> void { glUniform3f(location, v.x, v.y, v.z); },
+			[location = location](glm::vec4 v) -> void { glUniform4f(location, v.x, v.y, v.z, v.w); },
+			[location = location](std::int32_t v) -> void { glUniform1i(location, v); },
+			[location = location](glm::i32vec2 v) -> void { glUniform2i(location, v.x, v.y); },
+			[location = location](glm::i32vec3 v) -> void { glUniform3i(location, v.x, v.y, v.z); },
+			[location = location](glm::i32vec4 v) -> void { glUniform4i(location, v.x, v.y, v.z, v.w); },
+			[location = location](std::uint32_t v) -> void { glUniform1ui(location, v); },
+			[location = location](glm::u32vec2 v) -> void { glUniform2ui(location, v.x, v.y); },
+			[location = location](glm::u32vec3 v) -> void { glUniform3ui(location, v.x, v.y, v.z); },
+			[location = location](glm::u32vec4 v) -> void { glUniform4ui(location, v.x, v.y, v.z, v.w); },
+			[location = location](const glm::mat2& v) -> void { glUniformMatrix2fv(location, 1, GL_FALSE, glm::value_ptr(v)); },
+			[location = location](const glm::mat3& v) -> void { glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(v)); },
+			[location = location](const glm::mat4& v) -> void { glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(v)); });
+	}
+	shader.program.clearUniformUploadQueue();
 
 	glUniformMatrix4fv(shader.projectionViewMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(projectionViewMatrix));
 	glUniform1i(shader.diffuseMap.getLocation(), Scene::Object::TEXTURE_UNIT_DIFFUSE);
@@ -62,6 +82,25 @@ void useShader(Shader3D& shader, const glm::mat4& projectionViewMatrix) {
 
 void useShader(Shader2D& shader, const glm::mat4& projectionViewMatrix) {
 	glUseProgram(shader.program.get());
+
+	for (const auto& [location, value] : shader.program.getUniformUploadQueue()) {
+		match(value)([location = location](float v) -> void { glUniform1f(location, v); },
+			[location = location](glm::vec2 v) -> void { glUniform2f(location, v.x, v.y); },
+			[location = location](glm::vec3 v) -> void { glUniform3f(location, v.x, v.y, v.z); },
+			[location = location](glm::vec4 v) -> void { glUniform4f(location, v.x, v.y, v.z, v.w); },
+			[location = location](std::int32_t v) -> void { glUniform1i(location, v); },
+			[location = location](glm::i32vec2 v) -> void { glUniform2i(location, v.x, v.y); },
+			[location = location](glm::i32vec3 v) -> void { glUniform3i(location, v.x, v.y, v.z); },
+			[location = location](glm::i32vec4 v) -> void { glUniform4i(location, v.x, v.y, v.z, v.w); },
+			[location = location](std::uint32_t v) -> void { glUniform1ui(location, v); },
+			[location = location](glm::u32vec2 v) -> void { glUniform2ui(location, v.x, v.y); },
+			[location = location](glm::u32vec3 v) -> void { glUniform3ui(location, v.x, v.y, v.z); },
+			[location = location](glm::u32vec4 v) -> void { glUniform4ui(location, v.x, v.y, v.z, v.w); },
+			[location = location](const glm::mat2& v) -> void { glUniformMatrix2fv(location, 1, GL_FALSE, glm::value_ptr(v)); },
+			[location = location](const glm::mat3& v) -> void { glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(v)); },
+			[location = location](const glm::mat4& v) -> void { glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(v)); });
+	}
+	shader.program.clearUniformUploadQueue();
 
 	glUniformMatrix4fv(shader.projectionViewMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(projectionViewMatrix));
 	glUniform1i(shader.textureUnit.getLocation(), TexturedQuad::TEXTURE_UNIT);
@@ -169,7 +208,7 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 			for (const RenderPass::ModelInstances& models : std::span{renderPass.modelInstancesSortedByShaderAndScene}.subspan(1)) {
 				if (shader != models.shader.get()) {
 					shader = models.shader.get();
-					actualShader = shader;
+					actualShader = (shader) ? shader : &modelShader;
 					useShader(*actualShader, projectionViewMatrix);
 				}
 
@@ -219,7 +258,7 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 			for (const RenderPass::QuadInstances& quads : std::span{renderPass.quadInstancesSortedByShaderAndTexture}.subspan(1)) {
 				if (shader != quads.shader.get()) {
 					shader = quads.shader.get();
-					actualShader = shader;
+					actualShader = (shader) ? shader : &defaultShader;
 					useShader(*actualShader, projectionViewMatrix);
 				}
 

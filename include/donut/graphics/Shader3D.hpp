@@ -3,13 +3,12 @@
 
 #include <donut/graphics/Shader.hpp>
 
-#include <string_view> // std::string_view
-
 namespace donut {
 namespace graphics {
 
 struct Shader3DOptions {
-	bool clearDepthBuffer = true;
+	int orderIndex = 1;
+	bool clearDepthBuffer = false;
 	bool overwriteDepthBuffer = false;
 	bool useDepthTest = true;
 	bool useBackfaceCulling = true;
@@ -18,15 +17,12 @@ struct Shader3DOptions {
 
 class Shader3D {
 public:
-	static const std::string_view vertexShaderSourceCodeInstancedModel;
-	static const std::string_view fragmentShaderSourceCodeModelBlinnPhong;
+	static const char* const vertexShaderSourceCodeInstancedModel;
+	static const char* const fragmentShaderSourceCodeModelBlinnPhong;
 
-	Shader3D(std::string_view vertexShaderSourceCode, std::string_view fragmentShaderSourceCode, const Shader3DOptions& options = {})
+	Shader3D(const ShaderProgramOptions& programOptions, const Shader3DOptions& options = {})
 		: options(options)
-		, program({
-			  .vertexShaderSourceCode = vertexShaderSourceCode,
-			  .fragmentShaderSourceCode = fragmentShaderSourceCode,
-		  }) {}
+		, program(programOptions) {}
 
 	Shader3DOptions options;
 	ShaderProgram program;

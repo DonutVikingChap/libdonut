@@ -3,17 +3,20 @@
 #include <donut/graphics/Shader.hpp>
 #include <donut/graphics/opengl.hpp>
 
-#include <array>       // std::array
-#include <cstddef>     // std::size_t
-#include <string>      // std::string
-#include <string_view> // std::string_view
+#include <array>   // std::array
+#include <cstddef> // std::size_t
+#include <string>  // std::string
 
 namespace donut {
 namespace graphics {
 
-ShaderStage::ShaderStage(ShaderStageType type, std::string_view sourceCode) {
-	if (sourceCode.empty()) {
+ShaderStage::ShaderStage(ShaderStageType type, const char* definitions, const char* sourceCode) {
+	if (!sourceCode) {
 		return;
+	}
+
+	if (!definitions) {
+		definitions = "";
 	}
 
 	const Handle handle = glCreateShader(static_cast<GLenum>(type));
@@ -23,13 +26,19 @@ ShaderStage::ShaderStage(ShaderStageType type, std::string_view sourceCode) {
 	shader.reset(handle);
 
 #ifdef __EMSCRIPTEN__
-	constexpr std::string_view header{"#version 300 es\nprecision highp float;\nprecision lowp sampler2DArray;\n"};
+	constexpr const char* HEADER = "#version 300 es\nprecision highp float;\nprecision lowp sampler2DArray;\n";
 #else
-	constexpr std::string_view header{"#version 330 core\n"};
+	constexpr const char* HEADER = "#version 330 core\n";
 #endif
-	const std::array<const GLchar*, 2> sourceStrings{static_cast<const GLchar*>(header.data()), static_cast<const GLchar*>(sourceCode.data())};
-	const std::array<GLint, 2> sourceLengths{static_cast<GLint>(header.size()), static_cast<GLint>(sourceCode.size())};
-	glShaderSource(shader.get(), sourceStrings.size(), sourceStrings.data(), sourceLengths.data());
+	constexpr const char* LINE_DIRECTIVE = "\n#line 1\n";
+
+	const std::array<const GLchar*, 4> sourceStrings{
+		static_cast<const GLchar*>(HEADER),
+		static_cast<const GLchar*>(definitions),
+		static_cast<const GLchar*>(LINE_DIRECTIVE),
+		static_cast<const GLchar*>(sourceCode),
+	};
+	glShaderSource(shader.get(), sourceStrings.size(), sourceStrings.data(), nullptr);
 	glCompileShader(shader.get());
 
 	GLint success = GL_FALSE;
@@ -51,9 +60,9 @@ void ShaderStage::ShaderDeleter::operator()(Handle handle) const noexcept {
 }
 
 ShaderProgram::ShaderProgram(const ShaderProgramOptions& options)
-	: vertexShader(ShaderStageType::VERTEX_SHADER, options.vertexShaderSourceCode)
-	, fragmentShader(ShaderStageType::FRAGMENT_SHADER, options.fragmentShaderSourceCode) {
-	if (options.vertexShaderSourceCode.empty() && options.fragmentShaderSourceCode.empty()) {
+	: vertexShader(ShaderStageType::VERTEX_SHADER, options.definitions, options.vertexShaderSourceCode)
+	, fragmentShader(ShaderStageType::FRAGMENT_SHADER, options.definitions, options.fragmentShaderSourceCode) {
+	if (!options.vertexShaderSourceCode && !options.fragmentShaderSourceCode) {
 		return;
 	}
 
@@ -85,6 +94,66 @@ ShaderProgram::ShaderProgram(const ShaderProgramOptions& options)
 		}
 		throw Error{"Failed to link shader program!"};
 	}
+}
+
+void ShaderProgram::setUniformFloat(const ShaderUniform& uniform, float value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformVec2(const ShaderUniform& uniform, glm::vec2 value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformVec3(const ShaderUniform& uniform, glm::vec3 value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformVec4(const ShaderUniform& uniform, glm::vec4 value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformInt(const ShaderUniform& uniform, std::int32_t value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformIVec2(const ShaderUniform& uniform, glm::i32vec2 value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformIVec3(const ShaderUniform& uniform, glm::i32vec3 value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformIVec4(const ShaderUniform& uniform, glm::i32vec4 value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformUint(const ShaderUniform& uniform, glm::uint32_t value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformUVec2(const ShaderUniform& uniform, glm::u32vec2 value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformUVec3(const ShaderUniform& uniform, glm::u32vec3 value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformUVec4(const ShaderUniform& uniform, glm::u32vec4 value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformMat2(const ShaderUniform& uniform, const glm::mat2& value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformMat3(const ShaderUniform& uniform, const glm::mat3& value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
+}
+
+void ShaderProgram::setUniformMat4(const ShaderUniform& uniform, const glm::mat4& value) {
+	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
 }
 
 void ShaderProgram::ProgramDeleter::operator()(Handle handle) const noexcept {

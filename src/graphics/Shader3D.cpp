@@ -1,11 +1,9 @@
 #include <donut/graphics/Shader3D.hpp>
 
-#include <string_view> // std::string_view
-
 namespace donut {
 namespace graphics {
 
-const std::string_view Shader3D::vertexShaderSourceCodeInstancedModel = R"GLSL(
+const char* const Shader3D::vertexShaderSourceCodeInstancedModel = R"GLSL(
     layout(location = 0) in vec3 inPosition;
     layout(location = 1) in vec3 inNormal;
     layout(location = 2) in vec3 inTangent;
@@ -36,7 +34,7 @@ const std::string_view Shader3D::vertexShaderSourceCodeInstancedModel = R"GLSL(
     }
 )GLSL";
 
-const std::string_view Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
+const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
     struct PointLight {
         vec3 position;
         vec3 ambient;

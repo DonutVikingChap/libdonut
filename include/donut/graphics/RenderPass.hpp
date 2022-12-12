@@ -135,17 +135,26 @@ public:
 private:
 	friend Renderer;
 
+	template <typename Shader>
+	[[nodiscard]] static std::strong_ordering compareShaders(const std::shared_ptr<Shader>& a, const std::shared_ptr<Shader>& b) noexcept {
+		const int orderIndexA = (a) ? a->options.orderIndex : 0;
+		const int orderIndexB = (b) ? b->options.orderIndex : 0;
+		return orderIndexA <=> orderIndexB;
+	}
+
 	struct ModelInstances {
 		std::shared_ptr<Shader3D> shader;
 		std::shared_ptr<Scene> scene;
 		std::vector<std::vector<Scene::Object::Instance>> objectInstances;
 
 		[[nodiscard]] std::strong_ordering operator<=>(const ModelInstances& other) const {
-			return (shader != other.shader) ? shader.get() <=> other.shader.get() : scene.get() <=> other.scene.get();
+			const std::strong_ordering shaderOrdering = compareShaders(shader, other.shader);
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : scene.get() <=> other.scene.get();
 		}
 
 		[[nodiscard]] std::strong_ordering operator<=>(const Model& model) const {
-			return (shader != model.shader) ? shader.get() <=> model.shader.get() : scene.get() <=> model.scene.get();
+			const std::strong_ordering shaderOrdering = compareShaders(shader, model.shader);
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : scene.get() <=> model.scene.get();
 		}
 	};
 
@@ -160,11 +169,13 @@ private:
 		std::vector<TexturedQuad::Instance> instances;
 
 		[[nodiscard]] std::strong_ordering operator<=>(const QuadInstances& other) const {
-			return (shader != other.shader) ? shader.get() <=> other.shader.get() : texture.get() <=> other.texture.get();
+			const std::strong_ordering shaderOrdering = compareShaders(shader, other.shader);
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : texture.get() <=> other.texture.get();
 		}
 
 		[[nodiscard]] std::strong_ordering operator<=>(const Quad& quad) const {
-			return (shader != quad.shader) ? shader.get() <=> quad.shader.get() : texture.get() <=> quad.texture.get();
+			const std::strong_ordering shaderOrdering = compareShaders(shader, quad.shader);
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : texture.get() <=> quad.texture.get();
 		}
 	};
 

@@ -13,12 +13,16 @@
 #include <donut/graphics/ImageLDR.hpp>
 #include <donut/graphics/RenderPass.hpp>
 #include <donut/graphics/Renderer.hpp>
+#include <donut/graphics/Shader.hpp>
+#include <donut/graphics/Shader3D.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/Viewport.hpp>
 #include <donut/json.hpp>
 
+#include <array>                         // std::array
 #include <charconv>                      // std::from_chars_result, std::from_chars
 #include <concepts>                      // std::integral
+#include <cstddef>                       // std::size_t
 #include <cstdio>                        // stderr
 #include <exception>                     // std::exception
 #include <fmt/format.h>                  // fmt::format, fmt::print
@@ -89,6 +93,137 @@ private:
 		SCROLL_DOWN,
 	};
 
+	struct TestShader3D : gfx::Shader3D {
+		struct PointLight {
+			glm::vec3 position;
+			glm::vec3 ambient;
+			glm::vec3 diffuse;
+			glm::vec3 specular;
+			float constantFalloff;
+			float linearFalloff;
+			float quadraticFalloff;
+		};
+
+		struct PointLightUniform {
+			PointLightUniform(const gfx::ShaderProgram& program, const char* name)
+				: position(program, fmt::format("{}.position", name).c_str())
+				, ambient(program, fmt::format("{}.ambient", name).c_str())
+				, diffuse(program, fmt::format("{}.diffuse", name).c_str())
+				, specular(program, fmt::format("{}.specular", name).c_str())
+				, constantFalloff(program, fmt::format("{}.constantFalloff", name).c_str())
+				, linearFalloff(program, fmt::format("{}.linearFalloff", name).c_str())
+				, quadraticFalloff(program, fmt::format("{}.quadraticFalloff", name).c_str()) {}
+
+			gfx::ShaderUniform position;
+			gfx::ShaderUniform ambient;
+			gfx::ShaderUniform diffuse;
+			gfx::ShaderUniform specular;
+			gfx::ShaderUniform constantFalloff;
+			gfx::ShaderUniform linearFalloff;
+			gfx::ShaderUniform quadraticFalloff;
+		};
+
+		static constexpr std::size_t POINT_LIGHT_COUNT = 4;
+		static constexpr const char* FRAGMENT_SHADER_SOURCE_CODE = R"GLSL(
+			struct PointLight {
+				vec3 position;
+				vec3 ambient;
+				vec3 diffuse;
+				vec3 specular;
+				float constantFalloff;
+				float linearFalloff;
+				float quadraticFalloff;
+			};
+
+			in vec3 ioFragmentPosition;
+			in vec3 ioNormal;
+			in vec3 ioTangent;
+			in vec3 ioBitangent;
+			in vec2 ioTextureCoordinates;
+			in vec4 ioTintColor;
+
+			out vec4 outFragmentColor;
+
+			uniform sampler2D diffuseMap;
+			uniform sampler2D specularMap;
+			uniform sampler2D normalMap;
+			uniform float specularExponent;
+
+			uniform PointLight pointLights[POINT_LIGHT_COUNT];
+			uniform vec3 viewPosition;
+
+			float halfLambert(float cosine) {
+				float factor = 0.5 + 0.5 * cosine;
+				return factor * factor;
+			}
+
+			float blinnPhong(vec3 normal, vec3 lightDirection, vec3 viewDirection) {
+				vec3 halfwayDirection = normalize(lightDirection + viewDirection);
+				return pow(max(dot(normal, halfwayDirection), 0.0), specularExponent);
+			}
+
+			vec3 calculatePointLight(PointLight light, vec3 normal, vec3 viewDirection, vec3 ambientColor, vec3 diffuseColor, vec3 specularColor) {
+				vec3 lightDifference = light.position - ioFragmentPosition;
+				float lightDistanceSquared = dot(lightDifference, lightDifference);
+				float lightDistance = sqrt(lightDistanceSquared);
+				vec3 lightDirection = lightDifference * (1.0 / lightDistance);
+				float cosine = dot(normal, lightDirection);
+				float diffuseFactor = halfLambert(cosine);
+				float specularFactor = blinnPhong(normal, lightDirection, viewDirection);
+				float attenuation = 1.0 / (light.constantFalloff + light.linearFalloff * lightDistance + light.quadraticFalloff * lightDistanceSquared);
+				vec3 ambientTerm = light.ambient * ambientColor;
+				vec3 diffuseTerm = light.diffuse * diffuseFactor * diffuseColor;
+				vec3 specularTerm = light.specular * specularFactor * specularColor;
+				const float visibility = 1.0;
+				return attenuation * (ambientTerm + (diffuseTerm + specularTerm) * visibility);
+			}
+
+			void main() {
+				vec4 diffuseColor = ioTintColor * texture(diffuseMap, ioTextureCoordinates);
+				vec3 specularColor = texture(specularMap, ioTextureCoordinates).rgb;
+				
+				mat3 TBN = mat3(normalize(ioTangent), normalize(ioBitangent), normalize(ioNormal));
+				vec3 surfaceNormal = texture(normalMap, ioTextureCoordinates).xyz * 2.0 - vec3(1.0);
+				vec3 normal = normalize(TBN * surfaceNormal);
+
+				vec3 viewDirection = normalize(viewPosition - ioFragmentPosition);
+
+				vec3 result = vec3(0.0, 0.0, 0.0);
+				for (uint i = uint(0); i < uint(POINT_LIGHT_COUNT); ++i) {
+					result += calculatePointLight(pointLights[i], normal, viewDirection, diffuseColor.rgb, diffuseColor.rgb, specularColor);
+				}
+				outFragmentColor = vec4(result, diffuseColor.a);
+			}
+		)GLSL";
+
+		TestShader3D()
+			: gfx::Shader3D({
+				  .definitions = fmt::format("#define POINT_LIGHT_COUNT {}", POINT_LIGHT_COUNT).c_str(),
+				  .vertexShaderSourceCode = gfx::Shader3D::vertexShaderSourceCodeInstancedModel,
+				  .fragmentShaderSourceCode = FRAGMENT_SHADER_SOURCE_CODE,
+			  }) {}
+
+		void setPointLights(std::span<const PointLight, POINT_LIGHT_COUNT> values) {
+			for (std::size_t i = 0; i < POINT_LIGHT_COUNT; ++i) {
+				program.setUniformVec3(pointLights[i].position, values[i].position);
+				program.setUniformVec3(pointLights[i].ambient, values[i].ambient);
+				program.setUniformVec3(pointLights[i].diffuse, values[i].diffuse);
+				program.setUniformVec3(pointLights[i].specular, values[i].specular);
+				program.setUniformFloat(pointLights[i].constantFalloff, values[i].constantFalloff);
+				program.setUniformFloat(pointLights[i].linearFalloff, values[i].linearFalloff);
+				program.setUniformFloat(pointLights[i].quadraticFalloff, values[i].quadraticFalloff);
+			}
+		}
+
+		void setViewPosition(glm::vec3 position) {
+			program.setUniformVec3(viewPosition, position);
+		}
+
+	private:
+		gfx::ShaderArray<PointLightUniform, POINT_LIGHT_COUNT> pointLights{program, "pointLights"};
+		gfx::ShaderUniform viewPosition{program, "viewPosition"};
+	};
+
 	void resize(glm::ivec2 newWindowSize) override {
 		constexpr glm::ivec2 RENDER_RESOLUTION{640, 480};
 		constexpr glm::ivec2 WORLD_VIEWPORT_POSITION{15, 15};
@@ -157,7 +292,33 @@ private:
 	}
 
 	void endFrame(const app::FrameInfo& frameInfo) override {
-		(void)frameInfo; // TODO: Use?
+		const TestShader3D::PointLight baseLight = {
+			.position = carrotCakePosition,
+			.ambient{0.2f, 0.2f, 0.2f},
+			.diffuse{0.5f + 0.5f * glm::sin(frameInfo.elapsedTime), 0.8f, 0.8f},
+			.specular{0.8f, 0.8f, 0.8f},
+			.constantFalloff = 1.0f,
+			.linearFalloff = 0.04f,
+			.quadraticFalloff = 0.03f,
+		};
+
+		const auto baseLightWithOffset = [&](glm::vec3 offset) -> TestShader3D::PointLight {
+			TestShader3D::PointLight result = baseLight;
+			result.position += offset;
+			return result;
+		};
+
+		const std::array<TestShader3D::PointLight, TestShader3D::POINT_LIGHT_COUNT> pointLights{{
+			baseLightWithOffset({-2.0f, 0.0f, 0.0f}),
+			baseLightWithOffset({0.0f, -2.0f, 0.0f}),
+			baseLightWithOffset({0.0f, 2.0f, 0.0f}),
+			baseLightWithOffset({0.0f, 0.0f, 2.0f}),
+		}};
+
+		const glm::vec3 viewPosition{0.0f, 0.0f, 0.0f};
+
+		testShader3D->setPointLights(pointLights);
+		testShader3D->setViewPosition(viewPosition);
 	}
 
 	void display(const app::FrameInfo& frameInfo) override {
@@ -274,13 +435,25 @@ private:
 	void drawWorld(const app::FrameInfo& frameInfo) {
 		glm::mat4 carrotCakeTransformation = glm::identity<glm::mat4>();
 		carrotCakeTransformation = glm::translate(carrotCakeTransformation, glm::vec3{0.6f, -0.7f, -3.0f} + carrotCakePosition);
-		carrotCakeTransformation = glm::scale(carrotCakeTransformation, glm::vec3{5.0f * carrotCakeScale.x, 5.0f * carrotCakeScale.y, 5.0f});
-		carrotCakeTransformation = glm::rotate(carrotCakeTransformation, frameInfo.elapsedTime * -1.5f, glm::vec3{0.0f, 1.0f, 0.0f});
-		carrotCakeTransformation = glm::rotate(carrotCakeTransformation, frameInfo.elapsedTime * 2.0f, glm::vec3{0.0f, 0.0f, 1.0f});
+		carrotCakeTransformation = glm::scale(carrotCakeTransformation, {5.0f * carrotCakeScale.x, 5.0f * carrotCakeScale.y, 5.0f});
+		carrotCakeTransformation = glm::rotate(carrotCakeTransformation, frameInfo.elapsedTime * -1.5f, {0.0f, 1.0f, 0.0f});
+		carrotCakeTransformation = glm::rotate(carrotCakeTransformation, frameInfo.elapsedTime * 2.0f, {0.0f, 0.0f, 1.0f});
 		carrotCakeTransformation = glm::translate(carrotCakeTransformation, {0.0f, 0.05f, 0.0f});
 		renderPass.draw(gfx::Model{
 			.scene = carrotCakeModel,
 			.transformation = carrotCakeTransformation,
+		});
+
+		glm::mat4 shadedCarrotCakeTransformation = glm::identity<glm::mat4>();
+		shadedCarrotCakeTransformation = glm::translate(shadedCarrotCakeTransformation, {-0.6f, -0.2f, -3.0f});
+		shadedCarrotCakeTransformation = glm::scale(shadedCarrotCakeTransformation, {5.0f, 5.0f, 5.0f});
+		shadedCarrotCakeTransformation = glm::rotate(shadedCarrotCakeTransformation, frameInfo.elapsedTime * -1.5f, {0.0f, 1.0f, 0.0f});
+		shadedCarrotCakeTransformation = glm::rotate(shadedCarrotCakeTransformation, frameInfo.elapsedTime * 2.0f, {0.0f, 0.0f, 1.0f});
+		shadedCarrotCakeTransformation = glm::translate(shadedCarrotCakeTransformation, {0.0f, 0.05f, 0.0f});
+		renderPass.draw(gfx::Model{
+			.shader = testShader3D,
+			.scene = carrotCakeModel,
+			.transformation = shadedCarrotCakeTransformation,
 		});
 	}
 
@@ -385,6 +558,7 @@ private:
 	std::shared_ptr<gfx::SpriteAtlas> spriteAtlas = std::make_shared<gfx::SpriteAtlas>();
 	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas->insert(renderer, gfx::ImageLDR{"textures/test.png"});
 	std::shared_ptr<gfx::Font> mainFont = std::make_shared<gfx::Font>("fonts/unscii/unscii-8.ttf");
+	std::shared_ptr<TestShader3D> testShader3D = std::make_shared<TestShader3D>();
 	app::InputManager inputManager{};
 	std::optional<audio::SoundStage> soundStage{};
 	std::optional<audio::Sound> music{};

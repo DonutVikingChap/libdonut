@@ -1,11 +1,9 @@
 #include <donut/graphics/Shader2D.hpp>
 
-#include <string_view> // std::string_view
-
 namespace donut {
 namespace graphics {
 
-const std::string_view Shader2D::vertexShaderSourceCodeInstancedTexturedQuad = R"GLSL(
+const char* const Shader2D::vertexShaderSourceCodeInstancedTexturedQuad = R"GLSL(
     layout(location = 0) in vec2 inCoordinates;
     layout(location = 1) in mat4 instanceTransformation;
     layout(location = 5) in vec2 instanceTextureOffset;
@@ -24,7 +22,7 @@ const std::string_view Shader2D::vertexShaderSourceCodeInstancedTexturedQuad = R
     }
 )GLSL";
 
-const std::string_view Shader2D::fragmentShaderSourceCodeTexturedQuadPlain = R"GLSL(
+const char* const Shader2D::fragmentShaderSourceCodeTexturedQuadPlain = R"GLSL(
     in vec2 ioTextureCoordinates;
     in vec4 ioTintColor;
 
@@ -37,7 +35,7 @@ const std::string_view Shader2D::fragmentShaderSourceCodeTexturedQuadPlain = R"G
     }
 )GLSL";
 
-const std::string_view Shader2D::fragmentShaderSourceCodeTexturedQuadAlpha = R"GLSL(
+const char* const Shader2D::fragmentShaderSourceCodeTexturedQuadAlpha = R"GLSL(
     in vec2 ioTextureCoordinates;
     in vec4 ioTintColor;
 
