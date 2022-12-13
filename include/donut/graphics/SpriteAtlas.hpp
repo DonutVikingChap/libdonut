@@ -34,7 +34,7 @@ public:
 		glm::vec2 size{};
 	};
 
-	[[nodiscard]] SpriteId insert(Renderer& renderer, ImageLDRView image) {
+	[[nodiscard]] SpriteId insert(Renderer& renderer, const ImageLDRView& image) {
 		const auto [x, y, resized] = atlasPacker.insertRectangle(image.getWidth(), image.getHeight());
 		prepareAtlasTexture(renderer, resized);
 
