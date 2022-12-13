@@ -25,21 +25,21 @@ template <typename InputIt, typename Sentinel>
 	}
 	char32_t codePoint{};
 	const char8_t c0 = *it++;
-	if ((c0 & 0b10000000) == 0) { // 0-127
+	if ((c0 & 0b10000000u) == 0) { // 0-127
 		[[likely]] codePoint = c0;
-	} else if ((c0 & 0b11100000) == 0b11000000) { // 128-2047
+	} else if ((c0 & 0b11100000u) == 0b11000000u) { // 128-2047
 		if (it == end) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
 		const char8_t c1 = *it++;
-		if ((c1 & 0b11000000) != 0b10000000) {
+		if ((c1 & 0b11000000u) != 0b10000000u) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Invalid continuation.
 		}
-		codePoint = ((c0 & 0b11111)) << 6 | (c1 & 0b111111);
+		codePoint = ((c0 & 0b00011111u) << 6) | (c1 & 0b00111111u);
 		if (codePoint < 128) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Overlong sequence.
 		}
-	} else if ((c0 & 0b11110000) == 0b11100000) { // 2048-65535
+	} else if ((c0 & 0b11110000u) == 0b11100000u) { // 2048-65535
 		if (it == end) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
@@ -48,17 +48,17 @@ template <typename InputIt, typename Sentinel>
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
 		const char8_t c2 = *it++;
-		if ((c1 & 0b11000000) != 0b10000000 || (c2 & 0b11000000) != 0b10000000) {
+		if ((c1 & 0b11000000u) != 0b10000000u || (c2 & 0b11000000u) != 0b10000000u) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Invalid continuation.
 		}
-		codePoint = ((c0 & 0b1111) << 12) | ((c1 & 0b111111) << 6) | (c2 & 0b111111);
+		codePoint = ((c0 & 0b00001111u) << 12) | ((c1 & 0b00111111u) << 6) | (c2 & 0b00111111u);
 		if (codePoint < 2048) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Overlong sequence.
 		}
 		if (codePoint >= 0xD800 && codePoint <= 0xDFFF) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Surrogate code point.
 		}
-	} else if ((c0 & 0b11111000) == 0b11110000) { // 65536-1114111
+	} else if ((c0 & 0b11111000u) == 0b11110000u) { // 65536-1114111
 		if (it == end) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
@@ -71,10 +71,10 @@ template <typename InputIt, typename Sentinel>
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
 		const char8_t c3 = *it++;
-		if ((c1 & 0b11000000) != 0b10000000 || (c2 & 0b11000000) != 0b10000000 || (c3 & 0b11000000) != 0b10000000) {
+		if ((c1 & 0b11000000u) != 0b10000000u || (c2 & 0b11000000u) != 0b10000000u || (c3 & 0b11000000u) != 0b10000000u) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Invalid continuation.
 		}
-		codePoint = ((c0 & 0b111) << 18) | ((c1 & 0b111111) << 12) | ((c2 & 0b111111) << 6) | (c3 & 0b111111);
+		codePoint = ((c0 & 0b00000111u) << 18) | ((c1 & 0b00111111u) << 12) | ((c2 & 0b00111111u) << 6) | (c3 & 0b00111111u);
 		if (codePoint < 65536) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Overlong sequence.
 		}
