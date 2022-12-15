@@ -24,14 +24,14 @@ template <typename InputIt, typename Sentinel>
 		[[unlikely]] return {CODE_POINT_ERROR, it}; // Reached end.
 	}
 	char32_t codePoint{};
-	const char8_t c0 = *it++;
+	const char8_t c0 = static_cast<char8_t>(*it++);
 	if ((c0 & 0b10000000u) == 0) { // 0-127
 		[[likely]] codePoint = c0;
 	} else if ((c0 & 0b11100000u) == 0b11000000u) { // 128-2047
 		if (it == end) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
-		const char8_t c1 = *it++;
+		const char8_t c1 = static_cast<char8_t>(*it++);
 		if ((c1 & 0b11000000u) != 0b10000000u) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Invalid continuation.
 		}
@@ -43,11 +43,11 @@ template <typename InputIt, typename Sentinel>
 		if (it == end) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
-		const char8_t c1 = *it++;
+		const char8_t c1 = static_cast<char8_t>(*it++);
 		if (it == end) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
-		const char8_t c2 = *it++;
+		const char8_t c2 = static_cast<char8_t>(*it++);
 		if ((c1 & 0b11000000u) != 0b10000000u || (c2 & 0b11000000u) != 0b10000000u) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Invalid continuation.
 		}
@@ -62,15 +62,15 @@ template <typename InputIt, typename Sentinel>
 		if (it == end) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
-		const char8_t c1 = *it++;
+		const char8_t c1 = static_cast<char8_t>(*it++);
 		if (it == end) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
-		const char8_t c2 = *it++;
+		const char8_t c2 = static_cast<char8_t>(*it++);
 		if (it == end) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Missing continuation.
 		}
-		const char8_t c3 = *it++;
+		const char8_t c3 = static_cast<char8_t>(*it++);
 		if ((c1 & 0b11000000u) != 0b10000000u || (c2 & 0b11000000u) != 0b10000000u || (c3 & 0b11000000u) != 0b10000000u) {
 			[[unlikely]] return {CODE_POINT_ERROR, it}; // Invalid continuation.
 		}
