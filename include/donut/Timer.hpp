@@ -43,6 +43,7 @@ public:
 
 	[[nodiscard]] constexpr int countDownLoop(Duration deltaTime, Duration interval) noexcept {
 		if (interval <= Duration{}) {
+			time = Duration{};
 			return 1;
 		}
 		int ticks = 0;
@@ -56,6 +57,7 @@ public:
 
 	[[nodiscard]] constexpr int countUpLoop(Duration deltaTime, Duration interval) noexcept {
 		if (interval <= Duration{}) {
+			time = Duration{};
 			return 1;
 		}
 		int ticks = 0;
