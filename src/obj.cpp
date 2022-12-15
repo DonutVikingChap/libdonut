@@ -186,7 +186,7 @@ private:
 	[[nodiscard]] T parseUnsignedInteger() {
 		T result = 0;
 		while (it != end && isDecimalDigit(*it)) {
-			result = result * T{10} + static_cast<T>(*it++ - '0');
+			result = static_cast<T>(result * T{10} + static_cast<T>(*it++ - '0'));
 		}
 		return result;
 	}
