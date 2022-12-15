@@ -1,6 +1,7 @@
 #include <donut/Color.hpp>
 #include <donut/File.hpp>
 #include <donut/InputFileStream.hpp>
+#include <donut/Timer.hpp>
 #include <donut/application/Application.hpp>
 #include <donut/application/Event.hpp>
 #include <donut/application/Input.hpp>
@@ -46,6 +47,7 @@ namespace json = donut::json;
 using Color = donut::Color;
 using File = donut::File;
 using InputFileStream = donut::InputFileStream;
+using Timer = donut::Timer<float>;
 
 namespace {
 
@@ -285,6 +287,10 @@ private:
 
 		const float scrollInput = inputManager.getRelativeVector(Action::SCROLL_DOWN, Action::SCROLL_UP);
 		carrotCakePosition.z -= scrollInput * 0.25f * sprintInput;
+
+		const bool triggerInput = inputManager.isPressed(Action::CANCEL);
+		counterA += timerA.countUpLoopTrigger(frameInfo.deltaTime, 1.0f, triggerInput);
+		counterB += timerB.countDownLoopTrigger(frameInfo.deltaTime, 1.0f, triggerInput);
 	}
 
 	void tick(const app::TickInfo& tickInfo) override {
@@ -536,6 +542,13 @@ private:
 		if (inputManager.isPressed(Action::AIM_RIGHT) || inputManager.justPressed(Action::AIM_RIGHT)) {
 			renderPass.draw(gfx::Text{.font = mainFont, .text = mainFont->shapeText(renderer, 8, ">"), .position{600.0f, 210.0f}});
 		}
+
+		renderPass.draw(gfx::Text{
+			.font = mainFont,
+			.text = mainFont->shapeText(
+				renderer, 8, fmt::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", timerA.getTime(), counterA, timerB.getTime(), counterB)),
+			.position{410.0f, 240.0f},
+		});
 	}
 
 	void drawFpsCounter() {
@@ -567,6 +580,10 @@ private:
 	float verticalFieldOfView;
 	glm::vec3 carrotCakePosition{0.0f, 0.0f, 0.0f};
 	glm::vec2 carrotCakeScale{1.0f, 1.0f};
+	Timer timerA{};
+	Timer timerB{};
+	int counterA = 0;
+	int counterB = 0;
 };
 
 void parseOptionValue(int argc, char* argv[], int& i, std::string_view optionName, const char*& output) {

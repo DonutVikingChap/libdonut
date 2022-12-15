@@ -42,6 +42,7 @@ add_library(donut
 	"include/donut/graphics/Texture.hpp"
 	"include/donut/graphics/TexturedQuad.hpp"
 	"include/donut/graphics/VertexArray.hpp"
+	"include/donut/graphics/Viewport.hpp"
 
 	"include/donut/base64.hpp"
 	"include/donut/Color.hpp"
@@ -54,6 +55,7 @@ add_library(donut
 	"include/donut/reflection.hpp"
 	"include/donut/Resource.hpp"
 	"include/donut/shapes.hpp"
+	"include/donut/Timer.hpp"
 	"include/donut/unicode.hpp"
 	"include/donut/Variant.hpp"
 	"include/donut/xml.hpp"
