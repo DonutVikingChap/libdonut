@@ -20,7 +20,7 @@ SoundStage::SoundStage(const SoundStageOptions& options)
 	setMaxSimultaneousSounds(options.maxSimultaneousSounds);
 }
 
-void SoundStage::beginFrame(float deltaTime, glm::vec3 listenerPosition) {
+void SoundStage::update(float deltaTime, glm::vec3 listenerPosition) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 
 	time += deltaTime;

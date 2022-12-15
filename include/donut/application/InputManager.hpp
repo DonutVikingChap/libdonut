@@ -47,7 +47,7 @@ public:
 	InputManager& operator=(const InputManager&) = delete;
 	InputManager& operator=(InputManager&&) = delete;
 
-	void beginFrame();
+	void prepareForEvents();
 	void handleEvent(const application::Event& event);
 
 	void bind(Input input, Outputs outputs);

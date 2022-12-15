@@ -4,7 +4,6 @@
 
 //
 #include <SDL.h> // SDL...
-#include <SDL_video.h>
 #ifdef __EMSCRIPTEN__
 #include <SDL_opengles.h> // SDL_GL_...
 #else
@@ -16,7 +15,7 @@
 #endif
 //
 
-#include <algorithm>    // std::min
+#include <algorithm>    // std::min, std::max
 #include <cmath>        // std::ceil
 #include <cstdint>      // std::uint64_t, std::uint32_t
 #include <cstdio>       // stderr
@@ -24,6 +23,7 @@
 #include <fmt/format.h> // fmt::format, fmt::print
 #include <glm/glm.hpp>  // glm::
 #include <physfs.h>     // PHYSFS_...
+#include <string>       // std::string
 #include <string_view>  // std::string_view
 
 namespace donut {
@@ -49,7 +49,7 @@ Application::Application(const char* programFilepath, const ApplicationOptions& 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 #endif
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, options.msaaLevel > 0);
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, options.msaaLevel);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, std::max(0, options.msaaLevel));
 
 	std::uint32_t windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
 	if (options.windowResizable) {
@@ -76,14 +76,21 @@ Application::Application(const char* programFilepath, const ApplicationOptions& 
 #endif
 
 	setWindowVSync(options.windowVSync);
-	setWindowFramerate(options.tickRate, options.minFps, options.maxFps);
+	setFrameRateParameters(options.tickRate, options.minFps, options.maxFps);
 }
 
 void Application::run() {
-	startTime = SDL_GetPerformanceCounter();
-	latestTickTime = startTime;
-	latestFrameTime = startTime;
-	latestFpsCountTime = startTime;
+	startClockTime = SDL_GetPerformanceCounter();
+	latestFrameClockTime = startClockTime;
+	latestFpsMeasurementClockTime = startClockTime;
+	processedTickClockTime = startClockTime;
+	latestMeasuredFps = 0u;
+	fpsCounter = 0u;
+	frameInfo.tickInfo.processedTickCount = 0u;
+	frameInfo.tickInfo.processedTickTime = 0.0f;
+	frameInfo.tickInterpolationAlpha = 0.0f;
+	frameInfo.elapsedTime = 0.0f;
+	frameInfo.deltaTime = 0.0f;
 
 	resize(getWindowSize());
 
@@ -109,7 +116,12 @@ void Application::run() {
 	emscripten_set_main_loop_arg(run_emscripten_frame, this, 0, 1);
 #else
 	while (isRunning()) {
-		runFrame();
+		try {
+			runFrame();
+		} catch (...) {
+			quit();
+			throw;
+		}
 	}
 #endif
 }
@@ -181,34 +193,29 @@ void Application::setWindowVSync(bool vSync) {
 	}
 }
 
-void Application::setWindowFramerate(float tickRate, float minFps, float maxFps) {
-	tickInterval = static_cast<std::uint64_t>(std::ceil(static_cast<float>(clockFrequency) / tickRate));
-	tickDeltaTime = static_cast<float>(tickInterval) * clockInterval;
-	minFrameInterval = (maxFps == 0.0f) ? 0 : static_cast<std::uint64_t>(std::ceil(static_cast<float>(clockFrequency) / maxFps));
-	maxTicksPerFrame = (tickRate <= minFps) ? 1 : static_cast<std::uint64_t>(tickRate / minFps);
+void Application::setFrameRateParameters(float tickRate, float minFps, float maxFps) {
+	tickClockInterval = static_cast<std::uint64_t>(std::ceil(static_cast<float>(clockFrequency) / tickRate));
+	frameInfo.tickInfo.tickInterval = static_cast<float>(tickClockInterval) * clockInterval;
+	minFrameClockInterval = (maxFps == 0.0f) ? 0 : static_cast<std::uint64_t>(std::ceil(static_cast<float>(clockFrequency) / maxFps));
+	maxTicksPerFrame = (minFps <= 0.0f || tickRate <= minFps) ? 1 : static_cast<std::uint64_t>(tickRate / minFps);
 }
 
 void Application::runFrame() {
-	const std::uint64_t currentTime = SDL_GetPerformanceCounter();
-	const std::uint64_t timeSinceLatestFrame = currentTime - latestFrameTime;
-	if (currentTime > latestFrameTime && timeSinceLatestFrame >= minFrameInterval) {
-		latestFrameTime = currentTime;
-		++fpsCount;
-		if (currentTime - latestFpsCountTime >= clockFrequency) {
-			latestFpsCountTime = currentTime;
-			latestMeasuredFps = fpsCount;
-			fpsCount = 0;
+	const std::uint64_t currentClockTime = SDL_GetPerformanceCounter();
+	const std::uint64_t clockDeltaTime = currentClockTime - latestFrameClockTime;
+	if (currentClockTime > latestFrameClockTime && clockDeltaTime >= minFrameClockInterval) {
+		latestFrameClockTime = currentClockTime;
+		++fpsCounter;
+		if (currentClockTime - latestFpsMeasurementClockTime >= clockFrequency) {
+			latestFpsMeasurementClockTime = currentClockTime;
+			latestMeasuredFps = fpsCounter;
+			fpsCounter = 0;
 		}
 
-		FrameInfo frameInfo{
-			.tickCount = tickCount,
-			.latestTickTime = static_cast<float>(latestTickTime) * clockInterval,
-			.elapsedTime = static_cast<float>(currentTime - startTime) * clockInterval,
-			.deltaTime = static_cast<float>(timeSinceLatestFrame) * clockInterval,
-		};
+		frameInfo.elapsedTime = static_cast<float>(currentClockTime - startClockTime) * clockInterval;
+		frameInfo.deltaTime = static_cast<float>(clockDeltaTime) * clockInterval;
 
-		beginFrame(frameInfo);
-
+		prepareForEvents(frameInfo);
 		for (SDL_Event event{}; SDL_PollEvent(&event) != 0;) {
 			switch (event.type) {
 				case SDL_QUIT: quit(); return;
@@ -223,22 +230,17 @@ void Application::runFrame() {
 		}
 
 		update(frameInfo);
-
-		const std::uint64_t timeSinceLatestTick = currentTime - latestTickTime;
-		for (std::uint64_t ticks = std::min(timeSinceLatestTick / tickInterval, maxTicksPerFrame); ticks > 0; --ticks) {
-			tick({
-				.tickCount = tickCount,
-				.latestTickTime = static_cast<float>(latestTickTime) * clockInterval,
-				.tickInterval = tickDeltaTime,
-			});
-			++tickCount;
-			latestTickTime += tickInterval;
+		const std::uint64_t clockTimeSinceLatestTick = currentClockTime - processedTickClockTime;
+		for (std::uint64_t ticksToProcess = std::min(clockTimeSinceLatestTick / tickClockInterval, maxTicksPerFrame); ticksToProcess > 0; --ticksToProcess) {
+			tick(frameInfo.tickInfo);
+			++frameInfo.tickInfo.processedTickCount;
+			frameInfo.tickInfo.processedTickTime += frameInfo.tickInfo.tickInterval;
+			processedTickClockTime += tickClockInterval;
 		}
-		frameInfo.tickCount = tickCount;
-		frameInfo.latestTickTime = static_cast<float>(latestTickTime) * clockInterval;
 
-		endFrame(frameInfo);
+		frameInfo.tickInterpolationAlpha = std::min(1.0f, (static_cast<float>(currentClockTime - processedTickClockTime) * clockInterval) / frameInfo.tickInfo.tickInterval);
 
+		prepareForDisplay(frameInfo);
 		display(frameInfo);
 		SDL_GL_SwapWindow(static_cast<SDL_Window*>(window.get()));
 	}
@@ -254,38 +256,50 @@ Application::PhysFSManager::PhysFSManager(
 			}
 
 #ifndef __EMSCRIPTEN__
-			const char* const prefDir = PHYSFS_getPrefDir(organizationName, applicationName);
-			if (!prefDir) {
-				throw Error{fmt::format("Failed to get application preferences directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
-			}
+			if (organizationName && applicationName) {
+				const char* const prefDir = PHYSFS_getPrefDir(organizationName, applicationName);
+				if (!prefDir) {
+					throw Error{fmt::format("Failed to get application preferences directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+				}
 
-			if (PHYSFS_setWriteDir(prefDir) == 0) {
-				throw Error{fmt::format("Failed to set application write directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
-			}
+				if (PHYSFS_setWriteDir(prefDir) == 0) {
+					throw Error{fmt::format("Failed to set application write directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+				}
 
-			if (PHYSFS_mount(prefDir, nullptr, 0) == 0) {
-				throw Error{fmt::format("Failed to mount application write directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+				if (PHYSFS_mount(prefDir, nullptr, 0) == 0) {
+					throw Error{fmt::format("Failed to mount application write directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+				}
 			}
 #endif
 
-			if (PHYSFS_mount(dataDirectoryFilepath, nullptr, 1) == 0) {
-				throw Error{fmt::format("Failed to set application data directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+			if (dataDirectoryFilepath) {
+				if (PHYSFS_mount(dataDirectoryFilepath, nullptr, 1) == 0) {
+					throw Error{fmt::format("Failed to set application data directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+				}
 			}
 
-			PHYSFS_enumerate(
-				"/",
-				[](void* data, const char*, const char* fname) -> PHYSFS_EnumerateCallbackResult {
-					const std::string_view archiveFilenameExtension{static_cast<const char*>(data)};
-					const std::string_view filename{fname};
-					if (filename.size() > archiveFilenameExtension.size() && filename[filename.size() - archiveFilenameExtension.size() - 1] == '.' &&
-						filename.ends_with(archiveFilenameExtension)) {
-						if (const char* directory = PHYSFS_getRealDir(fname)) {
-							PHYSFS_mount(fmt::format("{}{}{}", directory, PHYSFS_getDirSeparator(), fname).c_str(), nullptr, 0);
+			if (archiveFilenameExtension) {
+				PHYSFS_enumerate(
+					"/",
+					[](void* data, const char*, const char* fname) -> PHYSFS_EnumerateCallbackResult {
+						const std::string_view archiveFilenameExtension{static_cast<const char*>(data)};
+						const std::string_view filename{fname};
+						if (!archiveFilenameExtension.empty() && filename.size() > archiveFilenameExtension.size() &&
+							(archiveFilenameExtension.front() == '.' || filename[filename.size() - archiveFilenameExtension.size() - 1] == '.') &&
+							filename.ends_with(archiveFilenameExtension)) {
+							if (const char* directory = PHYSFS_getRealDir(fname)) {
+								const std::string archiveFilepath = fmt::format("{}{}{}", directory, PHYSFS_getDirSeparator(), fname);
+								if (PHYSFS_mount(archiveFilepath.c_str(), nullptr, 0) == 0) {
+									fmt::print(stderr, "Failed to mount archive \"{}\": {}\n", archiveFilepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+								}
+							} else {
+								fmt::print(stderr, "Failed to get the real directory of archive \"{}\": {}\n", fname, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+							}
 						}
-					}
-					return PHYSFS_ENUM_OK;
-				},
-				const_cast<char*>(archiveFilenameExtension));
+						return PHYSFS_ENUM_OK;
+					},
+					const_cast<char*>(archiveFilenameExtension));
+			}
 		}
 
 		~Context() {

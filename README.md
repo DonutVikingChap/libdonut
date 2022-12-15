@@ -9,7 +9,7 @@ Note: This library is currently a **work in progress** and makes no guarantees a
 - Application framework:
     - [Application](include/donut/application/Application.hpp) base class:
         - Handles context setup and window management using [SDL](https://www.libsdl.org/).
-        - Controls the main game loop, including [Event](include/donut/application/Event.hpp) pumping, frame pacing and fixed-interval framerate-independent tick updates.
+        - Controls the main game loop, including [Event](include/donut/application/Event.hpp) pumping, frame pacing and fixed-interval frame rate-independent tick updates.
         - Supports both native Windows/Linux compilation as well as the [emscripten](https://emscripten.org/) WebAssembly runtime.
     - [InputManager](include/donut/application/InputManager.hpp):
         - Maps physical [Input](include/donut/application/Input.hpp) events to abstract action numbers.

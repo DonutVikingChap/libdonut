@@ -176,7 +176,7 @@ InputManager::~InputManager() {
 	SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
 }
 
-void InputManager::beginFrame() {
+void InputManager::prepareForEvents() {
 	previousPersistentOutputs = currentPersistentOutputs;
 	transientOutputs = {};
 	outputRelativeValues.fill(0.0f);

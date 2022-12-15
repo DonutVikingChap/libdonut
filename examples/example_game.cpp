@@ -61,6 +61,7 @@ struct GameOptions {
 		.windowWidth = 640,
 		.windowHeight = 480,
 		.windowResizable = true,
+		.tickRate = 5.0f,
 		.maxFps = 240.0f,
 	};
 	const char* mainMenuMusicFilepath = "sounds/music/donauwalzer.ogg";
@@ -75,6 +76,131 @@ public:
 		loadBindingsConfiguration();
 		initializeSoundStage();
 		playMainMenuMusic(options.mainMenuMusicFilepath);
+	}
+
+protected:
+	void resize(glm::ivec2 newWindowSize) override {
+		constexpr glm::ivec2 RENDER_RESOLUTION{640, 480};
+		constexpr glm::ivec2 WORLD_VIEWPORT_POSITION{15, 15};
+		constexpr glm::ivec2 WORLD_VIEWPORT_SIZE{380, 450};
+
+		const auto [viewport, scale] = gfx::Viewport::createIntegerScaled(newWindowSize, RENDER_RESOLUTION);
+		screenViewport = viewport;
+		screenProjectionViewMatrix = glm::ortho(0.0f, static_cast<float>(RENDER_RESOLUTION.x), static_cast<float>(RENDER_RESOLUTION.y), 0.0f);
+
+		worldViewport = {.position = screenViewport.position + WORLD_VIEWPORT_POSITION * scale, .size = WORLD_VIEWPORT_SIZE * scale};
+		const float aspectRatio = static_cast<float>(worldViewport.size.x) / static_cast<float>(worldViewport.size.y);
+		worldProjectionViewMatrix = glm::perspective(-verticalFieldOfView, -aspectRatio, 0.1f, 100.0f);
+	}
+
+	void prepareForEvents(app::FrameInfo frameInfo) override {
+		(void)frameInfo; // TODO: Use?
+
+		inputManager.prepareForEvents();
+	}
+
+	void handleEvent(app::FrameInfo frameInfo, const app::Event& event) override {
+		(void)frameInfo; // TODO: Use?
+
+		inputManager.handleEvent(event);
+	}
+
+	void update(app::FrameInfo frameInfo) override {
+		if (soundStage) {
+			soundStage->update(frameInfo.deltaTime, soundListenerPosition);
+		}
+
+		if (inputManager.justPressed(app::Input::KEY_F10)) {
+			quit();
+		}
+
+		if (inputManager.justPressed(app::Input::KEY_F11) ||
+			(inputManager.justPressed(app::Input::KEY_RETURN) && (inputManager.isPressed(app::Input::KEY_LALT) || inputManager.isPressed(app::Input::KEY_RALT)))) {
+			setWindowFullscreen(!isWindowFullscreen());
+		}
+
+		if (inputManager.justPressed(app::Input::KEY_F2)) {
+			if (soundStage) {
+				soundStage->stopSound(musicId);
+			}
+		}
+
+		const float sprintInput = (inputManager.isPressed(Action::SPRINT)) ? 4.0f : 1.0f;
+
+		glm::vec2 movementInput = inputManager.getAbsoluteVector(Action::MOVE_LEFT, Action::MOVE_RIGHT, Action::MOVE_UP, Action::MOVE_DOWN);
+		if (const float movementInputLengthSquared = glm::length2(movementInput); movementInputLengthSquared > 1.0f) {
+			movementInput /= glm::sqrt(movementInputLengthSquared);
+		}
+		const float carrotCakeSpeed = 2.0f * sprintInput;
+		carrotCakeVelocity.x = movementInput.x * carrotCakeSpeed;
+		carrotCakeVelocity.y = movementInput.y * carrotCakeSpeed;
+		carrotCakeVelocity.z = 0.0f;
+
+		if (inputManager.isPressed(Action::CONFIRM)) {
+			const glm::vec2 aimInput = inputManager.getRelativeVector(Action::AIM_LEFT, Action::AIM_RIGHT, Action::AIM_DOWN, Action::AIM_UP);
+			carrotCakeScale.x = glm::clamp(carrotCakeScale.x + aimInput.x, 0.25f, 4.0f);
+			carrotCakeScale.y = glm::clamp(carrotCakeScale.y + aimInput.y, 0.25f, 4.0f);
+		}
+
+		const float scrollInput = inputManager.getRelativeVector(Action::SCROLL_DOWN, Action::SCROLL_UP);
+		carrotCakeCurrentPosition.z -= scrollInput * 0.25f * sprintInput;
+
+		const bool triggerInput = inputManager.isPressed(Action::CANCEL);
+		counterA += timerA.countUpLoopTrigger(frameInfo.deltaTime, 1.0f, triggerInput);
+		counterB += timerB.countDownLoopTrigger(frameInfo.deltaTime, 1.0f, triggerInput);
+	}
+
+	void tick(app::TickInfo tickInfo) override {
+		carrotCakePreviousPosition = carrotCakeCurrentPosition;
+		carrotCakeCurrentPosition += carrotCakeVelocity * tickInfo.tickInterval;
+	}
+
+	void prepareForDisplay(app::FrameInfo frameInfo) override {
+		carrotCakeDisplayPosition = glm::mix(carrotCakePreviousPosition, carrotCakeCurrentPosition, frameInfo.tickInterpolationAlpha);
+
+		const TestShader3D::PointLight baseLight = {
+			.position = carrotCakeDisplayPosition,
+			.ambient{0.2f, 0.2f, 0.2f},
+			.diffuse{0.5f + 0.5f * glm::sin(frameInfo.elapsedTime), 0.8f, 0.8f},
+			.specular{0.8f, 0.8f, 0.8f},
+			.constantFalloff = 1.0f,
+			.linearFalloff = 0.04f,
+			.quadraticFalloff = 0.03f,
+		};
+
+		const auto baseLightWithOffset = [&](glm::vec3 offset) -> TestShader3D::PointLight {
+			TestShader3D::PointLight result = baseLight;
+			result.position += offset;
+			return result;
+		};
+
+		const std::array<TestShader3D::PointLight, TestShader3D::POINT_LIGHT_COUNT> pointLights{{
+			baseLightWithOffset({-2.0f, 0.0f, 0.0f}),
+			baseLightWithOffset({0.0f, -2.0f, 0.0f}),
+			baseLightWithOffset({0.0f, 2.0f, 0.0f}),
+			baseLightWithOffset({0.0f, 0.0f, 2.0f}),
+		}};
+
+		const glm::vec3 viewPosition{0.0f, 0.0f, 0.0f};
+
+		testShader3D->setPointLights(pointLights);
+		testShader3D->setViewPosition(viewPosition);
+	}
+
+	void display(app::FrameInfo frameInfo) override {
+		renderPass.reset();
+		renderPass.setBackgroundColor(Color::PURPLE * 0.25f);
+		drawBackground(frameInfo);
+		renderer.render(gfx::Framebuffer::getDefault(), renderPass, worldViewport, worldProjectionViewMatrix);
+
+		renderPass.reset();
+		drawWorld(frameInfo);
+		renderer.render(gfx::Framebuffer::getDefault(), renderPass, worldViewport, worldProjectionViewMatrix);
+
+		renderPass.reset();
+		drawUserInterface(frameInfo);
+		drawFpsCounter();
+		renderer.render(gfx::Framebuffer::getDefault(), renderPass, screenViewport, screenProjectionViewMatrix);
 	}
 
 private:
@@ -226,123 +352,6 @@ private:
 		gfx::ShaderUniform viewPosition{program, "viewPosition"};
 	};
 
-	void resize(glm::ivec2 newWindowSize) override {
-		constexpr glm::ivec2 RENDER_RESOLUTION{640, 480};
-		constexpr glm::ivec2 WORLD_VIEWPORT_POSITION{15, 15};
-		constexpr glm::ivec2 WORLD_VIEWPORT_SIZE{380, 450};
-
-		const auto [viewport, scale] = gfx::Viewport::createIntegerScaled(newWindowSize, RENDER_RESOLUTION);
-		screenViewport = viewport;
-		screenProjectionViewMatrix = glm::ortho(0.0f, static_cast<float>(RENDER_RESOLUTION.x), static_cast<float>(RENDER_RESOLUTION.y), 0.0f);
-
-		worldViewport = {.position = screenViewport.position + WORLD_VIEWPORT_POSITION * scale, .size = WORLD_VIEWPORT_SIZE * scale};
-		const float aspectRatio = static_cast<float>(worldViewport.size.x) / static_cast<float>(worldViewport.size.y);
-		worldProjectionViewMatrix = glm::perspective(-verticalFieldOfView, -aspectRatio, 0.1f, 100.0f);
-	}
-
-	void beginFrame(const app::FrameInfo& frameInfo) override {
-		inputManager.beginFrame();
-		if (soundStage) {
-			soundStage->beginFrame(frameInfo.deltaTime, soundListenerPosition);
-		}
-	}
-
-	void handleEvent(const app::FrameInfo& frameInfo, const app::Event& event) override {
-		(void)frameInfo; // TODO: Use?
-
-		inputManager.handleEvent(event);
-	}
-
-	void update(const app::FrameInfo& frameInfo) override {
-		if (inputManager.justPressed(app::Input::KEY_F10)) {
-			quit();
-		}
-
-		if (inputManager.justPressed(app::Input::KEY_F11) ||
-			(inputManager.justPressed(app::Input::KEY_RETURN) && (inputManager.isPressed(app::Input::KEY_LALT) || inputManager.isPressed(app::Input::KEY_RALT)))) {
-			setWindowFullscreen(!isWindowFullscreen());
-		}
-
-		if (inputManager.justPressed(app::Input::KEY_F2)) {
-			if (soundStage) {
-				soundStage->stopSound(musicId);
-			}
-		}
-
-		const float sprintInput = (inputManager.isPressed(Action::SPRINT)) ? 4.0f : 1.0f;
-
-		glm::vec2 movementInput = inputManager.getAbsoluteVector(Action::MOVE_LEFT, Action::MOVE_RIGHT, Action::MOVE_UP, Action::MOVE_DOWN);
-		if (const float movementInputLengthSquared = glm::length2(movementInput); movementInputLengthSquared > 1.0f) {
-			movementInput /= glm::sqrt(movementInputLengthSquared);
-		}
-		const float carrotCakeSpeed = 2.0f * sprintInput;
-		carrotCakePosition.x += movementInput.x * carrotCakeSpeed * frameInfo.deltaTime;
-		carrotCakePosition.y += movementInput.y * carrotCakeSpeed * frameInfo.deltaTime;
-
-		if (inputManager.isPressed(Action::CONFIRM)) {
-			const glm::vec2 aimInput = inputManager.getRelativeVector(Action::AIM_LEFT, Action::AIM_RIGHT, Action::AIM_DOWN, Action::AIM_UP);
-			carrotCakeScale.x = glm::clamp(carrotCakeScale.x + aimInput.x, 0.25f, 4.0f);
-			carrotCakeScale.y = glm::clamp(carrotCakeScale.y + aimInput.y, 0.25f, 4.0f);
-		}
-
-		const float scrollInput = inputManager.getRelativeVector(Action::SCROLL_DOWN, Action::SCROLL_UP);
-		carrotCakePosition.z -= scrollInput * 0.25f * sprintInput;
-
-		const bool triggerInput = inputManager.isPressed(Action::CANCEL);
-		counterA += timerA.countUpLoopTrigger(frameInfo.deltaTime, 1.0f, triggerInput);
-		counterB += timerB.countDownLoopTrigger(frameInfo.deltaTime, 1.0f, triggerInput);
-	}
-
-	void tick(const app::TickInfo& tickInfo) override {
-		(void)tickInfo; // TODO: Use?
-	}
-
-	void endFrame(const app::FrameInfo& frameInfo) override {
-		const TestShader3D::PointLight baseLight = {
-			.position = carrotCakePosition,
-			.ambient{0.2f, 0.2f, 0.2f},
-			.diffuse{0.5f + 0.5f * glm::sin(frameInfo.elapsedTime), 0.8f, 0.8f},
-			.specular{0.8f, 0.8f, 0.8f},
-			.constantFalloff = 1.0f,
-			.linearFalloff = 0.04f,
-			.quadraticFalloff = 0.03f,
-		};
-
-		const auto baseLightWithOffset = [&](glm::vec3 offset) -> TestShader3D::PointLight {
-			TestShader3D::PointLight result = baseLight;
-			result.position += offset;
-			return result;
-		};
-
-		const std::array<TestShader3D::PointLight, TestShader3D::POINT_LIGHT_COUNT> pointLights{{
-			baseLightWithOffset({-2.0f, 0.0f, 0.0f}),
-			baseLightWithOffset({0.0f, -2.0f, 0.0f}),
-			baseLightWithOffset({0.0f, 2.0f, 0.0f}),
-			baseLightWithOffset({0.0f, 0.0f, 2.0f}),
-		}};
-
-		const glm::vec3 viewPosition{0.0f, 0.0f, 0.0f};
-
-		testShader3D->setPointLights(pointLights);
-		testShader3D->setViewPosition(viewPosition);
-	}
-
-	void display(const app::FrameInfo& frameInfo) override {
-		renderPass.reset();
-		renderPass.setBackgroundColor(Color::PURPLE * 0.25f);
-		drawBackground(frameInfo);
-		renderer.render(gfx::Framebuffer::getDefault(), renderPass, worldViewport, worldProjectionViewMatrix);
-
-		renderPass.reset();
-		drawWorld(frameInfo);
-		renderer.render(gfx::Framebuffer::getDefault(), renderPass, worldViewport, worldProjectionViewMatrix);
-
-		renderPass.reset();
-		drawUserInterface(frameInfo);
-		drawFpsCounter();
-		renderer.render(gfx::Framebuffer::getDefault(), renderPass, screenViewport, screenProjectionViewMatrix);
-	}
-
 	void loadBindingsConfiguration() {
 		const std::unordered_map<std::string_view, Action> actionsByIdentifier{
 			{"confirm", Action::CONFIRM},
@@ -440,7 +449,7 @@ private:
 
 	void drawWorld(const app::FrameInfo& frameInfo) {
 		glm::mat4 carrotCakeTransformation = glm::identity<glm::mat4>();
-		carrotCakeTransformation = glm::translate(carrotCakeTransformation, glm::vec3{0.6f, -0.7f, -3.0f} + carrotCakePosition);
+		carrotCakeTransformation = glm::translate(carrotCakeTransformation, glm::vec3{0.6f, -0.7f, -3.0f} + carrotCakeDisplayPosition);
 		carrotCakeTransformation = glm::scale(carrotCakeTransformation, {5.0f * carrotCakeScale.x, 5.0f * carrotCakeScale.y, 5.0f});
 		carrotCakeTransformation = glm::rotate(carrotCakeTransformation, frameInfo.elapsedTime * -1.5f, {0.0f, 1.0f, 0.0f});
 		carrotCakeTransformation = glm::rotate(carrotCakeTransformation, frameInfo.elapsedTime * 2.0f, {0.0f, 0.0f, 1.0f});
@@ -509,9 +518,9 @@ private:
 			.text = mainFont->shapeText(renderer,
 				8,
 				fmt::format("Position:\n({:.2f}, {:.2f}, {:.2f})\n\nScale:\n({:.2f}, {:.2f})",
-					carrotCakePosition.x,
-					carrotCakePosition.y,
-					carrotCakePosition.z,
+					carrotCakeDisplayPosition.x,
+					carrotCakeDisplayPosition.y,
+					carrotCakeDisplayPosition.z,
 					carrotCakeScale.x,
 					carrotCakeScale.y)),
 			.position{410.0f, 170.0f},
@@ -578,8 +587,11 @@ private:
 	audio::SoundStage::SoundInstanceId musicId{};
 	glm::vec3 soundListenerPosition{0.0f, 0.0f, 0.0f};
 	float verticalFieldOfView;
-	glm::vec3 carrotCakePosition{0.0f, 0.0f, 0.0f};
+	glm::vec3 carrotCakeCurrentPosition{0.0f, 0.0f, 0.0f};
+	glm::vec3 carrotCakePreviousPosition{0.0f, 0.0f, 0.0f};
+	glm::vec3 carrotCakeDisplayPosition{0.0f, 0.0f, 0.0f};
 	glm::vec2 carrotCakeScale{1.0f, 1.0f};
+	glm::vec3 carrotCakeVelocity{0.0f, 0.0f, 0.0f};
 	Timer timerA{};
 	Timer timerB{};
 	int counterA = 0;
@@ -630,8 +642,8 @@ void parseOptionValue(int, char*[], int&, std::string_view, bool& output) {
 				"  -resizable                   Enable window resizing.\n"
 				"  -fullscreen                  Enable fullscreen.\n"
 				"  -vsync                       Enable vertical synchronization.\n"
-				"  -min-fps <Hz>                Minimum framerate before slowdown.\n"
-				"  -max-fps <Hz>                Framerate limit. 0 = unlimited.\n"
+				"  -min-fps <Hz>                Minimum frame rate before slowdown.\n"
+				"  -max-fps <Hz>                Frame rate limit. 0 = unlimited.\n"
 				"  -msaa <level>                Level of multisample anti-aliasing.\n"
 				"  -main-menu-music <filepath>  Music file to use for the main menu.\n"
 				"  -fov <degrees>               Field of view for world rendering."};
