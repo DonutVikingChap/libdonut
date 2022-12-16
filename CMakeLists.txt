@@ -5,6 +5,7 @@ project("libdonut"
 	LANGUAGES C CXX)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+option(DONUT_ENABLE_DOCUMENTATION "Enable generation of documentation using Doxygen" ON)
 option(DONUT_ENABLE_EXAMPLES "Enable building examples" OFF)
 option(DONUT_ENABLE_TESTING "Enable test suite" OFF)
 
@@ -129,6 +130,20 @@ if(BUILD_SHARED_LIBS)
 endif()
 
 include(GNUInstallDirs)
+
+if(DONUT_ENABLE_DOCUMENTATION)
+    find_package(Doxygen)
+    if(DOXYGEN_FOUND)
+        configure_file("${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile" "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" COPYONLY)
+        file(APPEND "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" "\nPROJECT_NUMBER = \"${CMAKE_PROJECT_VERSION}\"\nOUTPUT_DIRECTORY = \"${CMAKE_CURRENT_BINARY_DIR}/docs\"\nINPUT += \"${CMAKE_CURRENT_SOURCE_DIR}/include\"\n")
+        add_custom_target(donut-generate-documentation
+            ${DOXYGEN_EXECUTABLE} "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            COMMENT "Generating documentation.")
+    else()
+        message(WARNING "Doxygen package not found; documentation will not be generated.")
+    endif()
+endif()
 
 set_target_properties(donut PROPERTIES
 	SOVERSION "${PROJECT_VERSION_MAJOR}"

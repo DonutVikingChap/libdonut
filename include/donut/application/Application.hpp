@@ -7,10 +7,7 @@
 #include <cstdint>     // std::uint64_t
 #include <glm/glm.hpp> // glm::...
 
-/** \namespace donut */
 namespace donut {
-
-/** \namespace application */
 namespace application {
 
 /**
@@ -272,7 +269,7 @@ public:
 	 * \param programFilepath the first string in the argument vector passed to
 	 *        the main function of the program, i.e. argv[0].
 	 *
-	 * \param options initial configuration of the application.
+	 * \param options initial configuration of the application, see ApplicationOptions.
 	 *
 	 * \throws application::Error if context or window setup failed.
 	 * \throws std::bad_alloc on allocation failure.
@@ -448,8 +445,8 @@ protected:
 	 *        - the x component represents the width, and
 	 *        - the y component represents the height.
 	 *
-	 * \throws Any exception that is thrown out of this function will percolate
-	 *         up to run() and cause the main loop to stop.
+	 * \note Any exception that is thrown out of this function will percolate up
+	 *       to run() and cause the main loop to stop.
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *
@@ -463,8 +460,8 @@ protected:
 	 *
 	 * \param frameInfo information about the current frame, see FrameInfo.
 	 *
-	 * \throws Any exception that is thrown out of this function will percolate
-	 *         up to run() and cause the main loop to stop.
+	 * \note Any exception that is thrown out of this function will percolate up
+	 *       to run() and cause the main loop to stop.
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *
@@ -485,8 +482,8 @@ protected:
 	 * \param frameInfo information about the current frame, see FrameInfo.
 	 * \param event the event that occured, see Event.
 	 *
-	 * \throws Any exception that is thrown out of this function will percolate
-	 *         up to run() and cause the main loop to stop.
+	 * \note Any exception that is thrown out of this function will percolate up
+	 *       to run() and cause the main loop to stop.
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *
@@ -509,8 +506,8 @@ protected:
 	 *
 	 * \param frameInfo information about the current frame, see FrameInfo.
 	 *
-	 * \throws Any exception that is thrown out of this function will percolate
-	 *         up to run() and cause the main loop to stop.
+	 * \note Any exception that is thrown out of this function will percolate up
+	 *       to run() and cause the main loop to stop.
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *
@@ -530,8 +527,8 @@ protected:
 	 *
 	 * \param tickInfo information about the current tick, see TickInfo.
 	 *
-	 * \throws Any exception that is thrown out of this function will percolate
-	 *         up to run() and cause the main loop to stop.
+	 * \note Any exception that is thrown out of this function will percolate up
+	 *       to run() and cause the main loop to stop.
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *
@@ -551,8 +548,8 @@ protected:
 	 *
 	 * \param frameInfo information about the current frame, see FrameInfo.
 	 *
-	 * \throws Any exception that is thrown out of this function will percolate
-	 *         up to run() and cause the main loop to stop.
+	 * \note Any exception that is thrown out of this function will percolate up
+	 *       to run() and cause the main loop to stop.
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *
@@ -571,8 +568,8 @@ protected:
 	 *
 	 * \param frameInfo information about the current frame, see FrameInfo.
 	 *
-	 * \throws Any exception that is thrown out of this function will percolate
-	 *         up to run() and cause the main loop to stop.
+	 * \note Any exception that is thrown out of this function will percolate up
+	 *       to run() and cause the main loop to stop.
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *

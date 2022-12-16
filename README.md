@@ -2,7 +2,7 @@
 
 Libdonut is an application framework for cross-platform game development in C++20.
 
-Note: This library is currently a **work in progress** and makes no guarantees about future version compatibility.
+Note: This library is currently a **work in progress** and makes no guarantees regarding future version compatibility.
 
 ## Features
 
@@ -54,35 +54,91 @@ Note: This library is currently a **work in progress** and makes no guarantees a
         - Circle
         - AxisAlignedBox
         - Rectangle
-    - Utilities for working with [UTF8](include/donut/unicode.hpp) text:
+    - Utilities for working with [UTF8](include/donut/unicode.hpp)-encoded text:
         - Supports iterating unicode code points in any arbitrary byte sequence with basic error handling in the case of invalid encoding.
     - [XML](include/donut/xml.hpp) document parsing.
-
-## Prerequisites
-
-- CMake 3.15+
-- gcc 12+/clang 14+/MSVC 17+
-
-## Usage
-
-```
-TODO
-```
 
 ## Authors
 
 - Donut the Vikingchap: https://steamcommunity.com/id/donutvikingchap/
 
+## Prerequisites
+
+The following programs need to be installed in order to build an application using libdonut:
+
+- [CMake](https://cmake.org/) (version 3.15+).
+- A C++20-compatible compiler, such as:
+    - [GCC](https://gcc.gnu.org/) (version 12+), or
+    - [Clang](https://clang.llvm.org/) (version 14+), or
+    - [MSVC](https://visualstudio.microsoft.com/) (VS 2022 version 17+).
+
+## Setup
+
+Follow these steps to create a new application project using libdonut:
+
+1. Copy the contents of the included [template/](template) directory into a newly created folder for your project.
+2. Edit the `CMakeLists.txt` file in your new project folder as follows:
+    - Change the project name at the top of the file.
+    - Optional, but recommended: Set the GIT_TAG to the commit hash of the libdonut release that you want to use instead of `"origin/main"`.
+    - Optional: Change the value of APP_TARGET_NAME from `"app"` to your desired application executable name.
+3. Use CMake to configure the project. This can be done by running the following commands from within your new project folder:
+    ```sh
+    mkdir build
+    cd build
+    cmake ..
+    ```
+    CMake will then use FetchContent to automatically download a copy of libdonut and all of the required dependencies, and save them under `build/_deps/`.
+
+### Documentation
+
+If you have [Doxygen](https://www.doxygen.nl/) installed, you can build the API reference for libdonut as follows.
+
+After configuring your new project, run the following command from inside the `build/` directory to generate the documentation for libdonut's API:
+
+```sh
+cmake --build . --target donut-generate-documentation
+```
+
+The generated HTML file at `build/_deps/donut-build/docs/html/index.html` can then be opened in your favorite web browser to read the documentation and navigate it like a website.
+
+## Building
+
+After performing the configuration steps described above, the project can be built from the `build/` folder at any time using the following command to compile in debug mode:
+
+```sh
+cmake --build . --config Debug
+```
+
+or the following command to compile in performance-optimized release mode instead:
+
+```sh
+cmake --build . --config Release
+```
+
+The resulting application executable is written to `build/bin/`.
+
+### Adding source files
+
+When adding new source files to your project, make sure to also add their filepaths to the `add_executable` command in `CMakeLists.txt`, before or after `"src/main.cpp"`, and reconfigure CMake with the `cmake ..` command. Otherwise, the new files will not be included in the build.
+
+## Debugging
+
+When running the compiled executable, make sure that the current working directory is set to point to the folder where your main data directory is located, if you have one. Otherwise, your application will likely fail to run due to missing resources.
+
+## Distribution
+
+After compiling in release mode, the resulting application executable can be packaged into a folder along with its main data directory and be distributed according to the licenses mentioned below. A sample `copyright.txt` file is provided in the project template to illustrate the copyright notices that must be included when distributing an application containing the code of libdonut and its direct dependencies. Note however that this is only an example and not any form of legal advice.
+
 ## License
 
-Libdonut is distributed under the **MIT License**. See the included LICENSE file for more information.
+Libdonut is distributed under the **MIT License**. See the included [LICENSE](LICENSE) file for more information.
 
 ### External libraries
 
-Note that applications using libdonut must also respect the licenses of each of the following third-party libraries on which libdonut depends, as well as their respective dependencies:
+Libdonut depends on the C++ standard library, for which any compatible implementation may be used, as well as the following specific third-party libraries, each one having its own license, with some including further dependencies:
 
 - [{fmt}](https://github.com/fmtlib/fmt) (MIT License)
-- [glad](https://github.com/Dav1dde/glad) (glad/gl.h is Public Domain/WTFPL/CC0, khrplatform.h is under MIT License)
+- [glad](https://github.com/Dav1dde/glad) (glad/gl.h is Public Domain, khrplatform.h is under MIT License)
 - [GLM](https://github.com/g-truc/glm) (MIT License)
 - [libschrift](https://github.com/tomolt/libschrift) (ISC License)
 - [PhysicsFS](https://github.com/icculus/physfs) (zlib License)

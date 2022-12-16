@@ -59,6 +59,7 @@ struct Matcher {
 
 } // namespace detail
 
+/// \cond
 template <typename T, typename V>
 struct variant_has_alternative;
 
@@ -70,10 +71,12 @@ struct variant_has_alternative<T, Variant<>> : std::false_type {};
 
 template <typename T, typename... Rest>
 struct variant_has_alternative<T, Variant<T, Rest...>> : std::true_type {};
+/// \endcond
 
 template <typename T, typename V>
 inline constexpr bool variant_has_alternative_v = variant_has_alternative<T, V>::value;
 
+/// \cond
 template <typename T, typename V>
 struct variant_index;
 
@@ -93,15 +96,18 @@ template <typename T, typename... Rest>
 struct variant_alternative<0, Variant<T, Rest...>> {
 	using type = T;
 };
+/// \endcond
 
 template <std::size_t index, typename V>
 using variant_alternative_t = typename variant_alternative<index, V>::type;
 
+/// \cond
 template <typename V>
 struct variant_size;
 
 template <typename... Ts>
 struct variant_size<Variant<Ts...>> : std::integral_constant<std::size_t, sizeof...(Ts)> {};
+/// \endcond
 
 template <typename V>
 inline constexpr std::size_t variant_size_v = variant_size<V>::value;

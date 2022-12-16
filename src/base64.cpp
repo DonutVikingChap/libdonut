@@ -76,23 +76,23 @@ std::string encode(std::string_view data) {
 	return result;
 }
 
-std::string decode(std::string_view data) {
-	const std::size_t size = data.size();
+std::string decode(std::string_view string) {
+	const std::size_t size = string.size();
 	if (size % 4 != 0) {
-		throw std::invalid_argument{"Invalid base64 data length."};
+		throw std::invalid_argument{"Invalid base64 string length."};
 	}
 
-	const std::size_t padding = (size >= 4) ? ((data[size - 1] == '=') + (data[size - 2] == '=')) : 0;
+	const std::size_t padding = (size >= 4) ? ((string[size - 1] == '=') + (string[size - 2] == '=')) : 0;
 	const std::size_t decodedSize = size / 4 * 3 - padding;
 
 	std::string result{};
 	result.reserve(decodedSize);
 
 	for (std::size_t i = 0; i < size;) {
-		const unsigned char sextetA = DECODING_TABLE[static_cast<unsigned char>(data[i++])];
-		const unsigned char sextetB = DECODING_TABLE[static_cast<unsigned char>(data[i++])];
-		const unsigned char sextetC = DECODING_TABLE[static_cast<unsigned char>(data[i++])];
-		const unsigned char sextetD = DECODING_TABLE[static_cast<unsigned char>(data[i++])];
+		const unsigned char sextetA = DECODING_TABLE[static_cast<unsigned char>(string[i++])];
+		const unsigned char sextetB = DECODING_TABLE[static_cast<unsigned char>(string[i++])];
+		const unsigned char sextetC = DECODING_TABLE[static_cast<unsigned char>(string[i++])];
+		const unsigned char sextetD = DECODING_TABLE[static_cast<unsigned char>(string[i++])];
 		const std::uint32_t triple = (static_cast<std::uint32_t>(sextetA) << 3 * 6) + (static_cast<std::uint32_t>(sextetB) << 2 * 6) +
 			(static_cast<std::uint32_t>(sextetC) << 1 * 6) + (static_cast<std::uint32_t>(sextetD) << 0 * 6);
 		if (result.size() < decodedSize) {
