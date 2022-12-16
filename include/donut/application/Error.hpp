@@ -7,6 +7,10 @@
 namespace donut {
 namespace application {
 
+/**
+ * Exception type for domain-specific errors originating from the
+ * donut::application module.
+ */
 struct Error : std::runtime_error {
 	explicit Error(const std::string& message)
 		: std::runtime_error(message) {}

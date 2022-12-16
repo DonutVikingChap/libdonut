@@ -191,7 +191,7 @@ void InputManager::prepareForEvents() {
 	controllerRightTriggerTransientMotion = false;
 }
 
-void InputManager::handleEvent(const application::Event& event) {
+void InputManager::handleEvent(const Event& event) {
 	switch (event.type) {
 		case SDL_WINDOWEVENT:
 			switch (event.window.event) {
@@ -356,6 +356,17 @@ void InputManager::move(Input input, glm::i32 offset) noexcept {
 	}
 }
 
+void InputManager::set(Input input, glm::i32 value) noexcept {
+	if (const auto it = bindings.find(input); it != bindings.end()) {
+		const Outputs outputs = it->second;
+		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
+			if (outputs.test(i)) {
+				outputAbsoluteValues[i] = value;
+			}
+		}
+	}
+}
+
 void InputManager::resetAllInputs() noexcept {
 	mousePosition = {};
 	controllerLeftStickPosition = {};
@@ -395,6 +406,160 @@ void InputManager::setControllerLeftTriggerDeadzone(float deadzone) noexcept {
 
 void InputManager::setControllerRightTriggerDeadzone(float deadzone) noexcept {
 	controllerRightTriggerDeadzone = deadzone;
+}
+
+bool InputManager::hasAnyBindings() const noexcept {
+	return !bindings.empty();
+}
+
+std::vector<InputManager::Binding> InputManager::getBindings() const {
+	std::vector<Binding> result{};
+	result.reserve(bindings.size());
+	for (const auto& [input, outputs] : bindings) {
+		result.push_back(Binding{.input = input, .outputs = outputs});
+	}
+	return result;
+}
+
+std::optional<InputManager::Outputs> InputManager::findBinding(Input input) const noexcept {
+	if (const auto it = bindings.find(input); it != bindings.end()) {
+		return it->second;
+	}
+	return {};
+}
+
+std::optional<glm::vec2> InputManager::getMousePosition() const noexcept {
+	return mousePosition;
+}
+
+bool InputManager::mouseJustMoved() const noexcept {
+	return mouseTransientMotion;
+}
+
+bool InputManager::mouseWheelJustScrolledHorizontally() const noexcept {
+	return mouseWheelHorizontalTransientMotion;
+}
+
+bool InputManager::mouseWheelJustScrolledVertically() const noexcept {
+	return mouseWheelVerticalTransientMotion;
+}
+
+bool InputManager::isControllerConnected() const noexcept {
+	return static_cast<bool>(controller);
+}
+
+std::optional<glm::vec2> InputManager::getControllerLeftStickPosition() const noexcept {
+	return controllerLeftStickPosition;
+}
+
+std::optional<glm::vec2> InputManager::getControllerRightStickPosition() const noexcept {
+	return controllerRightStickPosition;
+}
+
+std::optional<float> InputManager::getControllerLeftTriggerPosition() const noexcept {
+	return controllerLeftTriggerPosition;
+}
+
+std::optional<float> InputManager::getControllerRightTriggerPosition() const noexcept {
+	return controllerRightTriggerPosition;
+}
+
+bool InputManager::controllerLeftStickJustMoved() const noexcept {
+	return controllerLeftStickTransientMotion;
+}
+
+bool InputManager::controllerRightStickJustMoved() const noexcept {
+	return controllerRightStickTransientMotion;
+}
+
+bool InputManager::controllerLeftTriggerJustMoved() const noexcept {
+	return controllerLeftTriggerTransientMotion;
+}
+
+bool InputManager::controllerRightTriggerJustMoved() const noexcept {
+	return controllerRightTriggerTransientMotion;
+}
+
+InputManager::Outputs InputManager::getCurrentOutputs() const noexcept {
+	return currentPersistentOutputs;
+}
+
+InputManager::Outputs InputManager::getPreviousOutputs() const noexcept {
+	return previousPersistentOutputs;
+}
+
+InputManager::Outputs InputManager::getJustPressedOutputs() const noexcept {
+	return transientOutputs | (currentPersistentOutputs & ~previousPersistentOutputs);
+}
+
+InputManager::Outputs InputManager::getJustReleasedOutputs() const noexcept {
+	return transientOutputs | (previousPersistentOutputs & ~currentPersistentOutputs);
+}
+
+bool InputManager::isPressed(std::size_t output) const noexcept {
+	return getCurrentOutputs().test(output);
+}
+
+bool InputManager::justPressed(std::size_t output) const noexcept {
+	return getJustPressedOutputs().test(output);
+}
+
+bool InputManager::justReleased(std::size_t output) const noexcept {
+	return getJustReleasedOutputs().test(output);
+}
+
+glm::i32 InputManager::getAbsoluteValue(std::size_t output) const noexcept {
+	return outputAbsoluteValues[output];
+}
+
+glm::i32 InputManager::getRelativeValue(std::size_t output) const noexcept {
+	return outputRelativeValues[output];
+}
+
+float InputManager::getAbsoluteVector(std::size_t outputPositive) const noexcept {
+	return getFloatValue(glm::max(0, getAbsoluteValue(outputPositive)));
+}
+
+float InputManager::getRelativeVector(std::size_t outputPositive) const noexcept {
+	return getFloatValue(glm::max(0, getRelativeValue(outputPositive)));
+}
+
+float InputManager::getAbsoluteVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
+	return getAbsoluteVector(outputPositive) - getAbsoluteVector(outputNegative);
+}
+
+float InputManager::getRelativeVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
+	return getRelativeVector(outputPositive) - getRelativeVector(outputNegative);
+}
+
+glm::vec2 InputManager::getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
+	return {
+		getAbsoluteVector(outputNegativeX, outputPositiveX),
+		getAbsoluteVector(outputNegativeY, outputPositiveY),
+	};
+}
+
+glm::vec2 InputManager::getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
+	return {
+		getRelativeVector(outputNegativeX, outputPositiveX),
+		getRelativeVector(outputNegativeY, outputPositiveY),
+	};
+}
+
+bool InputManager::isPressed(Input input) const noexcept {
+	return currentPersistentInputs.test(getInputIndex(input));
+}
+
+bool InputManager::justPressed(Input input) const noexcept {
+	return (transientInputs | (currentPersistentInputs & ~previousPersistentInputs)).test(getInputIndex(input));
+}
+
+bool InputManager::justReleased(Input input) const noexcept {
+	return (transientInputs | (previousPersistentInputs & ~currentPersistentInputs)).test(getInputIndex(input));
+}
+
+void InputManager::ControllerDeleter::operator()(void* handle) const noexcept {
+	SDL_GameControllerClose(static_cast<SDL_GameController*>(handle));
 }
 
 void InputManager::setMousePosition(glm::vec2 position) noexcept {
@@ -545,158 +710,6 @@ void InputManager::setControllerRightTriggerPosition(float position) noexcept {
 	} else {
 		release(Input::CONTROLLER_AXIS_RIGHT_TRIGGER, offset);
 	}
-}
-
-bool InputManager::hasAnyBindings() const noexcept {
-	return !bindings.empty();
-}
-
-std::vector<InputManager::Binding> InputManager::getBindings() const {
-	std::vector<Binding> result{};
-	result.reserve(bindings.size());
-	for (const auto& [input, outputs] : bindings) {
-		result.push_back(Binding{.input = input, .outputs = outputs});
-	}
-	return result;
-}
-
-const InputManager::Outputs* InputManager::findBinding(Input input) const noexcept {
-	const auto it = bindings.find(input);
-	return (it == bindings.end()) ? nullptr : &it->second;
-}
-
-std::optional<glm::vec2> InputManager::getMousePosition() const noexcept {
-	return mousePosition;
-}
-
-bool InputManager::mouseJustMoved() const noexcept {
-	return mouseTransientMotion;
-}
-
-bool InputManager::mouseWheelJustScrolledHorizontally() const noexcept {
-	return mouseWheelHorizontalTransientMotion;
-}
-
-bool InputManager::mouseWheelJustScrolledVertically() const noexcept {
-	return mouseWheelVerticalTransientMotion;
-}
-
-bool InputManager::isControllerConnected() const noexcept {
-	return static_cast<bool>(controller);
-}
-
-std::optional<glm::vec2> InputManager::getControllerLeftStickPosition() const noexcept {
-	return controllerLeftStickPosition;
-}
-
-std::optional<glm::vec2> InputManager::getControllerRightStickPosition() const noexcept {
-	return controllerRightStickPosition;
-}
-
-std::optional<float> InputManager::getControllerLeftTriggerPosition() const noexcept {
-	return controllerLeftTriggerPosition;
-}
-
-std::optional<float> InputManager::getControllerRightTriggerPosition() const noexcept {
-	return controllerRightTriggerPosition;
-}
-
-bool InputManager::controllerLeftStickJustMoved() const noexcept {
-	return controllerLeftStickTransientMotion;
-}
-
-bool InputManager::controllerRightStickJustMoved() const noexcept {
-	return controllerRightStickTransientMotion;
-}
-
-bool InputManager::controllerLeftTriggerJustMoved() const noexcept {
-	return controllerLeftTriggerTransientMotion;
-}
-
-bool InputManager::controllerRightTriggerJustMoved() const noexcept {
-	return controllerRightTriggerTransientMotion;
-}
-
-InputManager::Outputs InputManager::getCurrentOutputs() const noexcept {
-	return currentPersistentOutputs;
-}
-
-InputManager::Outputs InputManager::getPreviousOutputs() const noexcept {
-	return previousPersistentOutputs;
-}
-
-InputManager::Outputs InputManager::getJustPressedOutputs() const noexcept {
-	return transientOutputs | (currentPersistentOutputs & ~previousPersistentOutputs);
-}
-
-InputManager::Outputs InputManager::getJustReleasedOutputs() const noexcept {
-	return transientOutputs | (previousPersistentOutputs & ~currentPersistentOutputs);
-}
-
-bool InputManager::isPressed(std::size_t output) const noexcept {
-	return getCurrentOutputs().test(output);
-}
-
-bool InputManager::justPressed(std::size_t output) const noexcept {
-	return getJustPressedOutputs().test(output);
-}
-
-bool InputManager::justReleased(std::size_t output) const noexcept {
-	return getJustReleasedOutputs().test(output);
-}
-
-glm::i32 InputManager::getAbsoluteValue(std::size_t output) const noexcept {
-	return outputAbsoluteValues[output];
-}
-
-glm::i32 InputManager::getRelativeValue(std::size_t output) const noexcept {
-	return outputRelativeValues[output];
-}
-
-float InputManager::getAbsoluteVector(std::size_t outputPositive) const noexcept {
-	return getFloatValue(glm::max(0, getAbsoluteValue(outputPositive)));
-}
-
-float InputManager::getRelativeVector(std::size_t outputPositive) const noexcept {
-	return getFloatValue(glm::max(0, getRelativeValue(outputPositive)));
-}
-
-float InputManager::getAbsoluteVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
-	return getAbsoluteVector(outputPositive) - getAbsoluteVector(outputNegative);
-}
-
-float InputManager::getRelativeVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
-	return getRelativeVector(outputPositive) - getRelativeVector(outputNegative);
-}
-
-glm::vec2 InputManager::getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
-	return {
-		getAbsoluteVector(outputNegativeX, outputPositiveX),
-		getAbsoluteVector(outputNegativeY, outputPositiveY),
-	};
-}
-
-glm::vec2 InputManager::getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
-	return {
-		getRelativeVector(outputNegativeX, outputPositiveX),
-		getRelativeVector(outputNegativeY, outputPositiveY),
-	};
-}
-
-bool InputManager::isPressed(Input input) const noexcept {
-	return currentPersistentInputs.test(getInputIndex(input));
-}
-
-bool InputManager::justPressed(Input input) const noexcept {
-	return (transientInputs | (currentPersistentInputs & ~previousPersistentInputs)).test(getInputIndex(input));
-}
-
-bool InputManager::justReleased(Input input) const noexcept {
-	return (transientInputs | (previousPersistentInputs & ~currentPersistentInputs)).test(getInputIndex(input));
-}
-
-void InputManager::ControllerDeleter::operator()(void* handle) const noexcept {
-	SDL_GameControllerClose(static_cast<SDL_GameController*>(handle));
 }
 
 } // namespace application

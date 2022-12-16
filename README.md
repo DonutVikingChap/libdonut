@@ -127,7 +127,7 @@ When running the compiled executable, make sure that the current working directo
 
 ## Distribution
 
-After compiling in release mode, the resulting application executable can be packaged into a folder along with its main data directory and be distributed according to the licenses mentioned below. A sample `copyright.txt` file is provided in the project template to illustrate the copyright notices that must be included when distributing an application containing the code of libdonut and its direct dependencies. Note however that this is only an example and not any form of legal advice.
+After compiling in release mode, the resulting application executable can be packaged into a folder along with its main data directory and be distributed according to each of the relevant licenses mentioned below. A sample `copyright.txt` file is provided in the project template to illustrate the copyright notices that must be included when distributing an application containing the code of libdonut and its direct dependencies. Note however that this is only an example and not any form of legal advice.
 
 ## License
 

@@ -1134,6 +1134,7 @@ struct Deserializer {
 	}
 };
 
+/// \cond
 template <>
 struct Serializer<Null> {
 	void serialize(SerializationState& state, Null) {
@@ -1203,7 +1204,9 @@ struct Serializer<Value> {
 		match(value)([&](const auto& v) -> void { state.serialize(v); });
 	}
 };
+/// \endcond
 
+/// \cond
 template <>
 struct Deserializer<Null> {
 	void deserialize(DeserializationState& state, Null&) {
@@ -1298,6 +1301,7 @@ struct Deserializer<Value> {
 		state.readValue(value);
 	}
 };
+/// \endcond
 
 inline Object::Object() noexcept = default;
 

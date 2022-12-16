@@ -148,11 +148,15 @@ struct ApplicationOptions {
 
 	/**
 	 * Width of the main window, in screen coordinates (typically pixels).
+	 *
+	 * \warning Must be positive.
 	 */
 	int windowWidth = 800;
 
 	/**
 	 * Height of the main window, in screen coordinates (typically pixels).
+	 *
+	 * \warning Must be positive.
 	 */
 	int windowHeight = 600;
 
@@ -382,6 +386,7 @@ public:
 	 *        in screen coordinates (typically pixels), where:
 	 *        - the x component represents the width, and
 	 *        - the y component represents the height.
+	 *        Both the width and height must be positive.
 	 *
 	 * \sa ApplicationOptions::windowWidth
 	 * \sa ApplicationOptions::windowHeight
@@ -398,7 +403,7 @@ public:
 	void setWindowResizable(bool resizable);
 
 	/**
-	 * Change the fullscreen state of the main window.
+	 * Set the fullscreen state of the main window.
 	 *
 	 * \param fullscreen true for fullscreen mode, false for windowed mode.
 	 *
