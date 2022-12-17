@@ -107,7 +107,7 @@ protected:
 
 	void update(app::FrameInfo frameInfo) override {
 		if (soundStage) {
-			soundStage->update(frameInfo.deltaTime, soundListenerPosition);
+			soundStage->update(frameInfo.deltaTime, {.position = soundListenerPosition});
 		}
 
 		if (inputManager.justPressed(app::Input::KEY_F10)) {
