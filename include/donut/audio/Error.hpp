@@ -8,6 +8,10 @@
 namespace donut {
 namespace audio {
 
+/**
+ * Exception type for domain-specific errors originating from the
+ * donut::audio module.
+ */
 struct Error : std::runtime_error {
 	explicit Error(const std::string& message)
 		: std::runtime_error(message) {}

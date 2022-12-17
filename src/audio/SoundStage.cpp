@@ -10,31 +10,39 @@ namespace donut {
 namespace audio {
 
 SoundStage::SoundStage(const SoundStageOptions& options)
-	: engine(new SoLoud::Soloud{})
-	, coordinateScale(options.coordinateScale) {
+	: engine(new SoLoud::Soloud{}) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	if (const SoLoud::result errorCode = soloud.init(); errorCode != SoLoud::SO_NO_ERROR) {
 		throw Error{"Failed to initialize sound manager", errorCode};
 	}
 	setVolume(options.volume);
+	setSoundSpeed(options.soundSpeed);
 	setMaxSimultaneousSounds(options.maxSimultaneousSounds);
 }
 
-void SoundStage::update(float deltaTime, glm::vec3 listenerPosition) {
+void SoundStage::update(float deltaTime, const SoundListener& listener) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 
 	time += deltaTime;
 
-	listenerPosition *= coordinateScale;
-	soloud.set3dListenerPosition(listenerPosition.x, listenerPosition.y, listenerPosition.z);
+	soloud.set3dListenerParameters(listener.position.x,
+		listener.position.y,
+		listener.position.z,
+		listener.aimDirection.x,
+		listener.aimDirection.y,
+		listener.aimDirection.z,
+		listener.up.x,
+		listener.up.y,
+		listener.up.z,
+		listener.velocity.x,
+		listener.velocity.y,
+		listener.velocity.z);
 
 	soloud.update3dAudio();
 }
 
 SoundStage::SoundInstanceId SoundStage::playSound(const Sound& sound, float volume, glm::vec3 position, glm::vec3 velocity) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	position *= coordinateScale;
-	velocity *= coordinateScale;
 	return soloud.play3dClocked(time, *static_cast<SoLoud::Wav*>(sound.get()), position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume);
 }
 
@@ -92,9 +100,29 @@ void SoundStage::seekToSoundTime(SoundInstanceId id, float timePointInSound) {
 	soloud.seek(id, timePointInSound);
 }
 
+void SoundStage::setSoundPosition(SoundInstanceId id, glm::vec3 newPosition) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.set3dSourcePosition(id, newPosition.x, newPosition.y, newPosition.z);
+}
+
+void SoundStage::setSoundVelocity(SoundInstanceId id, glm::vec3 newVelocity) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.set3dSourceVelocity(id, newVelocity.x, newVelocity.y, newVelocity.z);
+}
+
+void SoundStage::setSoundPositionAndVelocity(SoundInstanceId id, glm::vec3 newPosition, glm::vec3 newVelocity) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.set3dSourceParameters(id, newPosition.x, newPosition.y, newPosition.z, newVelocity.x, newVelocity.y, newVelocity.z);
+}
+
 void SoundStage::setVolume(float volume) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	soloud.setGlobalVolume(volume);
+}
+
+void SoundStage::setSoundSpeed(float soundSpeed) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.set3dSoundSpeed(soundSpeed);
 }
 
 void SoundStage::setMaxSimultaneousSounds(unsigned maxSimultaneousSounds) {

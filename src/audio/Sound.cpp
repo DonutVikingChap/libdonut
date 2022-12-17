@@ -77,6 +77,7 @@ Sound::Sound(const char* filepath, const SoundOptions& options)
 	wav.set3dDistanceDelay(options.useDistanceDelay);
 	wav.set3dListenerRelative(options.listenerRelative);
 	wav.setLooping(options.looping);
+	wav.setSingleInstance(options.singleInstance);
 }
 
 void Sound::SourceDeleter::operator()(void* handle) const noexcept {

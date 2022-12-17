@@ -18,7 +18,7 @@ namespace donut {
 namespace application {
 
 /**
- * Configuration options of an InputManager.
+ * Configuration options for an InputManager.
  */
 struct InputManagerOptions {
 	/**
@@ -135,13 +135,13 @@ public:
 	};
 
 	/**
-	 * Construct an InputManager.
+	 * Construct an input manager.
 	 *
 	 * \param options initial configuration of the input manager, see
 	 *        InputManagerOptions.
 	 *
-	 * \throws application::Error on failure to initialize the required global
-	 *         subsystems.
+	 * \throw application::Error on failure to initialize the required global
+	 *        subsystems.
 	 */
 	InputManager(const InputManagerOptions& options = {});
 
@@ -172,8 +172,8 @@ public:
 	 * to be pressed to the previous frame, and then resets the current input
 	 * state.
 	 *
-	 * \note This function should typically be called during the
-	 *       Application::prepareForEvents() callback.
+	 * \note This function should typically be called once every frame during
+	 *       the Application::prepareForEvents() callback.
 	 *
 	 * \sa handleEvent()
 	 */
@@ -200,7 +200,7 @@ public:
 	 * \param input physical input to set the binding for.
 	 * \param outputs set of outputs which the input should control.
 	 *
-	 * \throws std::bad_alloc on allocation failure.
+	 * \throw std::bad_alloc on allocation failure.
 	 *
 	 * \sa addBinding()
 	 * \sa unbind()
@@ -215,7 +215,7 @@ public:
 	 * \param input physical input to add the binding to.
 	 * \param outputs additional set of outputs which the input should control.
 	 *
-	 * \throws std::bad_alloc on allocation failure.
+	 * \throw std::bad_alloc on allocation failure.
 	 *
 	 * \sa bind()
 	 * \sa unbind()
@@ -228,7 +228,7 @@ public:
 	 *
 	 * \param input physical input to remove the binding from.
 	 *
-	 * \throws std::bad_alloc on allocation failure.
+	 * \throw std::bad_alloc on allocation failure.
 	 *
 	 * \sa bind()
 	 * \sa addBinding()
