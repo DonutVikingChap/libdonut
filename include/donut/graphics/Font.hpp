@@ -1,7 +1,7 @@
 #ifndef DONUT_GRAPHICS_FONT_HPP
 #define DONUT_GRAPHICS_FONT_HPP
 
-#include <donut/graphics/AtlasPacker.hpp>
+#include <donut/AtlasPacker.hpp>
 #include <donut/graphics/Texture.hpp>
 
 #include <cstddef>       // std::size_t, std::byte
@@ -82,6 +82,9 @@ private:
 
 	using GlyphKey = std::uint64_t;
 
+	static constexpr std::size_t INITIAL_RESOLUTION = 128;
+	static constexpr std::size_t PADDING = 6;
+
 	[[nodiscard]] static constexpr GlyphKey makeGlyphKey(std::uint32_t characterSize, char32_t codePoint) noexcept {
 		static_assert(sizeof(GlyphKey) >= sizeof(characterSize) + sizeof(codePoint));
 		static_assert(sizeof(codePoint) == 4);
@@ -94,7 +97,7 @@ private:
 
 	std::vector<std::byte> fontFileContents;
 	Resource<void*, FontDeleter, nullptr> font;
-	AtlasPacker atlasPacker{};
+	AtlasPacker<INITIAL_RESOLUTION, PADDING> atlasPacker{};
 	Texture atlasTexture{};
 	std::unordered_map<GlyphKey, Glyph> glyphs{};
 	FontOptions options;

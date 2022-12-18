@@ -22,7 +22,6 @@ add_library(donut
 	"include/donut/audio/Sound.hpp"
 	"include/donut/audio/SoundStage.hpp"
 
-	"include/donut/graphics/AtlasPacker.hpp"
 	"include/donut/graphics/Buffer.hpp"
 	"include/donut/graphics/Error.hpp"
 	"include/donut/graphics/Font.hpp"
@@ -45,6 +44,7 @@ add_library(donut
 	"include/donut/graphics/VertexArray.hpp"
 	"include/donut/graphics/Viewport.hpp"
 
+	"include/donut/AtlasPacker.hpp"
 	"include/donut/base64.hpp"
 	"include/donut/Color.hpp"
 	"include/donut/File.hpp"

@@ -45,6 +45,7 @@ Libdonut also includes the following utility APIs which encompass all of the mai
     - [donut::Resource](@ref donut::Resource) - Generic resource handle with exclusive ownership
     - [donut::Variant](@ref donut::Variant) - Generic tagged union type
 - Other:
+    - [donut::AtlasPacker](@ref donut::AtlasPacker) - Rectangle packer for expandable square texture atlases
     - [donut::random](@ref donut::random) - Fast pseudo-random number generation
     - [donut::reflection](@ref donut::reflection) - Compile-time reflection of aggregate types
     - [donut::Timer](@ref donut::Timer) - Time counting utility

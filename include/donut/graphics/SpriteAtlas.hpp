@@ -1,8 +1,8 @@
 #ifndef DONUT_GRAPHICS_SPRITE_ATLAS_HPP
 #define DONUT_GRAPHICS_SPRITE_ATLAS_HPP
 
+#include <donut/AtlasPacker.hpp>
 #include <donut/Color.hpp>
-#include <donut/graphics/AtlasPacker.hpp>
 #include <donut/graphics/ImageLDR.hpp>
 #include <donut/graphics/Texture.hpp>
 
@@ -62,6 +62,9 @@ public:
 	}
 
 private:
+	static constexpr std::size_t INITIAL_RESOLUTION = 128;
+	static constexpr std::size_t PADDING = 6;
+
 	void prepareAtlasTexture(Renderer& renderer, bool resized) {
 		if (atlasTexture) {
 			if (resized) {
@@ -83,7 +86,7 @@ private:
 		}
 	}
 
-	AtlasPacker atlasPacker{};
+	AtlasPacker<INITIAL_RESOLUTION, PADDING> atlasPacker{};
 	Texture atlasTexture{};
 	std::vector<Sprite> sprites{};
 };

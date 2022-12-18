@@ -1,17 +1,17 @@
-#ifndef DONUT_GRAPHICS_ATLAS_PACKER_HPP
-#define DONUT_GRAPHICS_ATLAS_PACKER_HPP
+#ifndef DONUT_ATLAS_PACKER_HPP
+#define DONUT_ATLAS_PACKER_HPP
 
 #include <cstddef> // std::size_t
 #include <vector>  // std::vector
 
 namespace donut {
-namespace graphics {
 
+template <std::size_t InitialResolution, std::size_t Padding>
 class AtlasPacker {
 public:
-	static constexpr std::size_t INITIAL_RESOLUTION = 128;
+	static constexpr std::size_t INITIAL_RESOLUTION = InitialResolution;
 	static constexpr std::size_t GROWTH_FACTOR = 2;
-	static constexpr std::size_t PADDING = 6;
+	static constexpr std::size_t PADDING = Padding;
 	static constexpr float MINIMUM_ROW_HEIGHT_RATIO = 0.7f;
 
 	struct InsertResult {
@@ -71,7 +71,6 @@ private:
 	std::size_t resolution = INITIAL_RESOLUTION;
 };
 
-} // namespace graphics
 } // namespace donut
 
 #endif

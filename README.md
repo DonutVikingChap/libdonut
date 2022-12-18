@@ -30,6 +30,7 @@ Note: This library is currently a **work in progress** and makes no guarantees r
     - [Scene](include/donut/graphics/Scene.hpp) loading from OBJ files.
     - [Image](include/donut/graphics/Image.hpp) loading/saving in both 8-bit [LDR](include/donut/graphics/ImageLDR.hpp) and floating-point [HDR](include/donut/graphics/ImageHDR.hpp) using [stbi](https://github.com/nothings/stb).
 - Utilities:
+    - [AtlasPacker](include/donut/AtlasPacker.hpp) for packing rectangles into expandable square texture atlases.
     - Floating-point RGBA [Color](include/donut/Color.hpp) type that includes predefined constants for common web colors.
     - Virtual [File](include/donut/File.hpp) system with streamed [reading](include/donut/InputFileStream.hpp) and [writing](include/donut/OutputFileStream.hpp) using [PhysicsFS](https://icculus.org/physfs/):
         - Supports automatic mounting of pak/zip/etc. archives at startup for easy mod loading.
@@ -72,7 +73,7 @@ The following programs need to be installed in order to build an application usi
     - [Clang](https://clang.llvm.org/) (version 14+), or
     - [MSVC](https://visualstudio.microsoft.com/) (VS 2022 version 17+).
 
-## Setup
+## Project setup
 
 Follow these steps to create a new application project using libdonut:
 
