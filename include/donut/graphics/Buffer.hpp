@@ -7,10 +7,28 @@
 namespace donut {
 namespace graphics {
 
+/**
+ * Unique resource handle with exclusive ownership of a GPU memory buffer.
+ */
 class Buffer {
 public:
+	/**
+	 * Create a new empty GPU memory buffer resource.
+	 *
+	 * \throws graphics::Error on failure to create the buffer object.
+	 */
 	Buffer();
 
+	/**
+	 * Get an opaque handle to the GPU representation of the buffer.
+	 *
+	 * \return a non-owning resource handle to the GPU representation of the
+	 *         buffer.
+	 *
+	 * \note This function is used internally by the implementations of various
+	 *       abstractions and is not intended to be used outside of the graphics
+	 *       module. The returned handle has no meaning to application code.
+	 */
 	[[nodiscard]] Handle get() const noexcept {
 		return buffer.get();
 	}

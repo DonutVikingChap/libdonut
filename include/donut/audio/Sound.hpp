@@ -82,7 +82,7 @@ enum class SoundAttenuationModel : unsigned {
 };
 
 /**
- * Configuration options for a sound.
+ * Configuration options for a Sound.
  */
 struct SoundOptions {
 	/**
@@ -221,15 +221,17 @@ public:
 	 *        donut::File.
 	 * \param options sound options, see SoundOptions.
 	 *
-	 * \throw audio::Error on failure to open or load the file.
-	 * \throw std::bad_alloc on allocation failure.
+	 * \throws File::Error on failure to open the file.
+	 * \throws audio::Error on failure to load a sound from the file.
+	 * \throws std::bad_alloc on allocation failure.
 	 */
 	explicit Sound(const char* filepath, const SoundOptions& options = {});
 
 	/**
 	 * Get an opaque handle to the internal representation of the sound.
 	 *
-	 * \return an untyped pointer to the internal representation of the sound.
+	 * \return an untyped non-owning pointer to the internal representation of
+	 *         the sound.
 	 *
 	 * \note This function is used internally by the SoundStage implementation
 	 *       and is not intended to be used outside of it. The returned handle

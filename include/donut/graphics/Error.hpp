@@ -7,6 +7,10 @@
 namespace donut {
 namespace graphics {
 
+/**
+ * Exception type for domain-specific errors originating from the
+ * donut::graphics module.
+ */
 struct Error : std::runtime_error {
 	explicit Error(const std::string& message)
 		: std::runtime_error(message) {}

@@ -34,7 +34,7 @@ Libdonut also includes the following utility APIs which encompass all of the mai
     - [donut::base64](@ref donut::base64) - Base64 string encoding/decoding
     - [donut::json](@ref donut::json) - JSON parsing/writing/(de)serialization
     - [donut::obj](@ref donut::obj) - OBJ and MTL file parsing
-    - [donut::unicode](@ref donut::unicode) - UTF8 text decoding
+    - [donut::unicode](@ref donut::unicode) - UTF-8 text decoding
     - [donut::xml](@ref donut::xml) - XML document parsing
 - Basic geometric shapes:
     - [donut::Circle](@ref donut::Circle) - Generic circle shape with a center and radius

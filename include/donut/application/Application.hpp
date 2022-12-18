@@ -275,8 +275,8 @@ public:
 	 *
 	 * \param options initial configuration of the application, see ApplicationOptions.
 	 *
-	 * \throw application::Error if context or window setup failed.
-	 * \throw std::bad_alloc on allocation failure.
+	 * \throws application::Error if context or window setup failed.
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \warning The behavior of passing programFilepath a value other than the
 	 *          argv[0] string received from main is undefined.
@@ -304,9 +304,9 @@ public:
 	 *       specific cleanup or shutdown code be called from the overriden
 	 *       destructor, rather than after run() has finished.
 	 *
-	 * \throw any unhandled exception which was thrown during the execution of
-	 *        the main loop, unless running under emscripten, in which case
-	 *        exceptions are simply printed before shutting down.
+	 * \throws any unhandled exception which was thrown during the execution of
+	 *         the main loop, unless running under emscripten, in which case
+	 *         exceptions are simply printed before shutting down.
 	 *
 	 * \remark The intended usage of this function is to call it once at the end
 	 *         of main function of the program as the last code to be executed,

@@ -43,6 +43,55 @@ const Font::Glyph& Font::loadGlyph(Renderer& renderer, std::uint32_t characterSi
 	return it->second;
 }
 
+Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize, std::u8string_view string, glm::vec2 scale) {
+	ShapedText result{
+		.shapedGlyphs{},
+		.extentsMin{0.0f, 0.0f},
+		.extentsMax{0.0f, 0.0f},
+		.rowCount = 1,
+	};
+	glm::vec2 offset{0.0f, 0.0f};
+	const float xBegin = offset.x;
+	const unicode::UTF8View codePoints{string};
+	for (auto it = codePoints.begin(); it != codePoints.end();) {
+		if (const char32_t codePoint = *it++; codePoint == '\n') {
+			offset.x = xBegin;
+			offset.y += std::floor(getLineMetrics(characterSize).height * scale.y);
+			++result.rowCount;
+		} else {
+			const Glyph& glyph = loadGlyph(renderer, characterSize, codePoint);
+			const glm::vec2 glyphOffset{
+				std::floor(offset.x + std::round(glyph.bearing.x * scale.x)),
+				std::floor(offset.y + std::round(glyph.bearing.y * scale.y)),
+			};
+			const glm::vec2 glyphSize{
+				std::round(glyph.size.x * scale.x),
+				std::round(glyph.size.y * scale.y),
+			};
+			result.shapedGlyphs.push_back({
+				.offset = glyphOffset,
+				.size = glyphSize,
+				.textureOffset = glyph.textureOffset,
+				.textureScale = glyph.textureScale,
+			});
+			result.extentsMin.x = std::min(result.extentsMin.x, glyphOffset.x);
+			result.extentsMin.y = std::min(result.extentsMin.y, glyphOffset.y);
+			result.extentsMax.x = std::max(result.extentsMax.x, glyphOffset.x + glyphSize.x);
+			result.extentsMax.y = std::max(result.extentsMax.y, glyphOffset.y + glyphSize.y);
+			const glm::vec2 kerning = getKerning(characterSize, codePoint, (it == codePoints.end()) ? char32_t{0} : *it);
+			offset.x += (glyph.advance + kerning.x) * scale.x;
+			offset.y += kerning.y * scale.y;
+		}
+	}
+	return result;
+}
+
+Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize, std::string_view string, glm::vec2 scale) {
+	static_assert(sizeof(char) == sizeof(char8_t));
+	static_assert(alignof(char) == alignof(char8_t));
+	return shapeText(renderer, characterSize, std::u8string_view{reinterpret_cast<const char8_t*>(string.data()), string.size()}, scale);
+}
+
 Font::LineMetrics Font::getLineMetrics(std::uint32_t characterSize) const noexcept {
 	const SFT sft{
 		.font = static_cast<SFT_Font*>(font.get()),
@@ -91,55 +140,6 @@ glm::vec2 Font::getKerning(std::uint32_t characterSize, char32_t left, char32_t 
 	}
 
 	return {static_cast<float>(kerning.xShift), static_cast<float>(kerning.yShift)};
-}
-
-Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize, std::u8string_view string, glm::vec2 scale) {
-	ShapedText result{
-		.shapedGlyphs{},
-		.extentsMin{0.0f, 0.0f},
-		.extentsMax{0.0f, 0.0f},
-		.rowCount = 1,
-	};
-	glm::vec2 offset{0.0f, 0.0f};
-	const float xBegin = offset.x;
-	const unicode::UTF8View codePoints{string};
-	for (auto it = codePoints.begin(); it != codePoints.end();) {
-		if (const char32_t codePoint = *it++; codePoint == '\n') {
-			offset.x = xBegin;
-			offset.y += std::floor(getLineMetrics(characterSize).height * scale.y);
-			++result.rowCount;
-		} else {
-			const Glyph& glyph = loadGlyph(renderer, characterSize, codePoint);
-			const glm::vec2 glyphOffset{
-				std::floor(offset.x + std::round(glyph.bearing.x * scale.x)),
-				std::floor(offset.y + std::round(glyph.bearing.y * scale.y)),
-			};
-			const glm::vec2 glyphSize{
-				std::round(glyph.size.x * scale.x),
-				std::round(glyph.size.y * scale.y),
-			};
-			result.shapedGlyphs.push_back({
-				.offset = glyphOffset,
-				.size = glyphSize,
-				.textureOffset = glyph.textureOffset,
-				.textureScale = glyph.textureScale,
-			});
-			result.extentsMin.x = std::min(result.extentsMin.x, glyphOffset.x);
-			result.extentsMin.y = std::min(result.extentsMin.y, glyphOffset.y);
-			result.extentsMax.x = std::max(result.extentsMax.x, glyphOffset.x + glyphSize.x);
-			result.extentsMax.y = std::max(result.extentsMax.y, glyphOffset.y + glyphSize.y);
-			const glm::vec2 kerning = getKerning(characterSize, codePoint, (it == codePoints.end()) ? char32_t{0} : *it);
-			offset.x += (glyph.advance + kerning.x) * scale.x;
-			offset.y += kerning.y * scale.y;
-		}
-	}
-	return result;
-}
-
-Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize, std::string_view string, glm::vec2 scale) {
-	static_assert(sizeof(char) == sizeof(char8_t));
-	static_assert(alignof(char) == alignof(char8_t));
-	return shapeText(renderer, characterSize, std::u8string_view{reinterpret_cast<const char8_t*>(string.data()), string.size()}, scale);
 }
 
 void Font::prepareAtlasTexture(Renderer& renderer, bool resized) {

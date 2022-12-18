@@ -103,8 +103,9 @@ public:
 	 * \param options initial configuration of the sound stage, see
 	 *        SoundStageOptions.
 	 *
-	 * \throw audio::Error on failure to initialize the underlying audio engine.
-	 * \throw std::bad_alloc on allocation failure.
+	 * \throws audio::Error on failure to initialize the underlying audio
+	 *         engine.
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \warning Due to having global access to the default audio device, only a
 	 *          single SoundManager instance may exist in the program at any

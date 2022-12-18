@@ -140,16 +140,12 @@ public:
 	 * \param options initial configuration of the input manager, see
 	 *        InputManagerOptions.
 	 *
-	 * \throw application::Error on failure to initialize the required global
-	 *        subsystems.
+	 * \throws application::Error on failure to initialize the required global
+	 *         subsystems.
 	 */
 	InputManager(const InputManagerOptions& options = {});
 
-	/**
-	 * Destructor.
-	 *
-	 * Shuts down the associated global subsystems.
-	 */
+	/** Destructor. */
 	~InputManager();
 
 	/** Copying an input manager is not allowed. */
@@ -200,7 +196,7 @@ public:
 	 * \param input physical input to set the binding for.
 	 * \param outputs set of outputs which the input should control.
 	 *
-	 * \throw std::bad_alloc on allocation failure.
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \sa addBinding()
 	 * \sa unbind()
@@ -215,7 +211,7 @@ public:
 	 * \param input physical input to add the binding to.
 	 * \param outputs additional set of outputs which the input should control.
 	 *
-	 * \throw std::bad_alloc on allocation failure.
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \sa bind()
 	 * \sa unbind()
@@ -228,7 +224,7 @@ public:
 	 *
 	 * \param input physical input to remove the binding from.
 	 *
-	 * \throw std::bad_alloc on allocation failure.
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \sa bind()
 	 * \sa addBinding()
@@ -412,7 +408,7 @@ public:
 	 * \return an iterable input range of all of the bindings that currently
 	 *         exist between a physical input and a set of abstract outputs.
 	 *
-	 * \throw std::bad_alloc on allocation failure.
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \sa hasAnyBindings()
 	 * \sa findBinding()

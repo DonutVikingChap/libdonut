@@ -55,7 +55,7 @@ Note: This library is currently a **work in progress** and makes no guarantees r
         - Circle
         - AxisAlignedBox
         - Rectangle
-    - Utilities for working with [UTF8](include/donut/unicode.hpp)-encoded text:
+    - Utilities for working with [UTF-8](include/donut/unicode.hpp)-encoded text:
         - Supports iterating unicode code points in any arbitrary byte sequence with basic error handling in the case of invalid encoding.
     - [XML](include/donut/xml.hpp) document parsing.
 
