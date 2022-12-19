@@ -17,38 +17,29 @@ namespace donut {
 namespace graphics {
 
 struct RendererOptions {
-	const char* defaultVertexShaderSourceCode = Shader2D::vertexShaderSourceCodeInstancedTexturedQuad;
-	const char* defaultFragmentShaderSourceCode = Shader2D::fragmentShaderSourceCodeTexturedQuadPlain;
+	ShaderProgramOptions defaultShaderProgramOptions{
+		.vertexShaderSourceCode = Shader2D::vertexShaderSourceCodeInstancedTexturedQuad,
+		.fragmentShaderSourceCode = Shader2D::fragmentShaderSourceCodeTexturedQuadPlain,
+	};
 	Shader2DOptions defaultShaderOptions{.orderIndex = 0};
-	const char* glyphVertexShaderSourceCode = Shader2D::vertexShaderSourceCodeInstancedTexturedQuad;
-	const char* glyphFragmentShaderSourceCode = Shader2D::fragmentShaderSourceCodeTexturedQuadAlpha;
+	ShaderProgramOptions glyphShaderProgramOptions{
+		.vertexShaderSourceCode = Shader2D::vertexShaderSourceCodeInstancedTexturedQuad,
+		.fragmentShaderSourceCode = Shader2D::fragmentShaderSourceCodeTexturedQuadAlpha,
+	};
 	Shader2DOptions glyphShaderOptions{.orderIndex = 0};
-	const char* modelVertexShaderSourceCode = Shader3D::vertexShaderSourceCodeInstancedModel;
-	const char* modelFragmentShaderSourceCode = Shader3D::fragmentShaderSourceCodeModelBlinnPhong;
+	ShaderProgramOptions modelShaderProgramOptions{
+		.vertexShaderSourceCode = Shader3D::vertexShaderSourceCodeInstancedModel,
+		.fragmentShaderSourceCode = Shader3D::fragmentShaderSourceCodeModelBlinnPhong,
+	};
 	Shader3DOptions modelShaderOptions{.orderIndex = 0, .clearDepthBuffer = true};
 };
 
 class Renderer {
 public:
 	explicit Renderer(const RendererOptions& options = {})
-		: defaultShader(
-			  {
-				  .vertexShaderSourceCode = options.defaultVertexShaderSourceCode,
-				  .fragmentShaderSourceCode = options.defaultFragmentShaderSourceCode,
-			  },
-			  options.defaultShaderOptions)
-		, glyphShader(
-			  {
-				  .vertexShaderSourceCode = options.glyphVertexShaderSourceCode,
-				  .fragmentShaderSourceCode = options.glyphFragmentShaderSourceCode,
-			  },
-			  options.glyphShaderOptions)
-		, modelShader(
-			  {
-				  .vertexShaderSourceCode = options.modelVertexShaderSourceCode,
-				  .fragmentShaderSourceCode = options.modelFragmentShaderSourceCode,
-			  },
-			  options.modelShaderOptions) {}
+		: defaultShader(options.defaultShaderProgramOptions, options.defaultShaderOptions)
+		, glyphShader(options.glyphShaderProgramOptions, options.glyphShaderOptions)
+		, modelShader(options.modelShaderProgramOptions, options.modelShaderOptions) {}
 
 	void render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const glm::mat4& projectionViewMatrix);
 

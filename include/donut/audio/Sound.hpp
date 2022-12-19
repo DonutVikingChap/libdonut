@@ -217,13 +217,15 @@ public:
 	 * - FLAC (.flac)
 	 * - MP3 (.mp3)
 	 *
-	 * \param filepath virtual filepath of the sound file to load, see
-	 *        donut::File.
+	 * \param filepath virtual filepath of the sound file to load, see File.
 	 * \param options sound options, see SoundOptions.
 	 *
 	 * \throws File::Error on failure to open the file.
 	 * \throws audio::Error on failure to load a sound from the file.
 	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \note The file format is determined entirely from the file contents; the
+	 *       filename extension is not taken into account.
 	 */
 	explicit Sound(const char* filepath, const SoundOptions& options = {});
 

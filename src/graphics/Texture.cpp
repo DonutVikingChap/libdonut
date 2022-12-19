@@ -303,14 +303,12 @@ void Texture::pasteImage2DArray(const ImageHDRView& image, std::size_t x, std::s
 
 void Texture::fill2D(Renderer& renderer, Color color) {
 	Framebuffer framebuffer{};
-	framebuffer.attachTexture2D(*this);
+	const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(*this);
 
 	RenderPass renderPass{};
 	renderPass.setBackgroundColor(color);
 
 	renderer.render(framebuffer, renderPass, {}, {});
-
-	framebuffer.detachTexture2D();
 }
 
 void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<Color> backgroundColor) {
@@ -318,39 +316,35 @@ void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHe
 	assert(newHeight >= height);
 
 	Texture newTexture{internalFormat, newWidth, newHeight, {.repeat = false, .useLinearFiltering = false, .useMipmap = false}};
+	{
+		Framebuffer framebuffer{};
+		const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(newTexture);
 
-	Framebuffer framebuffer{};
-	framebuffer.attachTexture2D(newTexture);
-
-	RenderPass renderPass{};
-	renderPass.setBackgroundColor(backgroundColor);
-	renderPass.draw(TransientTexture{.texture = this});
-	renderer.render(framebuffer,
-		renderPass,
-		{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
-		glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
-
-	framebuffer.detachTexture2D();
-
+		RenderPass renderPass{};
+		renderPass.setBackgroundColor(backgroundColor);
+		renderPass.draw(TransientTexture{.texture = this});
+		renderer.render(framebuffer,
+			renderPass,
+			{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
+			glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
+	}
 	newTexture.setOptions2D(options);
 	*this = std::move(newTexture);
 }
 
 Texture Texture::copy2D(Renderer& renderer) const {
 	Texture newTexture{internalFormat, width, height, {.repeat = false, .useLinearFiltering = false, .useMipmap = false}};
+	{
+		Framebuffer framebuffer{};
+		const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(newTexture);
 
-	Framebuffer framebuffer{};
-	framebuffer.attachTexture2D(newTexture);
-
-	RenderPass renderPass{};
-	renderPass.draw(TransientTexture{.texture = this});
-	renderer.render(framebuffer,
-		renderPass,
-		{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
-		glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
-
-	framebuffer.detachTexture2D();
-
+		RenderPass renderPass{};
+		renderPass.draw(TransientTexture{.texture = this});
+		renderer.render(framebuffer,
+			renderPass,
+			{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
+			glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
+	}
 	newTexture.setOptions2D(options);
 	return newTexture;
 }

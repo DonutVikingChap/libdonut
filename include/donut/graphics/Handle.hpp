@@ -6,6 +6,9 @@
 namespace donut {
 namespace graphics {
 
+/**
+ * Generic GPU resource handle.
+ */
 using Handle = std::uint32_t;
 
 } // namespace graphics

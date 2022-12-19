@@ -16,11 +16,27 @@ The main example is a simple game project consisting of a single source file, `e
 
 ## Main modules
 
-The main API of libdonut is organized into the following modules:
+The main API of libdonut is organized into the following modules, listed along with a summary of their most important components:
 
-- [donut::application](@ref donut::application) - Application framework
-- [donut::audio](@ref donut::audio) - Audio engine
-- [donut::graphics](@ref donut::graphics) - Graphics rendering
+- [donut::application](@ref donut::application) - Application framework module
+    - [Application](@ref donut::application::Application) - Main application base class
+    - [InputManager](@ref donut::application::InputManager) - Mapping between physical inputs and abstract output numbers
+- [donut::audio](@ref donut::audio) - Audio engine module
+    - [Sound](@ref donut::audio::Sound) - Sound wave loading
+    - [SoundStage](@ref donut::audio::SoundStage) - Sound playback in 3D to the default audio device
+- [donut::graphics](@ref donut::graphics) - Graphics rendering module
+    - [Font](@ref donut::graphics::Font) - Text shaping facility
+    - [Framebuffer](@ref donut::graphics::Framebuffer) - Render target on the GPU
+    - [ImageHDR](@ref donut::graphics::ImageHDR) - High dynamic range image loading/saving
+    - [ImageLDR](@ref donut::graphics::ImageLDR) - Low dynamic range image loading/saving
+    - [Renderer](@ref donut::graphics::Renderer) - Rendering onto a framebuffer
+    - [RenderPass](@ref donut::graphics::RenderPass) - Graphics drawing queue for batch rendering
+    - [Scene](@ref donut::graphics::Scene) - Scene loading of 3D models
+    - [Shader2D](@ref donut::graphics::Shader2D) - Shader program for instanced 2D textured quads
+    - [Shader3D](@ref donut::graphics::Shader3D) - Shader program for instanced 3D models
+    - [SpriteAtlas](@ref donut::graphics::SpriteAtlas) - Packing of sprites into an expandable spritesheet
+    - [Texture](@ref donut::graphics::Texture) - Texture data stored on the GPU
+    - [Viewport](@ref donut::graphics::Viewport) - Rectangular region of a framebuffer
 
 ## Utility modules
 

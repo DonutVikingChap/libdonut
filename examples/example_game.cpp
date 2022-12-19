@@ -61,7 +61,7 @@ struct GameOptions {
 		.windowWidth = 640,
 		.windowHeight = 480,
 		.windowResizable = true,
-		.tickRate = 5.0f,
+		.tickRate = 60.0f,
 		.maxFps = 240.0f,
 	};
 	const char* mainMenuMusicFilepath = "sounds/music/donauwalzer.ogg";
@@ -191,16 +191,16 @@ protected:
 		renderPass.reset();
 		renderPass.setBackgroundColor(Color::PURPLE * 0.25f);
 		drawBackground(frameInfo);
-		renderer.render(gfx::Framebuffer::getDefault(), renderPass, worldViewport, worldProjectionViewMatrix);
+		renderer.render(framebuffer, renderPass, worldViewport, worldProjectionViewMatrix);
 
 		renderPass.reset();
 		drawWorld(frameInfo);
-		renderer.render(gfx::Framebuffer::getDefault(), renderPass, worldViewport, worldProjectionViewMatrix);
+		renderer.render(framebuffer, renderPass, worldViewport, worldProjectionViewMatrix);
 
 		renderPass.reset();
 		drawUserInterface(frameInfo);
 		drawFpsCounter();
-		renderer.render(gfx::Framebuffer::getDefault(), renderPass, screenViewport, screenProjectionViewMatrix);
+		renderer.render(framebuffer, renderPass, screenViewport, screenProjectionViewMatrix);
 	}
 
 private:
@@ -569,6 +569,7 @@ private:
 		renderPass.draw(gfx::Text{.font = mainFont, .text = fpsText, .position = fpsPosition, .color = fpsColor});
 	}
 
+	gfx::Framebuffer framebuffer = gfx::Framebuffer::getDefault();
 	gfx::Renderer renderer{};
 	gfx::RenderPass renderPass{};
 	gfx::Viewport screenViewport{};

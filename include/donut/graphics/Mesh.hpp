@@ -18,30 +18,30 @@ namespace donut {
 namespace graphics {
 
 enum class MeshBufferUsage : std::uint32_t {
-	STATIC_COPY = 0x88E6,
-	STATIC_DRAW = 0x88E4,
-	STATIC_READ = 0x88E5,
-	DYNAMIC_COPY = 0x88EA,
-	DYNAMIC_DRAW = 0x88E8,
-	DYNAMIC_READ = 0x88E9,
-	STREAM_COPY = 0x88E2,
-	STREAM_DRAW = 0x88E0,
-	STREAM_READ = 0x88E1,
+	STATIC_COPY = 0x88E6,  ///< \hideinitializer
+	STATIC_DRAW = 0x88E4,  ///< \hideinitializer
+	STATIC_READ = 0x88E5,  ///< \hideinitializer
+	DYNAMIC_COPY = 0x88EA, ///< \hideinitializer
+	DYNAMIC_DRAW = 0x88E8, ///< \hideinitializer
+	DYNAMIC_READ = 0x88E9, ///< \hideinitializer
+	STREAM_COPY = 0x88E2,  ///< \hideinitializer
+	STREAM_DRAW = 0x88E0,  ///< \hideinitializer
+	STREAM_READ = 0x88E1,  ///< \hideinitializer
 };
 
 enum class MeshPrimitiveType : std::uint32_t {
-	POINTS = 0x0000,
-	LINES = 0x0001,
-	LINE_LOOP = 0x0002,
-	LINE_STRIP = 0x0003,
-	TRIANGLES = 0x0004,
-	TRIANGLE_STRIP = 0x0005,
+	POINTS = 0x0000,         ///< \hideinitializer
+	LINES = 0x0001,          ///< \hideinitializer
+	LINE_LOOP = 0x0002,      ///< \hideinitializer
+	LINE_STRIP = 0x0003,     ///< \hideinitializer
+	TRIANGLES = 0x0004,      ///< \hideinitializer
+	TRIANGLE_STRIP = 0x0005, ///< \hideinitializer
 };
 
 enum class MeshIndexType : std::uint32_t {
-	U8 = 0x1401,
-	U16 = 0x1403,
-	U32 = 0x1405,
+	U8 = 0x1401,  ///< Unsigned 8-bit integer. \hideinitializer
+	U16 = 0x1403, ///< Unsigned 16-bit integer. \hideinitializer
+	U32 = 0x1405, ///< Unsigned 32-bit integer. \hideinitializer
 };
 
 namespace detail {

@@ -7,9 +7,25 @@
 namespace donut {
 namespace graphics {
 
-Framebuffer& Framebuffer::getDefault() {
-	static Framebuffer defaultFramebuffer{Handle{}};
-	return defaultFramebuffer;
+Framebuffer::TextureAttachment::~TextureAttachment() {
+	GLint oldFramebufferBinding = 0;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebufferBinding);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(oldFramebufferBinding));
+}
+
+Framebuffer::TextureAttachment::TextureAttachment(Framebuffer& framebuffer, Texture& texture)
+	: framebuffer(framebuffer) {
+	GLint oldFramebufferBinding = 0;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebufferBinding);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture.get(), 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(oldFramebufferBinding));
 }
 
 Framebuffer::Framebuffer() {
@@ -19,26 +35,6 @@ Framebuffer::Framebuffer() {
 		throw Error{"Failed to create framebuffer object!"};
 	}
 	fbo.reset(handle);
-}
-
-void Framebuffer::attachTexture2D(Texture& texture) {
-	GLint oldFramebufferBinding = 0;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebufferBinding);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo.get());
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture.get(), 0);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, oldFramebufferBinding);
-}
-
-void Framebuffer::detachTexture2D() {
-	GLint oldFramebufferBinding = 0;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebufferBinding);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo.get());
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, oldFramebufferBinding);
 }
 
 void Framebuffer::FramebufferDeleter::operator()(Handle handle) const noexcept {

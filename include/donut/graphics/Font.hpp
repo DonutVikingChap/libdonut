@@ -92,8 +92,7 @@ public:
 	 * - TrueType (.ttf)
 	 * - OpenType (.otf)
 	 *
-	 * \param filepath virtual filepath of the font file to load, see
-	 *        donut::File.
+	 * \param filepath virtual filepath of the font file to load, see File.
 	 * \param options font options, see FontOptions.
 	 *
 	 * \throws File::Error on failure to open the file.

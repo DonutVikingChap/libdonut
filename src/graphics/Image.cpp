@@ -1,13 +1,11 @@
 #include <donut/InputFileStream.hpp>
-#include <donut/OutputFileStream.hpp>
 #include <donut/graphics/Error.hpp>
 #include <donut/graphics/Image.hpp>
 
-#include <cstddef>           // std::size_t, std::ptrdiff_t, std::byte
-#include <fmt/format.h>      // fmt::format
-#include <span>              // std::span, std::as_writable_bytes
-#include <stb_image.h>       // stbi_...
-#include <stb_image_write.h> // stbi_..., stbi_write_...
+#include <cstddef>      // std::size_t, std::ptrdiff_t, std::byte
+#include <fmt/format.h> // fmt::format
+#include <span>         // std::span, std::as_writable_bytes
+#include <stb_image.h>  // stbi_...
 
 namespace donut {
 namespace graphics {
@@ -29,95 +27,28 @@ constexpr stbi_io_callbacks IMAGE_FILE_INPUT_CALLBACKS{
 	},
 };
 
-void imageFileOutputCallback(void* context, void* data, int size) noexcept {
-	OutputFileStream& file = *static_cast<OutputFileStream*>(context);
-	file.write(std::span{reinterpret_cast<const std::byte*>(data), static_cast<std::size_t>(size)});
-}
-
 } // namespace
-
-void Image::savePng(const ImageView& image, const char* filepath, const ImageSavePngOptions& options) {
-	OutputFileStream file = OutputFileStream::create(filepath);
-	stbi_flip_vertically_on_write(options.flipVertically ? 1 : 0);
-	stbi_write_png_compression_level = options.compressionLevel;
-	const int width = static_cast<int>(image.getWidth());
-	const int height = static_cast<int>(image.getHeight());
-	const int channelCount = static_cast<int>(image.getChannelCount());
-	const stbi_uc* const pixels = static_cast<const stbi_uc*>(image.getPixels());
-	if (stbi_write_png_to_func(imageFileOutputCallback, &file, width, height, channelCount, pixels, 0) == 0) {
-		throw Error{fmt::format("Failed to save PNG image \"{}\"!", filepath)};
-	}
-}
-
-void Image::saveBmp(const ImageView& image, const char* filepath, const ImageSaveBmpOptions& options) {
-	OutputFileStream file = OutputFileStream::create(filepath);
-	stbi_flip_vertically_on_write(options.flipVertically ? 1 : 0);
-	const int width = static_cast<int>(image.getWidth());
-	const int height = static_cast<int>(image.getHeight());
-	const int channelCount = static_cast<int>(image.getChannelCount());
-	const stbi_uc* const pixels = static_cast<const stbi_uc*>(image.getPixels());
-	if (stbi_write_bmp_to_func(imageFileOutputCallback, &file, width, height, channelCount, pixels) == 0) {
-		throw Error{fmt::format("Failed to save BMP image \"{}\"!", filepath)};
-	}
-}
-
-void Image::saveTga(const ImageView& image, const char* filepath, const ImageSaveTgaOptions& options) {
-	OutputFileStream file = OutputFileStream::create(filepath);
-	stbi_flip_vertically_on_write(options.flipVertically ? 1 : 0);
-	stbi_write_tga_with_rle = (options.useRleCompression) ? 1 : 0;
-	const int width = static_cast<int>(image.getWidth());
-	const int height = static_cast<int>(image.getHeight());
-	const int channelCount = static_cast<int>(image.getChannelCount());
-	const stbi_uc* const pixels = static_cast<const stbi_uc*>(image.getPixels());
-	if (stbi_write_tga_to_func(imageFileOutputCallback, &file, width, height, channelCount, pixels) == 0) {
-		throw Error{fmt::format("Failed to save TGA image \"{}\"!", filepath)};
-	}
-}
-
-void Image::saveJpg(const ImageView& image, const char* filepath, const ImageSaveJpgOptions& options) {
-	OutputFileStream file = OutputFileStream::create(filepath);
-	stbi_flip_vertically_on_write(options.flipVertically ? 1 : 0);
-	const int width = static_cast<int>(image.getWidth());
-	const int height = static_cast<int>(image.getHeight());
-	const int channelCount = static_cast<int>(image.getChannelCount());
-	const stbi_uc* const pixels = static_cast<const stbi_uc*>(image.getPixels());
-	if (stbi_write_jpg_to_func(imageFileOutputCallback, &file, width, height, channelCount, pixels, options.quality) == 0) {
-		throw Error{fmt::format("Failed to save JPG image \"{}\"!", filepath)};
-	}
-}
-
-void Image::saveHdr(const ImageView& image, const char* filepath, const ImageSaveHdrOptions& options) {
-	OutputFileStream file = OutputFileStream::create(filepath);
-	stbi_flip_vertically_on_write(options.flipVertically ? 1 : 0);
-	const int width = static_cast<int>(image.getWidth());
-	const int height = static_cast<int>(image.getHeight());
-	const int channelCount = static_cast<int>(image.getChannelCount());
-	const float* const pixels = static_cast<const float*>(image.getPixels());
-	if (stbi_write_hdr_to_func(imageFileOutputCallback, &file, width, height, channelCount, pixels) == 0) {
-		throw Error{fmt::format("Failed to save HDR image \"{}\"!", filepath)};
-	}
-}
 
 Image::Image(const char* filepath, const ImageOptions& options) {
 	stbi_set_flip_vertically_on_load_thread(options.flipVertically ? 1 : 0);
-	int widthValue = 0;
-	int heightValue = 0;
-	int channelCountValue = 0;
+	int imageWidth = 0;
+	int imageHeight = 0;
+	int channelsInFile = 0;
 	InputFileStream file = InputFileStream::open(filepath);
 	if (options.highDynamicRange) {
-		pixels.reset(stbi_loadf_from_callbacks(&IMAGE_FILE_INPUT_CALLBACKS, &file, &widthValue, &heightValue, &channelCountValue, options.desiredChannelCount));
+		pixels.reset(stbi_loadf_from_callbacks(&IMAGE_FILE_INPUT_CALLBACKS, &file, &imageWidth, &imageHeight, &channelsInFile, static_cast<int>(options.desiredChannelCount)));
 		if (!pixels) {
 			throw Error{fmt::format("Failed to load HDR image \"{}\": {}", filepath, stbi_failure_reason())};
 		}
 	} else {
-		pixels.reset(stbi_load_from_callbacks(&IMAGE_FILE_INPUT_CALLBACKS, &file, &widthValue, &heightValue, &channelCountValue, options.desiredChannelCount));
+		pixels.reset(stbi_load_from_callbacks(&IMAGE_FILE_INPUT_CALLBACKS, &file, &imageWidth, &imageHeight, &channelsInFile, static_cast<int>(options.desiredChannelCount)));
 		if (!pixels) {
 			throw Error{fmt::format("Failed to load image \"{}\": {}", filepath, stbi_failure_reason())};
 		}
 	}
-	width = static_cast<std::size_t>(widthValue);
-	height = static_cast<std::size_t>(heightValue);
-	channelCount = static_cast<std::size_t>(channelCountValue);
+	width = static_cast<std::size_t>(imageWidth);
+	height = static_cast<std::size_t>(imageHeight);
+	channelCount = (options.desiredChannelCount > 0) ? static_cast<std::size_t>(options.desiredChannelCount) : static_cast<std::size_t>(channelsInFile);
 }
 
 void Image::PixelsDeleter::operator()(void* handle) const noexcept {
