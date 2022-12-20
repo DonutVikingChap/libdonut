@@ -16,31 +16,99 @@
 namespace donut {
 namespace graphics {
 
+/**
+ * Configuration options for a Renderer.
+ */
 struct RendererOptions {
+	/**
+	 * Configuration options for the ShaderProgram of the default shader, which
+	 * is used for rendering plain textured quads.
+	 */
 	ShaderProgramOptions defaultShaderProgramOptions{
 		.vertexShaderSourceCode = Shader2D::vertexShaderSourceCodeInstancedTexturedQuad,
 		.fragmentShaderSourceCode = Shader2D::fragmentShaderSourceCodeTexturedQuadPlain,
 	};
+
+	/**
+	 * Configuration options for the Shader2D of the default shader, which is
+	 * used for rendering plain textured quads.
+	 */
 	Shader2DOptions defaultShaderOptions{.orderIndex = 0};
+
+	/**
+	 * Configuration options for the ShaderProgram of the glyph shader, which is
+	 * used for rendering the individual glyphs of shaped text.
+	 */
 	ShaderProgramOptions glyphShaderProgramOptions{
 		.vertexShaderSourceCode = Shader2D::vertexShaderSourceCodeInstancedTexturedQuad,
 		.fragmentShaderSourceCode = Shader2D::fragmentShaderSourceCodeTexturedQuadAlpha,
 	};
+
+	/**
+	 * Configuration options for the Shader2D of the glyph shader, which is
+	 * used for rendering the individual glyphs of shaped text.
+	 */
 	Shader2DOptions glyphShaderOptions{.orderIndex = 0};
+
+	/**
+	 * Configuration options for the ShaderProgram of the model shader, which is
+	 * used for rendering 3D models.
+	 */
 	ShaderProgramOptions modelShaderProgramOptions{
 		.vertexShaderSourceCode = Shader3D::vertexShaderSourceCodeInstancedModel,
 		.fragmentShaderSourceCode = Shader3D::fragmentShaderSourceCodeModelBlinnPhong,
 	};
+
+	/**
+	 * Configuration options for the Shader3D of the model shader, which is
+	 * used for rendering 3D models.
+	 */
 	Shader3DOptions modelShaderOptions{.orderIndex = 0, .clearDepthBuffer = true};
 };
 
+/**
+ * Persistent system for rendering the batched draw commands of a RenderPass
+ * onto a Framebuffer, such as the user's screen.
+ *
+ * An instance of this class should be kept throughout the lifetime of the
+ * application in order to continuously render the visual state of the latest
+ * frame produced through the Application::display() callback. It can also be
+ * used for smaller render jobs in the middle of a frame, such as copying a
+ * GPU Texture.
+ *
+ * \sa RenderPass
+ */
 class Renderer {
 public:
+	/**
+	 * Construct a renderer.
+	 *
+	 * \param options initial configuration of the renderer, see
+	 *        RendererOptions.
+	 *
+	 * \throws File::Error on failure to open a required resource file.
+	 * \throws graphics::Error on failure to create or initialize a required GPU
+	 *         resource.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	explicit Renderer(const RendererOptions& options = {})
 		: defaultShader(options.defaultShaderProgramOptions, options.defaultShaderOptions)
 		, glyphShader(options.glyphShaderProgramOptions, options.glyphShaderOptions)
 		, modelShader(options.modelShaderProgramOptions, options.modelShaderOptions) {}
 
+	/**
+	 * Render the contents of a RenderPass to a Framebuffer.
+	 *
+	 * \param framebuffer the framebuffer to render to.
+	 * \param renderPass the render pass to render from.
+	 * \param viewport the rectangular region of the framebuffer to render
+	 *        inside of.
+	 * \param projectionViewMatrix combined projection/view matrix to transform
+	 *        all rendered vertices by.
+	 *
+	 * \note This function should typically be called at least once every frame
+	 *       during the Application::display() callback.
+	 */
 	void render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const glm::mat4& projectionViewMatrix);
 
 private:

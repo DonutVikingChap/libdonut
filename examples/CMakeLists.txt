@@ -17,3 +17,7 @@ target_link_libraries(donut-example-base INTERFACE
 add_executable(donut-example-game "example_game.cpp")
 target_link_libraries(donut-example-game PRIVATE donut-example-base)
 add_test(NAME donut-example-game COMMAND donut-example-game)
+
+add_executable(donut-example-rectangle "example_rectangle.cpp")
+target_link_libraries(donut-example-rectangle PRIVATE donut-example-base)
+add_test(NAME donut-example-rectangle COMMAND donut-example-rectangle)

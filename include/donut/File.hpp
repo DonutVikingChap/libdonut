@@ -42,13 +42,14 @@ public:
 
 	void close();
 
-protected:
-	constexpr explicit File(void* handle) noexcept
-		: file(handle) {}
-
+private:
 	struct FileDeleter {
 		void operator()(void* handle) const noexcept;
 	};
+
+protected:
+	constexpr explicit File(void* handle) noexcept
+		: file(handle) {}
 
 	Resource<void*, FileDeleter, nullptr> file{};
 };

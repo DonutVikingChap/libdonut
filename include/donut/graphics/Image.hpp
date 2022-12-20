@@ -344,11 +344,12 @@ public:
 		return channelCount;
 	}
 
-protected:
+private:
 	struct PixelsDeleter {
 		void operator()(void* handle) const noexcept;
 	};
 
+protected:
 	using Pixels = Resource<void*, PixelsDeleter, nullptr>;
 
 	Image(Pixels pixels, std::size_t width, std::size_t height, std::size_t channelCount)

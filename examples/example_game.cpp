@@ -1,3 +1,20 @@
+/**
+ * \example example_game.cpp
+ *
+ * \details This example shows a basic game project consisting of a single
+ *          source file. The main application class, Game, is defined at the top
+ *          while the main function is defined at the bottom.
+ *
+ *          This can be used to study how various libdonut features are combined
+ *          to form a working application. Note however that for a real project,
+ *          the code that this example represents would typically be split
+ *          across multiple files to make the main application file less
+ *          cluttered.
+ *
+ *          The game uses the included `examples/data/` folder as its main
+ *          resource directory for all asset files that are loaded at runtime.
+ */
+
 #include <donut/Color.hpp>
 #include <donut/File.hpp>
 #include <donut/InputFileStream.hpp>

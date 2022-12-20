@@ -8,11 +8,10 @@ The source code for libdonut can be found on [GitHub](https://github.com/DonutVi
 
 ## Examples
 
-Libdonut includes example code in the `examples/` directory that can be used as a reference for how various features of the library work and are intended to be used. All examples use the included `examples/data/` folder as their main resource directory for any associated assets that need to be loaded at runtime.
+Libdonut includes example code in the `examples/` directory that can serve as a reference for how various features of the library work and are intended to be used. All examples use the included `examples/data/` folder as their main resource directory for any associated assets that need to be loaded at runtime. The main examples are:
 
-### Example game
-
-The main example is a simple game project consisting of a single source file, `examples/example_game.cpp`, with the main application class at the beginning and the main program function at the bottom. This game can be used to study how various libdonut features are combined to form a working application. Note however that for a real project, the code that this example represents would typically be split across multiple files to make the main application file less cluttered.
+- [example_game.cpp](@ref example_game.cpp) - Single-file game project showcasing various features
+- [example_rectangle.cpp](@ref example_rectangle.cpp) - Very basic application that renders a rectangle
 
 ## Main modules
 
