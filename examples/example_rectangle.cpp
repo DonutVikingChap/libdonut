@@ -20,9 +20,9 @@ namespace app = donut::application;
 namespace gfx = donut::graphics;
 using Color = donut::Color;
 
-class Application : public app::Application {
+class RectangleApplication : public app::Application {
 public:
-	explicit Application(const char* programFilepath)
+	explicit RectangleApplication(const char* programFilepath)
 		: app::Application(programFilepath, {.windowTitle = "Rectangle"}) {}
 
 protected:
@@ -59,6 +59,6 @@ private:
 };
 
 int main(int /*argc*/, char* argv[]) {
-	Application application{argv[0]};
+	RectangleApplication application{argv[0]};
 	application.run();
 }
