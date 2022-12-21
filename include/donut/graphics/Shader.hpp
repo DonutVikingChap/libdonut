@@ -7,7 +7,7 @@
 
 #include <array>       // std::array
 #include <cstddef>     // std::size_t
-#include <cstdint>     // std::int32_t, std::uint32_t
+#include <cstdint>     // std::int32_t
 #include <glm/glm.hpp> // glm::...
 #include <span>        // std::span
 #include <string>      // std::string, std::to_string
@@ -59,11 +59,11 @@ public:
 		glm::vec2,                //
 		glm::vec3,                //
 		glm::vec4,                //
-		std::int32_t,             //
+		glm::i32,                 //
 		glm::i32vec2,             //
 		glm::i32vec3,             //
 		glm::i32vec4,             //
-		std::uint32_t,            //
+		glm::u32,                 //
 		glm::u32vec2,             //
 		glm::u32vec3,             //
 		glm::u32vec4,             //
@@ -83,11 +83,11 @@ public:
 	void setUniformVec2(const ShaderUniform& uniform, glm::vec2 value);
 	void setUniformVec3(const ShaderUniform& uniform, glm::vec3 value);
 	void setUniformVec4(const ShaderUniform& uniform, glm::vec4 value);
-	void setUniformInt(const ShaderUniform& uniform, std::int32_t value);
+	void setUniformInt(const ShaderUniform& uniform, glm::i32 value);
 	void setUniformIVec2(const ShaderUniform& uniform, glm::i32vec2 value);
 	void setUniformIVec3(const ShaderUniform& uniform, glm::i32vec3 value);
 	void setUniformIVec4(const ShaderUniform& uniform, glm::i32vec4 value);
-	void setUniformUint(const ShaderUniform& uniform, glm::uint32_t value);
+	void setUniformUint(const ShaderUniform& uniform, glm::u32 value);
 	void setUniformUVec2(const ShaderUniform& uniform, glm::u32vec2 value);
 	void setUniformUVec3(const ShaderUniform& uniform, glm::u32vec3 value);
 	void setUniformUVec4(const ShaderUniform& uniform, glm::u32vec4 value);

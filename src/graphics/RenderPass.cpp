@@ -11,7 +11,37 @@
 namespace donut {
 namespace graphics {
 
-void RenderPass::draw(Model&& model) {
+void RenderPass::reset() noexcept {
+	backgroundColor.reset();
+
+	std::erase_if(
+		modelsSortedByShaderAndScene, [](const SceneObjectInstancesFromModel& models) -> bool { return models.shader.use_count() <= 1 || models.scene.use_count() <= 1; });
+	for (SceneObjectInstancesFromModel& models : modelsSortedByShaderAndScene) {
+		for (std::vector<Scene::Object::Instance>& objectInstance : models.objectInstances) {
+			objectInstance.clear();
+		}
+	}
+
+	transientTextures.clear();
+
+	std::erase_if(
+		quadsSortedByShaderAndTexture, [](const TexturedQuadInstancesFromQuad& quads) -> bool { return quads.shader.use_count() <= 1 || quads.texture.use_count() <= 1; });
+	for (TexturedQuadInstancesFromQuad& quads : quadsSortedByShaderAndTexture) {
+		quads.instances.clear();
+	}
+
+	std::erase_if(spritesSortedByAtlas, [](const TexturedQuadInstancesFromSprite& sprites) -> bool { return sprites.atlas.use_count() <= 1; });
+	for (TexturedQuadInstancesFromSprite& sprites : spritesSortedByAtlas) {
+		sprites.instances.clear();
+	}
+
+	std::erase_if(glyphsSortedByFont, [](const TexturedQuadInstancesFromText& glyphs) -> bool { return glyphs.font.use_count() <= 1; });
+	for (TexturedQuadInstancesFromText& glyphs : glyphsSortedByFont) {
+		glyphs.instances.clear();
+	}
+}
+
+void RenderPass::draw(ModelInstance&& model) {
 	assert(model.scene);
 
 	const glm::mat4 transformation = glm::scale(model.transformation, {1.0f, -1.0f, 1.0f});
@@ -20,17 +50,16 @@ void RenderPass::draw(Model&& model) {
 	const std::size_t objectCount = model.scene->objects.size();
 
 	std::vector<std::vector<Scene::Object::Instance>>* objectInstances = nullptr;
-	const auto it = std::lower_bound(modelInstancesSortedByShaderAndScene.begin(), modelInstancesSortedByShaderAndScene.end(), model);
-	if (it == modelInstancesSortedByShaderAndScene.end()) {
-		modelInstancesSortedByShaderAndScene.push_back({.shader = std::move(model.shader), .scene = std::move(model.scene), .objectInstances{}});
-		objectInstances = &modelInstancesSortedByShaderAndScene.back().objectInstances;
+	const auto it = std::lower_bound(modelsSortedByShaderAndScene.begin(), modelsSortedByShaderAndScene.end(), model);
+	if (it == modelsSortedByShaderAndScene.end()) {
+		modelsSortedByShaderAndScene.push_back({.shader = std::move(model.shader), .scene = std::move(model.scene), .objectInstances{}});
+		objectInstances = &modelsSortedByShaderAndScene.back().objectInstances;
 		objectInstances->resize(objectCount);
 	} else if (it->shader == model.shader && it->scene == model.scene) {
 		objectInstances = &it->objectInstances;
 		assert(objectInstances->size() == objectCount);
 	} else {
-		objectInstances =
-			&modelInstancesSortedByShaderAndScene.insert(it, {.shader = std::move(model.shader), .scene = std::move(model.scene), .objectInstances{}})->objectInstances;
+		objectInstances = &modelsSortedByShaderAndScene.insert(it, {.shader = std::move(model.shader), .scene = std::move(model.scene), .objectInstances{}})->objectInstances;
 		objectInstances->resize(objectCount);
 	}
 	for (std::size_t i = 0; i < objectCount; ++i) {
@@ -42,14 +71,14 @@ void RenderPass::draw(Model&& model) {
 	}
 }
 
-void RenderPass::draw(TransientTexture&& transientTexture) {
+void RenderPass::draw(TransientTextureInstance&& transientTexture) {
 	assert(transientTexture.texture);
 	glm::mat4 transformation = glm::identity<glm::mat4>();
 	transformation = glm::translate(transformation, {transientTexture.position, 0.0f});
 	transformation = glm::rotate(transformation, transientTexture.angle, {0.0f, 0.0f, 1.0f});
 	transformation = glm::scale(transformation, {transientTexture.texture->getSize() * transientTexture.scale, 1.0f});
 	transformation = glm::translate(transformation, {-transientTexture.origin, 0.0f});
-	transientTextureInstances.push_back({
+	transientTextures.push_back({
 		.texture = transientTexture.texture,
 		.instance{
 			.transformation = transformation,
@@ -60,7 +89,37 @@ void RenderPass::draw(TransientTexture&& transientTexture) {
 	});
 }
 
-void RenderPass::draw(Quad&& quad) {
+void RenderPass::draw(TextureInstance&& texture) {
+	assert(texture.texture);
+	const glm::vec2 textureSize = texture.texture->getSize(); // NOTE: Copied here since the texture is moved before the initialization of .size below.
+	draw(RectangleInstance{
+		.texture = std::move(texture.texture),
+		.position = texture.position,
+		.size = textureSize * texture.scale,
+		.angle = texture.angle,
+		.origin = texture.origin,
+		.textureOffset = texture.textureOffset,
+		.textureScale = texture.textureScale,
+		.tintColor = texture.tintColor,
+	});
+}
+
+void RenderPass::draw(RectangleInstance&& rectangle) {
+	glm::mat4 transformation = glm::identity<glm::mat4>();
+	transformation = glm::translate(transformation, {rectangle.position, 0.0f});
+	transformation = glm::rotate(transformation, rectangle.angle, {0.0f, 0.0f, 1.0f});
+	transformation = glm::scale(transformation, {rectangle.size, 1.0f});
+	transformation = glm::translate(transformation, {-rectangle.origin, 0.0f});
+	draw(QuadInstance{
+		.texture = std::move(rectangle.texture),
+		.transformation = transformation,
+		.textureOffset = rectangle.textureOffset,
+		.textureScale = rectangle.textureScale,
+		.tintColor = rectangle.tintColor,
+	});
+}
+
+void RenderPass::draw(QuadInstance&& quad) {
 	const TexturedQuad::Instance instance{
 		.transformation = quad.transformation,
 		.textureOffset = quad.textureOffset,
@@ -68,17 +127,17 @@ void RenderPass::draw(Quad&& quad) {
 		.tintColor = quad.tintColor,
 	};
 
-	const auto it = std::lower_bound(quadInstancesSortedByShaderAndTexture.begin(), quadInstancesSortedByShaderAndTexture.end(), quad);
-	if (it == quadInstancesSortedByShaderAndTexture.end()) {
-		quadInstancesSortedByShaderAndTexture.push_back({.shader = std::move(quad.shader), .texture = std::move(quad.texture), .instances{instance}});
+	const auto it = std::lower_bound(quadsSortedByShaderAndTexture.begin(), quadsSortedByShaderAndTexture.end(), quad);
+	if (it == quadsSortedByShaderAndTexture.end()) {
+		quadsSortedByShaderAndTexture.push_back({.shader = std::move(quad.shader), .texture = std::move(quad.texture), .instances{instance}});
 	} else if (it->shader == quad.shader && it->texture == quad.texture) {
 		it->instances.push_back(instance);
 	} else {
-		quadInstancesSortedByShaderAndTexture.insert(it, {.shader = std::move(quad.shader), .texture = std::move(quad.texture), .instances{instance}});
+		quadsSortedByShaderAndTexture.insert(it, {.shader = std::move(quad.shader), .texture = std::move(quad.texture), .instances{instance}});
 	}
 }
 
-void RenderPass::draw(Sprite&& sprite) {
+void RenderPass::draw(SpriteInstance&& sprite) {
 	assert(sprite.atlas);
 	const SpriteAtlas::Sprite& atlasSprite = sprite.atlas->getSprite(sprite.id);
 	glm::mat4 transformation = glm::identity<glm::mat4>();
@@ -93,31 +152,31 @@ void RenderPass::draw(Sprite&& sprite) {
 		.tintColor = sprite.tintColor,
 	};
 
-	const auto it = std::lower_bound(spriteInstancesSortedByAtlas.begin(), spriteInstancesSortedByAtlas.end(), sprite);
-	if (it == spriteInstancesSortedByAtlas.end()) {
-		spriteInstancesSortedByAtlas.push_back({
+	const auto it = std::lower_bound(spritesSortedByAtlas.begin(), spritesSortedByAtlas.end(), sprite);
+	if (it == spritesSortedByAtlas.end()) {
+		spritesSortedByAtlas.push_back({
 			.atlas = std::move(sprite.atlas),
 			.instances{instance},
 		});
 	} else if (it->atlas == sprite.atlas) {
 		it->instances.push_back(instance);
 	} else {
-		spriteInstancesSortedByAtlas.insert(it, {.atlas = std::move(sprite.atlas), .instances{instance}});
+		spritesSortedByAtlas.insert(it, {.atlas = std::move(sprite.atlas), .instances{instance}});
 	}
 }
 
-void RenderPass::draw(Text&& text) {
+void RenderPass::draw(TextInstance&& text) {
 	assert(text.font);
 
 	std::vector<TexturedQuad::Instance>* instances = nullptr;
-	const auto it = std::lower_bound(glyphInstancesSortedByFont.begin(), glyphInstancesSortedByFont.end(), text);
-	if (it == glyphInstancesSortedByFont.end()) {
-		glyphInstancesSortedByFont.push_back({.font = std::move(text.font), .instances{}});
-		instances = &glyphInstancesSortedByFont.back().instances;
+	const auto it = std::lower_bound(glyphsSortedByFont.begin(), glyphsSortedByFont.end(), text);
+	if (it == glyphsSortedByFont.end()) {
+		glyphsSortedByFont.push_back({.font = std::move(text.font), .instances{}});
+		instances = &glyphsSortedByFont.back().instances;
 	} else if (it->font == text.font) {
 		instances = &it->instances;
 	} else {
-		instances = &glyphInstancesSortedByFont.insert(it, {.font = std::move(text.font), .instances{}})->instances;
+		instances = &glyphsSortedByFont.insert(it, {.font = std::move(text.font), .instances{}})->instances;
 	}
 	for (const Font::ShapedText::ShapedGlyph& shapedGlyph : text.text.shapedGlyphs) {
 		instances->push_back({
@@ -126,34 +185,6 @@ void RenderPass::draw(Text&& text) {
 			.textureScale = shapedGlyph.textureScale,
 			.tintColor = text.color,
 		});
-	}
-}
-
-void RenderPass::reset() noexcept {
-	backgroundColor.reset();
-
-	std::erase_if(modelInstancesSortedByShaderAndScene, [](const ModelInstances& models) -> bool { return models.shader.use_count() <= 1 || models.scene.use_count() <= 1; });
-	for (ModelInstances& models : modelInstancesSortedByShaderAndScene) {
-		for (std::vector<Scene::Object::Instance>& objectInstance : models.objectInstances) {
-			objectInstance.clear();
-		}
-	}
-
-	transientTextureInstances.clear();
-
-	std::erase_if(quadInstancesSortedByShaderAndTexture, [](const QuadInstances& quads) -> bool { return quads.shader.use_count() <= 1 || quads.texture.use_count() <= 1; });
-	for (QuadInstances& quads : quadInstancesSortedByShaderAndTexture) {
-		quads.instances.clear();
-	}
-
-	std::erase_if(spriteInstancesSortedByAtlas, [](const SpriteInstances& sprites) -> bool { return sprites.atlas.use_count() <= 1; });
-	for (SpriteInstances& sprites : spriteInstancesSortedByAtlas) {
-		sprites.instances.clear();
-	}
-
-	std::erase_if(glyphInstancesSortedByFont, [](const GlyphInstances& glyphs) -> bool { return glyphs.font.use_count() <= 1; });
-	for (GlyphInstances& glyphs : glyphInstancesSortedByFont) {
-		glyphs.instances.clear();
 	}
 }
 

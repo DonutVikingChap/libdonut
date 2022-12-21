@@ -112,7 +112,7 @@ void ShaderProgram::setUniformVec4(const ShaderUniform& uniform, glm::vec4 value
 	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
 }
 
-void ShaderProgram::setUniformInt(const ShaderUniform& uniform, std::int32_t value) {
+void ShaderProgram::setUniformInt(const ShaderUniform& uniform, glm::i32 value) {
 	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
 }
 
@@ -128,7 +128,7 @@ void ShaderProgram::setUniformIVec4(const ShaderUniform& uniform, glm::i32vec4 v
 	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
 }
 
-void ShaderProgram::setUniformUint(const ShaderUniform& uniform, glm::uint32_t value) {
+void ShaderProgram::setUniformUint(const ShaderUniform& uniform, glm::u32 value) {
 	uniformUploadQueue.emplace_back(uniform.getLocation(), value);
 }
 

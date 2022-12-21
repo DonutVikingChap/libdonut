@@ -6,6 +6,8 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/opengl.hpp>
 
+#include "donut/graphics/RenderPass.hpp"
+
 #include <cassert>                       // assert
 #include <cstddef>                       // std::size_t
 #include <fmt/format.h>                  // fmt::format
@@ -322,7 +324,7 @@ void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHe
 
 		RenderPass renderPass{};
 		renderPass.setBackgroundColor(backgroundColor);
-		renderPass.draw(TransientTexture{.texture = this});
+		renderPass.draw(TransientTextureInstance{.texture = this});
 		renderer.render(framebuffer,
 			renderPass,
 			{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
@@ -339,7 +341,7 @@ Texture Texture::copy2D(Renderer& renderer) const {
 		const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(newTexture);
 
 		RenderPass renderPass{};
-		renderPass.draw(TransientTexture{.texture = this});
+		renderPass.draw(TransientTextureInstance{.texture = this});
 		renderer.render(framebuffer,
 			renderPass,
 			{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},

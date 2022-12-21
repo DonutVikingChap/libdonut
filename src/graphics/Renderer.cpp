@@ -29,11 +29,11 @@ void useShader(Shader3D& shader, const glm::mat4& projectionViewMatrix) {
 			[location = location](glm::vec2 v) -> void { glUniform2f(location, v.x, v.y); },
 			[location = location](glm::vec3 v) -> void { glUniform3f(location, v.x, v.y, v.z); },
 			[location = location](glm::vec4 v) -> void { glUniform4f(location, v.x, v.y, v.z, v.w); },
-			[location = location](std::int32_t v) -> void { glUniform1i(location, v); },
+			[location = location](glm::i32 v) -> void { glUniform1i(location, v); },
 			[location = location](glm::i32vec2 v) -> void { glUniform2i(location, v.x, v.y); },
 			[location = location](glm::i32vec3 v) -> void { glUniform3i(location, v.x, v.y, v.z); },
 			[location = location](glm::i32vec4 v) -> void { glUniform4i(location, v.x, v.y, v.z, v.w); },
-			[location = location](std::uint32_t v) -> void { glUniform1ui(location, v); },
+			[location = location](glm::u32 v) -> void { glUniform1ui(location, v); },
 			[location = location](glm::u32vec2 v) -> void { glUniform2ui(location, v.x, v.y); },
 			[location = location](glm::u32vec3 v) -> void { glUniform3ui(location, v.x, v.y, v.z); },
 			[location = location](glm::u32vec4 v) -> void { glUniform4ui(location, v.x, v.y, v.z, v.w); },
@@ -88,11 +88,11 @@ void useShader(Shader2D& shader, const glm::mat4& projectionViewMatrix) {
 			[location = location](glm::vec2 v) -> void { glUniform2f(location, v.x, v.y); },
 			[location = location](glm::vec3 v) -> void { glUniform3f(location, v.x, v.y, v.z); },
 			[location = location](glm::vec4 v) -> void { glUniform4f(location, v.x, v.y, v.z, v.w); },
-			[location = location](std::int32_t v) -> void { glUniform1i(location, v); },
+			[location = location](glm::i32 v) -> void { glUniform1i(location, v); },
 			[location = location](glm::i32vec2 v) -> void { glUniform2i(location, v.x, v.y); },
 			[location = location](glm::i32vec3 v) -> void { glUniform3i(location, v.x, v.y, v.z); },
 			[location = location](glm::i32vec4 v) -> void { glUniform4i(location, v.x, v.y, v.z, v.w); },
-			[location = location](std::uint32_t v) -> void { glUniform1ui(location, v); },
+			[location = location](glm::u32 v) -> void { glUniform1ui(location, v); },
 			[location = location](glm::u32vec2 v) -> void { glUniform2ui(location, v.x, v.y); },
 			[location = location](glm::u32vec3 v) -> void { glUniform3ui(location, v.x, v.y, v.z); },
 			[location = location](glm::u32vec4 v) -> void { glUniform4ui(location, v.x, v.y, v.z, v.w); },
@@ -195,8 +195,8 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 	// Render 3D scene objects.
 	{
 		// Render models.
-		if (!renderPass.modelInstancesSortedByShaderAndScene.empty()) {
-			const RenderPass::ModelInstances& firstModels = renderPass.modelInstancesSortedByShaderAndScene.front();
+		if (!renderPass.modelsSortedByShaderAndScene.empty()) {
+			const RenderPass::SceneObjectInstancesFromModel& firstModels = renderPass.modelsSortedByShaderAndScene.front();
 
 			Shader3D* shader = firstModels.shader.get();
 			Shader3D* actualShader = (shader) ? shader : &modelShader;
@@ -205,7 +205,7 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 			const Scene* scene = firstModels.scene.get();
 			renderInstances(*actualShader, scene->objects, firstModels.objectInstances, whiteTexture, grayTexture, normalTexture);
 
-			for (const RenderPass::ModelInstances& models : std::span{renderPass.modelInstancesSortedByShaderAndScene}.subspan(1)) {
+			for (const RenderPass::SceneObjectInstancesFromModel& models : std::span{renderPass.modelsSortedByShaderAndScene}.subspan(1)) {
 				if (shader != models.shader.get()) {
 					shader = models.shader.get();
 					actualShader = (shader) ? shader : &modelShader;
@@ -225,8 +225,8 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 		glActiveTexture(GL_TEXTURE0 + TexturedQuad::TEXTURE_UNIT);
 
 		// Render transient textures.
-		if (!renderPass.transientTextureInstances.empty()) {
-			const RenderPass::TransientTextureInstance& firstTransientTexture = renderPass.transientTextureInstances.front();
+		if (!renderPass.transientTextures.empty()) {
+			const RenderPass::TexturedQuadInstanceFromTransientTexture& firstTransientTexture = renderPass.transientTextures.front();
 
 			useShader(defaultShader, projectionViewMatrix);
 
@@ -234,7 +234,7 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 
 			renderInstances(defaultShader, texturedQuad, std::span{&firstTransientTexture.instance, 1});
 
-			for (const RenderPass::TransientTextureInstance& transientTexture : std::span{renderPass.transientTextureInstances}.subspan(1)) {
+			for (const RenderPass::TexturedQuadInstanceFromTransientTexture& transientTexture : std::span{renderPass.transientTextures}.subspan(1)) {
 				glBindTexture(GL_TEXTURE_2D, transientTexture.texture->get());
 
 				renderInstances(defaultShader, texturedQuad, std::span{&transientTexture.instance, 1});
@@ -242,20 +242,20 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 		}
 
 		// Render quads.
-		if (!renderPass.quadInstancesSortedByShaderAndTexture.empty()) {
-			const RenderPass::QuadInstances& firstQuads = renderPass.quadInstancesSortedByShaderAndTexture.front();
+		if (!renderPass.quadsSortedByShaderAndTexture.empty()) {
+			const RenderPass::TexturedQuadInstancesFromQuad& firstQuads = renderPass.quadsSortedByShaderAndTexture.front();
 
 			Shader2D* shader = firstQuads.shader.get();
 			Shader2D* actualShader = (shader) ? shader : &defaultShader;
 			useShader(*actualShader, projectionViewMatrix);
 
-			Texture* texture = firstQuads.texture.get();
-			Texture* actualTexture = (texture) ? texture : &whiteTexture;
+			const Texture* texture = firstQuads.texture.get();
+			const Texture* actualTexture = (texture) ? texture : &whiteTexture;
 			glBindTexture(GL_TEXTURE_2D, actualTexture->get());
 
 			renderInstances(*actualShader, texturedQuad, firstQuads.instances);
 
-			for (const RenderPass::QuadInstances& quads : std::span{renderPass.quadInstancesSortedByShaderAndTexture}.subspan(1)) {
+			for (const RenderPass::TexturedQuadInstancesFromQuad& quads : std::span{renderPass.quadsSortedByShaderAndTexture}.subspan(1)) {
 				if (shader != quads.shader.get()) {
 					shader = quads.shader.get();
 					actualShader = (shader) ? shader : &defaultShader;
@@ -273,18 +273,18 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 		}
 
 		// Render sprites.
-		if (!renderPass.spriteInstancesSortedByAtlas.empty()) {
-			const RenderPass::SpriteInstances& firstSprites = renderPass.spriteInstancesSortedByAtlas.front();
+		if (!renderPass.spritesSortedByAtlas.empty()) {
+			const RenderPass::TexturedQuadInstancesFromSprite& firstSprites = renderPass.spritesSortedByAtlas.front();
 
 			useShader(defaultShader, projectionViewMatrix);
 
-			SpriteAtlas* atlas = firstSprites.atlas.get();
+			const SpriteAtlas* atlas = firstSprites.atlas.get();
 			assert(atlas);
 			glBindTexture(GL_TEXTURE_2D, atlas->getAtlasTexture().get());
 
 			renderInstances(defaultShader, texturedQuad, firstSprites.instances);
 
-			for (const RenderPass::SpriteInstances& sprites : std::span{renderPass.spriteInstancesSortedByAtlas}.subspan(1)) {
+			for (const RenderPass::TexturedQuadInstancesFromSprite& sprites : std::span{renderPass.spritesSortedByAtlas}.subspan(1)) {
 				if (atlas != sprites.atlas.get()) {
 					atlas = sprites.atlas.get();
 					assert(atlas);
@@ -296,18 +296,18 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 		}
 
 		// Render glyphs.
-		if (!renderPass.glyphInstancesSortedByFont.empty()) {
-			const RenderPass::GlyphInstances& firstGlyphs = renderPass.glyphInstancesSortedByFont.front();
+		if (!renderPass.glyphsSortedByFont.empty()) {
+			const RenderPass::TexturedQuadInstancesFromText& firstGlyphs = renderPass.glyphsSortedByFont.front();
 
 			useShader(glyphShader, projectionViewMatrix);
 
-			Font* font = firstGlyphs.font.get();
+			const Font* font = firstGlyphs.font.get();
 			assert(font);
 			glBindTexture(GL_TEXTURE_2D, font->getAtlasTexture().get());
 
 			renderInstances(defaultShader, texturedQuad, firstGlyphs.instances);
 
-			for (const RenderPass::GlyphInstances& glyphs : std::span{renderPass.glyphInstancesSortedByFont}.subspan(1)) {
+			for (const RenderPass::TexturedQuadInstancesFromText& glyphs : std::span{renderPass.glyphsSortedByFont}.subspan(1)) {
 				if (font != glyphs.font.get()) {
 					font = glyphs.font.get();
 					assert(font);

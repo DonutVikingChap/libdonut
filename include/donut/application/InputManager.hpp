@@ -90,7 +90,7 @@ struct InputManagerOptions {
 };
 
 /**
- * Persistent system for mapping physical Input controls to abstract output
+ * Persistent system for mapping physical #Input controls to abstract output
  * numbers and processing input events that control their associated values.
  *
  * By keeping an instance of this class and continuously feeding it the events

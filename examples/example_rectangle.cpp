@@ -42,7 +42,7 @@ protected:
 
 		renderPass.reset();
 		renderPass.setBackgroundColor(Color::BLACK);
-		renderPass.draw(gfx::Rectangle{
+		renderPass.draw(gfx::RectangleInstance{
 			.position = glm::vec2{viewport.size / 2} - RECTANGLE_SIZE * 0.5f,
 			.size = RECTANGLE_SIZE,
 			.tintColor = Color::LIME,

@@ -18,33 +18,33 @@ class ImageLDRView;
 class ImageHDRView;
 
 enum class TextureFormat : std::uint32_t {
-	NONE = 0,
-	R = 0x1903,
-	RG = 0x8227,
-	RGB = 0x1907,
-	RGBA = 0x1908,
+	NONE = 0,      ///< \hideinitializer
+	R = 0x1903,    ///< \hideinitializer
+	RG = 0x8227,   ///< \hideinitializer
+	RGB = 0x1907,  ///< \hideinitializer
+	RGBA = 0x1908, ///< \hideinitializer
 };
 
 enum class TextureInternalFormat : std::int32_t {
-	NONE = 0,
-	R8 = 0x8229,
-	RG8 = 0x822B,
-	RGB8 = 0x8051,
-	RGBA8 = 0x8058,
-	R16F = 0x822D,
-	RG16F = 0x822F,
-	RGB16F = 0x881B,
-	RGBA16F = 0x881A,
-	R32F = 0x822E,
-	RG32F = 0x8230,
-	RGB32F = 0x8815,
-	RGBA32F = 0x8814,
+	NONE = 0,         ///< \hideinitializer
+	R8 = 0x8229,      ///< \hideinitializer
+	RG8 = 0x822B,     ///< \hideinitializer
+	RGB8 = 0x8051,    ///< \hideinitializer
+	RGBA8 = 0x8058,   ///< \hideinitializer
+	R16F = 0x822D,    ///< \hideinitializer
+	RG16F = 0x822F,   ///< \hideinitializer
+	RGB16F = 0x881B,  ///< \hideinitializer
+	RGBA16F = 0x881A, ///< \hideinitializer
+	R32F = 0x822E,    ///< \hideinitializer
+	RG32F = 0x8230,   ///< \hideinitializer
+	RGB32F = 0x8815,  ///< \hideinitializer
+	RGBA32F = 0x8814, ///< \hideinitializer
 };
 
 enum class TextureComponentType : std::uint32_t {
-	U8 = 0x1401,
-	F16 = 0x140B,
-	F32 = 0x1406,
+	U8 = 0x1401,  ///< \hideinitializer
+	F16 = 0x140B, ///< \hideinitializer
+	F32 = 0x1406, ///< \hideinitializer
 };
 
 struct TextureOptions {
