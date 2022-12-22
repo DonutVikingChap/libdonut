@@ -15,7 +15,7 @@ void RenderPass::reset() noexcept {
 	backgroundColor.reset();
 
 	std::erase_if(
-		modelsSortedByShaderAndScene, [](const SceneObjectInstancesFromModel& models) -> bool { return models.shader.use_count() <= 1 || models.scene.use_count() <= 1; });
+		modelsSortedByShaderAndScene, [](const SceneObjectInstancesFromModel& models) -> bool { return (models.shader && models.shader.use_count() <= 1) || models.scene.use_count() <= 1; });
 	for (SceneObjectInstancesFromModel& models : modelsSortedByShaderAndScene) {
 		for (std::vector<Scene::Object::Instance>& objectInstance : models.objectInstances) {
 			objectInstance.clear();
@@ -25,7 +25,7 @@ void RenderPass::reset() noexcept {
 	transientTextures.clear();
 
 	std::erase_if(
-		quadsSortedByShaderAndTexture, [](const TexturedQuadInstancesFromQuad& quads) -> bool { return quads.shader.use_count() <= 1 || quads.texture.use_count() <= 1; });
+		quadsSortedByShaderAndTexture, [](const TexturedQuadInstancesFromQuad& quads) -> bool { return (quads.shader && quads.shader.use_count() <= 1) || (quads.texture && quads.texture.use_count() <= 1); });
 	for (TexturedQuadInstancesFromQuad& quads : quadsSortedByShaderAndTexture) {
 		quads.instances.clear();
 	}
