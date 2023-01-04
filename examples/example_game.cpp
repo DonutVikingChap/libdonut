@@ -41,7 +41,7 @@
 #include <charconv>                      // std::from_chars_result, std::from_chars
 #include <concepts>                      // std::integral
 #include <cstddef>                       // std::size_t
-#include <cstdio>                        // stderr
+#include <cstdio>                        // stderr, std::sscanf
 #include <exception>                     // std::exception
 #include <fmt/format.h>                  // fmt::format, fmt::print
 #include <glm/ext/matrix_clip_space.hpp> // glm::ortho, glm::perspective
