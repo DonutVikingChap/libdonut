@@ -15,8 +15,8 @@ MeshStatePreserver::MeshStatePreserver() noexcept {
 	GLint arrayBufferBinding = 0;
 	glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vertexArrayBinding);
 	glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBufferBinding);
-	vertexArrayBinding = static_cast<std::int32_t>(vertexArrayBinding);
-	arrayBufferBinding = static_cast<std::int32_t>(arrayBufferBinding);
+	this->vertexArrayBinding = static_cast<std::int32_t>(vertexArrayBinding);
+	this->arrayBufferBinding = static_cast<std::int32_t>(arrayBufferBinding);
 }
 
 MeshStatePreserver::~MeshStatePreserver() {

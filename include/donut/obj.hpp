@@ -61,19 +61,19 @@ struct Scene {
 namespace mtl {
 
 enum class IlluminationModel : std::uint8_t {
-	flat = 0,
-	lambert = 1,
-	blinn_phong = 2,
-	blinn_phong_raytrace = 3,
-	blinn_phong_raytrace_glass = 4,
-	blinn_phong_raytrace_fresnel = 5,
-	blinn_phong_raytrace_refract = 6,
-	blinn_phong_raytrace_refract_fresnel = 7,
-	blinn_phong_reflect = 8,
-	blinn_phong_reflect_glass = 9,
-	shadow = 10,
-	// NOTE: Keep "count" at the end of the enumeration!
-	count,
+	FLAT = 0,
+	LAMBERT = 1,
+	BLINN_PHONG = 2,
+	BLINN_PHONG_RAYTRACE = 3,
+	BLINN_PHONG_RAYTRACE_GLASS = 4,
+	BLINN_PHONG_RAYTRACE_FRESNEL = 5,
+	BLINN_PHONG_RAYTRACE_REFRACT = 6,
+	BLINN_PHONG_RAYTRACE_REFRACT_FRESNEL = 7,
+	BLINN_PHONG_REFLECT = 8,
+	BLINN_PHONG_REFLECT_GLASS = 9,
+	SHADOW = 10,
+	// NOTE: Keep "COUNT" at the end of the enumeration!
+	COUNT,
 };
 
 struct Material {
@@ -91,7 +91,7 @@ struct Material {
 	glm::vec3 emissiveColor{};
 	float specularExponent = 0.0f;
 	float dissolveFactor = 0.0f;
-	IlluminationModel illuminationModel = IlluminationModel::flat;
+	IlluminationModel illuminationModel = IlluminationModel::FLAT;
 };
 
 struct Library {
