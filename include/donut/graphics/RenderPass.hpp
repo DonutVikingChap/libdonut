@@ -511,24 +511,6 @@ public:
 	void reset() noexcept;
 
 	/**
-	 * Set the background color to use when clearing the framebuffer before any
-	 * rendering takes place.
-	 *
-	 * \param color the background color to use, or an empty optional to not
-	 *        clear the framebuffer color.
-	 *
-	 * \note When the render pass is rendered, if this background color is not
-	 *       empty, it will clear the color of the entire targeted framebuffer
-	 *       at the beginning of the render pass, regardless of what the
-	 *       viewport region is set to. To clear only a specific region of the
-	 *       framebuffer, draw a colored RectangleInstance covering that region
-	 *       instead.
-	 */
-	void setBackgroundColor(std::optional<Color> color) {
-		backgroundColor = color;
-	}
-
-	/**
 	 * Enqueue a ModelInstance to be drawn when the render pass is rendered.
 	 *
 	 * \sa ModelInstance
@@ -651,7 +633,6 @@ private:
 		}
 	};
 
-	std::optional<Color> backgroundColor{};
 	std::vector<ModelObjectInstancesFromModel> objectsSortedByShaderAndModel{};
 	std::vector<TexturedQuadInstanceFromTransientTexture> transientTextures{};
 	std::vector<TexturedQuadInstancesFromQuad> quadsSortedByShaderAndTexture{};

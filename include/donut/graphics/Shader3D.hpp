@@ -8,7 +8,6 @@ namespace graphics {
 
 struct Shader3DOptions {
 	int orderIndex = 1;
-	bool clearDepthBuffer = false;
 	bool overwriteDepthBuffer = false;
 	bool useDepthTest = true;
 	bool useBackfaceCulling = true;

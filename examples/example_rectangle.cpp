@@ -40,8 +40,9 @@ protected:
 	void display(app::FrameInfo /*frameInfo*/) override {
 		constexpr glm::vec2 RECTANGLE_SIZE{100.0f, 60.0f};
 
+		renderer.clearFramebufferColor(framebuffer, Color::BLACK);
+
 		renderPass.reset();
-		renderPass.setBackgroundColor(Color::BLACK);
 		renderPass.draw(gfx::RectangleInstance{
 			.position = glm::vec2{viewport.size / 2} - RECTANGLE_SIZE * 0.5f,
 			.size = RECTANGLE_SIZE,

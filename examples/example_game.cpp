@@ -205,8 +205,9 @@ protected:
 	}
 
 	void display(app::FrameInfo frameInfo) override {
+		renderer.clearFramebufferColorAndDepth(framebuffer, Color::PURPLE * 0.25f);
+
 		renderPass.reset();
-		renderPass.setBackgroundColor(Color::PURPLE * 0.25f);
 		drawBackground(frameInfo);
 		renderer.render(framebuffer, renderPass, worldViewport, worldProjectionViewMatrix);
 

@@ -12,8 +12,6 @@ namespace donut {
 namespace graphics {
 
 void RenderPass::reset() noexcept {
-	backgroundColor.reset();
-
 	std::erase_if(objectsSortedByShaderAndModel,
 		[](const ModelObjectInstancesFromModel& objects) -> bool { return (objects.shader && objects.shader.use_count() <= 1) || objects.model.use_count() <= 1; });
 	for (ModelObjectInstancesFromModel& objects : objectsSortedByShaderAndModel) {

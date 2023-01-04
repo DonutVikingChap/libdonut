@@ -48,10 +48,6 @@ void useShader(Shader3D& shader, const glm::mat4& projectionViewMatrix) {
 	glUniform1i(shader.specularMap.getLocation(), Model::Object::TEXTURE_UNIT_SPECULAR);
 	glUniform1i(shader.normalMap.getLocation(), Model::Object::TEXTURE_UNIT_NORMAL);
 
-	if (shader.options.clearDepthBuffer) {
-		glClear(GL_DEPTH_BUFFER_BIT);
-	}
-
 	if (shader.options.overwriteDepthBuffer) {
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_ALWAYS);
@@ -104,10 +100,6 @@ void useShader(Shader2D& shader, const glm::mat4& projectionViewMatrix) {
 
 	glUniformMatrix4fv(shader.projectionViewMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(projectionViewMatrix));
 	glUniform1i(shader.textureUnit.getLocation(), TexturedQuad::TEXTURE_UNIT);
-
-	if (shader.options.clearDepthBuffer) {
-		glClear(GL_DEPTH_BUFFER_BIT);
-	}
 
 	if (shader.options.overwriteDepthBuffer) {
 		glEnable(GL_DEPTH_TEST);
@@ -178,16 +170,52 @@ void renderInstances(Shader2D&, const TexturedQuad&, std::span<const TexturedQua
 
 } // namespace
 
+void Renderer::clearFramebufferDepth(Framebuffer& framebuffer) {
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	glClear(GL_DEPTH_BUFFER_BIT);
+}
+
+void Renderer::clearFramebufferStencil(Framebuffer& framebuffer, std::int32_t stencilValue) {
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	glClearStencil(static_cast<GLint>(stencilValue));
+	glClear(GL_STENCIL_BUFFER_BIT);
+}
+
+void Renderer::clearFramebufferDepthAndStencil(Framebuffer& framebuffer, std::int32_t stencilValue) {
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	glClearStencil(static_cast<GLint>(stencilValue));
+	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+}
+
+void Renderer::clearFramebufferColor(Framebuffer& framebuffer, Color color) {
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	glClearColor(color.getRedComponent(), color.getGreenComponent(), color.getBlueComponent(), color.getAlphaComponent());
+	glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void Renderer::clearFramebufferColorAndDepth(Framebuffer& framebuffer, Color color) {
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	glClearColor(color.getRedComponent(), color.getGreenComponent(), color.getBlueComponent(), color.getAlphaComponent());
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void Renderer::clearFramebufferColorAndStencil(Framebuffer& framebuffer, Color color, std::int32_t stencilValue) {
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	glClearColor(color.getRedComponent(), color.getGreenComponent(), color.getBlueComponent(), color.getAlphaComponent());
+	glClearStencil(static_cast<GLint>(stencilValue));
+	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+}
+
+void Renderer::clearFramebufferColorAndDepthAndStencil(Framebuffer& framebuffer, Color color, std::int32_t stencilValue) {
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	glClearColor(color.getRedComponent(), color.getGreenComponent(), color.getBlueComponent(), color.getAlphaComponent());
+	glClearStencil(static_cast<GLint>(stencilValue));
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+}
+
 void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const glm::mat4& projectionViewMatrix) {
 	// Bind framebuffer.
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
-
-	// Clear framebuffer color.
-	if (renderPass.backgroundColor) {
-		const glm::vec4 backgroundColor = *renderPass.backgroundColor;
-		glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
-		glClear(GL_COLOR_BUFFER_BIT);
-	}
 
 	// Setup viewport.
 	glViewport(viewport.position.x, viewport.position.y, viewport.size.x, viewport.size.y);

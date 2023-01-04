@@ -305,11 +305,7 @@ void Texture::pasteImage2DArray(const ImageHDRView& image, std::size_t x, std::s
 void Texture::fill2D(Renderer& renderer, Color color) {
 	Framebuffer framebuffer{};
 	const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(*this);
-
-	RenderPass renderPass{};
-	renderPass.setBackgroundColor(color);
-
-	renderer.render(framebuffer, renderPass, {}, {});
+	renderer.clearFramebufferColor(framebuffer, color);
 }
 
 void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<Color> backgroundColor) {
@@ -321,8 +317,11 @@ void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHe
 		Framebuffer framebuffer{};
 		const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(newTexture);
 
+		if (backgroundColor) {
+			renderer.clearFramebufferColor(framebuffer, *backgroundColor);
+		}
+
 		RenderPass renderPass{};
-		renderPass.setBackgroundColor(backgroundColor);
 		renderPass.draw(TransientTextureInstance{.texture = this});
 		renderer.render(framebuffer,
 			renderPass,
