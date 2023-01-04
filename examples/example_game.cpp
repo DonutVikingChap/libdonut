@@ -48,7 +48,6 @@
 #include <glm/ext/matrix_transform.hpp>  // glm::identity, glm::translate, glm::rotate, glm::scale
 #include <glm/glm.hpp>                   // glm::...
 #include <glm/gtx/norm.hpp>              // glm::length2
-#include <memory>                        // std::shared_ptr, std::make_shared
 #include <optional>                      // std::optional
 #include <span>                          // std::span
 #include <stdexcept>                     // std::runtime_error
@@ -200,8 +199,8 @@ protected:
 
 		const glm::vec3 viewPosition{0.0f, 0.0f, 0.0f};
 
-		testShader3D->setPointLights(pointLights);
-		testShader3D->setViewPosition(viewPosition);
+		testShader3D.setPointLights(pointLights);
+		testShader3D.setViewPosition(viewPosition);
 	}
 
 	void display(app::FrameInfo frameInfo) override {
@@ -458,10 +457,10 @@ private:
 		backgroundTransform = glm::scale(backgroundTransform, {BACKGROUND_SCALE, 1.0f});
 		backgroundTransform = glm::translate(backgroundTransform, {-0.5f, -0.5f, 0.0f});
 		renderPass.draw(gfx::QuadInstance{
-			.texture = testTexture,
+			.texture = &testTexture,
 			.transformation = backgroundTransform,
 			.textureOffset{0.0f, -frameInfo.elapsedTime * BACKGROUND_SPEED},
-			.textureScale = 1000.0f * BACKGROUND_SCALE / testTexture->getSize(),
+			.textureScale = 1000.0f * BACKGROUND_SCALE / testTexture.getSize(),
 		});
 	}
 
@@ -473,7 +472,7 @@ private:
 		carrotCakeTransformation = glm::rotate(carrotCakeTransformation, frameInfo.elapsedTime * 2.0f, {0.0f, 0.0f, 1.0f});
 		carrotCakeTransformation = glm::translate(carrotCakeTransformation, {0.0f, 0.05f, 0.0f});
 		renderPass.draw(gfx::ModelInstance{
-			.model = carrotCakeModel,
+			.model = &carrotCakeModel,
 			.transformation = carrotCakeTransformation,
 		});
 
@@ -484,15 +483,15 @@ private:
 		shadedCarrotCakeTransformation = glm::rotate(shadedCarrotCakeTransformation, frameInfo.elapsedTime * 2.0f, {0.0f, 0.0f, 1.0f});
 		shadedCarrotCakeTransformation = glm::translate(shadedCarrotCakeTransformation, {0.0f, 0.05f, 0.0f});
 		renderPass.draw(gfx::ModelInstance{
-			.shader = testShader3D,
-			.model = carrotCakeModel,
+			.shader = &testShader3D,
+			.model = &carrotCakeModel,
 			.transformation = shadedCarrotCakeTransformation,
 		});
 	}
 
 	void drawUserInterface(const app::FrameInfo& frameInfo) {
 		renderPass.draw(gfx::RectangleInstance{
-			.texture = testTexture,
+			.texture = &testTexture,
 			.position{100.0f, 100.0f},
 			.size{180.0f, 70.0f},
 			.angle = frameInfo.elapsedTime,
@@ -500,14 +499,14 @@ private:
 		});
 
 		renderPass.draw(gfx::TextureInstance{
-			.texture = testTexture,
+			.texture = &testTexture,
 			.position{200.0f + glm::cos(frameInfo.elapsedTime) * 50.0f, 360.0f + glm::sin(frameInfo.elapsedTime) * 50.0f},
 			.scale{0.2f + glm::sin(frameInfo.elapsedTime) * 0.1f, 0.2f + glm::cos(frameInfo.elapsedTime) * 0.1f},
 			.origin{0.5f, 0.5f},
 		});
 
 		renderPass.draw(gfx::SpriteInstance{
-			.atlas = spriteAtlas,
+			.atlas = &spriteAtlas,
 			.id = testSprite,
 			.position{450.0f + glm::cos(frameInfo.elapsedTime) * 50.0f, 360.0f + glm::sin(frameInfo.elapsedTime) * 50.0f},
 			.scale{0.2f + glm::sin(frameInfo.elapsedTime) * 0.1f, 0.2f + glm::cos(frameInfo.elapsedTime) * 0.1f},
@@ -515,8 +514,8 @@ private:
 		});
 
 		renderPass.draw(gfx::TextInstance{
-			.font = mainFont,
-			.text = mainFont->shapeText(renderer,
+			.font = &mainFont,
+			.text = mainFont.shapeText(renderer,
 				8,
 				u8"The quick brown fox\n"
 				"jumps over the lazy dog\n"
@@ -532,8 +531,8 @@ private:
 		});
 
 		renderPass.draw(gfx::TextInstance{
-			.font = mainFont,
-			.text = mainFont->shapeText(renderer,
+			.font = &mainFont,
+			.text = mainFont.shapeText(renderer,
 				8,
 				fmt::format("Position:\n({:.2f}, {:.2f}, {:.2f})\n\nScale:\n({:.2f}, {:.2f})",
 					carrotCakeDisplayPosition.x,
@@ -545,34 +544,34 @@ private:
 		});
 
 		if (inputManager.isPressed(Action::MOVE_UP) || inputManager.justPressed(Action::MOVE_UP)) {
-			renderPass.draw(gfx::TextInstance{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "^"), .position{590.0f, 160.0f}});
+			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "^"), .position{590.0f, 160.0f}});
 		}
 		if (inputManager.isPressed(Action::MOVE_DOWN) || inputManager.justPressed(Action::MOVE_DOWN)) {
-			renderPass.draw(gfx::TextInstance{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "v"), .position{590.0f, 180.0f}});
+			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "v"), .position{590.0f, 180.0f}});
 		}
 		if (inputManager.isPressed(Action::MOVE_LEFT) || inputManager.justPressed(Action::MOVE_LEFT)) {
-			renderPass.draw(gfx::TextInstance{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "<"), .position{580.0f, 170.0f}});
+			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "<"), .position{580.0f, 170.0f}});
 		}
 		if (inputManager.isPressed(Action::MOVE_RIGHT) || inputManager.justPressed(Action::MOVE_RIGHT)) {
-			renderPass.draw(gfx::TextInstance{.font = mainFont, .text = mainFont->shapeText(renderer, 8, ">"), .position{600.0f, 170.0f}});
+			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, ">"), .position{600.0f, 170.0f}});
 		}
 
 		if (inputManager.isPressed(Action::AIM_UP) || inputManager.justPressed(Action::AIM_UP)) {
-			renderPass.draw(gfx::TextInstance{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "^"), .position{590.0f, 200.0f}});
+			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "^"), .position{590.0f, 200.0f}});
 		}
 		if (inputManager.isPressed(Action::AIM_DOWN) || inputManager.justPressed(Action::AIM_DOWN)) {
-			renderPass.draw(gfx::TextInstance{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "v"), .position{590.0f, 220.0f}});
+			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "v"), .position{590.0f, 220.0f}});
 		}
 		if (inputManager.isPressed(Action::AIM_LEFT) || inputManager.justPressed(Action::AIM_LEFT)) {
-			renderPass.draw(gfx::TextInstance{.font = mainFont, .text = mainFont->shapeText(renderer, 8, "<"), .position{580.0f, 210.0f}});
+			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "<"), .position{580.0f, 210.0f}});
 		}
 		if (inputManager.isPressed(Action::AIM_RIGHT) || inputManager.justPressed(Action::AIM_RIGHT)) {
-			renderPass.draw(gfx::TextInstance{.font = mainFont, .text = mainFont->shapeText(renderer, 8, ">"), .position{600.0f, 210.0f}});
+			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, ">"), .position{600.0f, 210.0f}});
 		}
 
 		renderPass.draw(gfx::TextInstance{
-			.font = mainFont,
-			.text = mainFont->shapeText(
+			.font = &mainFont,
+			.text = mainFont.shapeText(
 				renderer, 8, fmt::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", timerA.getTime(), counterA, timerB.getTime(), counterB)),
 			.position{410.0f, 240.0f},
 		});
@@ -580,11 +579,11 @@ private:
 
 	void drawFpsCounter() {
 		const unsigned fps = getLatestMeasuredFps();
-		const gfx::Font::ShapedText fpsText = mainFont->shapeText(renderer, 16, fmt::format("FPS: {}", fps));
+		const gfx::Font::ShapedText fpsText = mainFont.shapeText(renderer, 16, fmt::format("FPS: {}", fps));
 		const glm::vec2 fpsPosition{15.0f + 2.0f, 15.0f + 20.0f};
 		const Color fpsColor = (fps < 60) ? Color::RED : (fps < 120) ? Color::YELLOW : (fps < 240) ? Color::GRAY : Color::LIME;
-		renderPass.draw(gfx::TextInstance{.font = mainFont, .text = fpsText, .position = fpsPosition + glm::vec2{1.0f, 1.0f}, .color = Color::BLACK});
-		renderPass.draw(gfx::TextInstance{.font = mainFont, .text = fpsText, .position = fpsPosition, .color = fpsColor});
+		renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = fpsText, .position = fpsPosition + glm::vec2{1.0f, 1.0f}, .color = Color::BLACK});
+		renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = fpsText, .position = fpsPosition, .color = fpsColor});
 	}
 
 	gfx::Framebuffer framebuffer = gfx::Framebuffer::getDefault();
@@ -594,12 +593,12 @@ private:
 	gfx::Viewport worldViewport{};
 	glm::mat4 screenProjectionViewMatrix{};
 	glm::mat4 worldProjectionViewMatrix{};
-	std::shared_ptr<const gfx::Texture> testTexture = std::make_shared<gfx::Texture>(gfx::ImageLDR{"textures/test.png"});
-	std::shared_ptr<const gfx::Model> carrotCakeModel = std::make_shared<gfx::Model>("models/carrot_cake.obj");
-	std::shared_ptr<gfx::SpriteAtlas> spriteAtlas = std::make_shared<gfx::SpriteAtlas>();
-	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas->insert(renderer, gfx::ImageLDR{"textures/test.png"});
-	std::shared_ptr<gfx::Font> mainFont = std::make_shared<gfx::Font>("fonts/unscii/unscii-8.ttf");
-	std::shared_ptr<TestShader3D> testShader3D = std::make_shared<TestShader3D>();
+	gfx::Texture testTexture{gfx::ImageLDR{"textures/test.png"}};
+	gfx::Model carrotCakeModel{"models/carrot_cake.obj"};
+	gfx::SpriteAtlas spriteAtlas{};
+	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas.insert(renderer, gfx::ImageLDR{"textures/test.png"});
+	gfx::Font mainFont{"fonts/unscii/unscii-8.ttf"};
+	TestShader3D testShader3D{};
 	app::InputManager inputManager{};
 	std::optional<audio::SoundStage> soundStage{};
 	std::optional<audio::Sound> music{};

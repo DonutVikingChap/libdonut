@@ -14,8 +14,8 @@
 #include <compare>                      // std::strong_ordering
 #include <glm/ext/matrix_transform.hpp> // glm::identity
 #include <glm/glm.hpp>                  // glm::...
-#include <memory>                       // std::shared_ptr
-#include <optional>                     // std::optional
+#include <memory_resource>              // std::pmr::...
+#include <optional>                     // std::optional, std::in_place
 #include <utility>                      // std::move
 #include <vector>                       // std::vector
 
@@ -29,7 +29,8 @@ namespace graphics {
  * - ModelInstance::model
  *
  * \note Instances of this type will be rendered **before** any 2D instances in
- *       the same RenderPass.
+ *       the same RenderPass. Model instances with the same shader and model
+ *       will be batched and rendered together.
  * \note Instances that use different shaders will be rendered separately from
  *       each other, ordered by their Shader3DOptions::orderIndex. The built-in
  *       shader has an orderIndex of 0 by default, while custom shaders default
@@ -37,18 +38,22 @@ namespace graphics {
  */
 struct ModelInstance {
 	/**
-	 * Shared pointer to a custom shader to use when rendering this model, or
-	 * nullptr to use the model shader specified in the RendererOptions of the
-	 * Renderer.
+	 * Non-owning pointer to a custom shader to use when rendering this model,
+	 * or nullptr to use the model shader specified in the RendererOptions of
+	 * the Renderer.
+	 *
+	 * \warning Unless nullptr, the pointed-to shader must remain valid for the
+	 *          duration of its use in the RenderPass.
 	 */
-	std::shared_ptr<Shader3D> shader{};
+	Shader3D* shader = nullptr;
 
 	/**
-	 * Shared pointer to the model to be drawn.
+	 * Non-owning pointer to the model to be drawn.
 	 *
-	 * \warning Must not be nullptr.
+	 * \warning The pointed-to model must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
 	 */
-	std::shared_ptr<const Model> model;
+	const Model* model;
 
 	/**
 	 * Transformation matrix to apply to every vertex position of the model, in
@@ -68,104 +73,16 @@ struct ModelInstance {
 };
 
 /**
- * Configuration of a short-lived 2D textured quad instance, for drawing as part
- * of a RenderPass.
- *
- * Required fields:
- * - TransientTextureInstance::texture
- *
- * This type is meant for unique unmanaged textures that are unlikely to be
- * rendered again. This allows them to be rendered without any kind of
- * persistent batching or other optimization techniques which are
- * counter-productive in that case.
- *
- * For general drawing of textures across multiple frames, use TextureInstance,
- * RectangleInstance, QuadInstance or SpriteInstance instead.
- *
- * \note Instances of this type will be rendered **after** any 3D instances and
- *       **before** any other 2D instances in the same RenderPass.
- *
- * \sa TextureInstance
- * \sa RectangleInstance
- * \sa QuadInstance
- * \sa SpriteInstance
- */
-struct TransientTextureInstance {
-	/**
-	 * Non-owning pointer to the texture to be drawn.
-	 *
-	 * \warning The pointed-to texture must remain valid for the duration of its
-	 *          use in the RenderPass, and must not be nullptr.
-	 */
-	const Texture* texture;
-
-	/**
-	 * Position, in world coordinates, to render the texture at, with respect to
-	 * its TransientTextureInstance::origin.
-	 */
-	glm::vec2 position{0.0f, 0.0f};
-
-	/**
-	 * Coefficients to scale the size of the texture by.
-	 *
-	 * The resulting textured quad will have the size of the original texture,
-	 * multiplied by this value.
-	 */
-	glm::vec2 scale{1.0f, 1.0f};
-
-	/**
-	 * Angle, in radians, to rotate the texture by, around its
-	 * TransientTextureInstance::origin.
-	 */
-	float angle = 0.0f;
-
-	/**
-	 * Offset, in texture coordinates, specifying the origin relative to the
-	 * bottom left of the texture. For example, a value of (0.5, 0.5) would
-	 * represent the middle of the texture.
-	 */
-	glm::vec2 origin{0.0f, 0.0f};
-
-	/**
-	 * Offset, in texture coordinates, to apply to the texture coordinates
-	 * before sampling the texture.
-	 *
-	 * \note This unscaled offset is applied after scaling the texture
-	 *       coordinates by the TransientTextureInstance::textureScale.
-	 */
-	glm::vec2 textureOffset{0.0f, 0.0f};
-
-	/**
-	 * Coefficients to scale the texture coordinates by before sampling the
-	 * texture.
-	 *
-	 * \note The texture coordinates are scaled before applying the unscaled
-	 *       TransientTextureInstance::textureOffset.
-	 */
-	glm::vec2 textureScale{1.0f, 1.0f};
-
-	/**
-	 * Tint color to use in the shader.
-	 *
-	 * \note In the built-in shader, the output color is multiplied by this
-	 *       value, meaning that a value of Color::WHITE, i.e. RGBA(1, 1, 1, 1)
-	 *       in linear color, represents no modification to the original texture
-	 *       color.
-	 */
-	Color tintColor = Color::WHITE;
-};
-
-/**
  * Configuration of a 2D textured quad instance, for drawing as part of a
  * RenderPass.
  *
  * Required fields:
  * - TextureInstance::texture
  *
- * \note Instances of this type will be rendered **after** any 3D instances or
- *       instances of type TransientTextureInstance, **together with** other
- *       non-sprite quad instances and **before** any sprite text instances in
- *       the same RenderPass.
+ * \note Instances of this type will be rendered **after** any 3D instances,
+ *       **together with** other quad instances and **before** any text
+ *       instances in the same RenderPass. Quad instances with the same shader
+ *       and texture will be batched and rendered together.
  *
  * \sa RectangleInstance
  * \sa QuadInstance
@@ -173,11 +90,22 @@ struct TransientTextureInstance {
  */
 struct TextureInstance {
 	/**
-	 * Shared pointer to the texture to be drawn.
+	 * Non-owning pointer to a custom shader to use when rendering this texture,
+	 * or nullptr to use the default shader specified in the RendererOptions of
+	 * the Renderer.
 	 *
-	 * \warning Must not be nullptr.
+	 * \warning Unless nullptr, the pointed-to shader must remain valid for the
+	 *          duration of its use in the RenderPass.
 	 */
-	std::shared_ptr<const Texture> texture;
+	Shader2D* shader = nullptr;
+
+	/**
+	 * Non-owning pointer to the texture to be drawn.
+	 *
+	 * \warning The pointed-to texture must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
+	 */
+	const Texture* texture;
 
 	/**
 	 * Position, in world coordinates, to render the texture at, with respect to
@@ -239,10 +167,10 @@ struct TextureInstance {
  * Configuration of a 2D rectangle instance, optionally textured, for drawing as
  * part of a RenderPass.
  *
- * \note Instances of this type will be rendered **after** any 3D instances or
- *       instances of type TransientTextureInstance, **together with** other
- *       non-sprite quad instances and **before** any sprite or text instances
- *       in the same RenderPass.
+ * \note Instances of this type will be rendered **after** any 3D instances,
+ *       **together with** other quad instances and **before** any text
+ *       instances in the same RenderPass. Quad instances with the same shader
+ *       and texture will be batched and rendered together.
  *
  * \sa TextureInstance
  * \sa QuadInstance
@@ -250,10 +178,23 @@ struct TextureInstance {
  */
 struct RectangleInstance {
 	/**
-	 * Shared pointer to a texture to apply to the rectangle, or nullptr to use
-	 * a solid white 1x1 texture.
+	 * Non-owning pointer to a custom shader to use when rendering this
+	 * rectangle, or nullptr to use the default shader specified in the
+	 * RendererOptions of the Renderer.
+	 *
+	 * \warning Unless nullptr, the pointed-to shader must remain valid for the
+	 *          duration of its use in the RenderPass.
 	 */
-	std::shared_ptr<const Texture> texture{};
+	Shader2D* shader = nullptr;
+
+	/**
+	 * Non-owning pointer to a texture to apply to the rectangle, or nullptr to
+	 * use a solid white 1x1 texture.
+	 *
+	 * \warning Unless nullptr, the pointed-to texture must remain valid for the
+	 *          duration of its use in the RenderPass.
+	 */
+	const Texture* texture = nullptr;
 
 	/**
 	 * Position, in world coordinates, to render the rectangle at, with respect
@@ -315,10 +256,10 @@ struct RectangleInstance {
  * Configuration of an arbitrarily shaded/transformed 2D quad instance,
  * optionally textured, for drawing as part of a RenderPass.
  *
- * \note Instances of this type will be rendered **after** any 3D instances or
- *       instances of type TransientTextureInstance, **together with** other
- *       non-sprite quad instances and **before** any sprite or text instances
- *       in the same RenderPass.
+ * \note Instances of this type will be rendered **after** any 3D instances,
+ *       **together with** other quad instances and **before** any text
+ *       instances in the same RenderPass. Quad instances with the same shader
+ *       and texture will be batched and rendered together.
  * \note Instances that use different shaders will be rendered separately from
  *       each other, ordered by their Shader2DOptions::orderIndex. The built-in
  *       shader has an orderIndex of 0 by default, while custom shaders default
@@ -330,17 +271,23 @@ struct RectangleInstance {
  */
 struct QuadInstance {
 	/**
-	 * Shared pointer to a custom shader to use when rendering this quad, or
+	 * Non-owning pointer to a custom shader to use when rendering this quad, or
 	 * nullptr to use the default shader specified in the RendererOptions of the
 	 * Renderer.
+	 *
+	 * \warning Unless nullptr, the pointed-to shader must remain valid for the
+	 *          duration of its use in the RenderPass.
 	 */
-	std::shared_ptr<Shader2D> shader{};
+	Shader2D* shader = nullptr;
 
 	/**
-	 * Shared pointer to a texture to apply to the quad, or nullptr to use a
+	 * Non-owning pointer to a texture to apply to the quad, or nullptr to use a
 	 * solid white 1x1 texture.
+	 *
+	 * \warning Unless nullptr, the pointed-to texture must remain valid for the
+	 *          duration of its use in the RenderPass.
 	 */
-	std::shared_ptr<const Texture> texture{};
+	const Texture* texture = nullptr;
 
 	/**
 	 * Transformation matrix to apply to every corner of the quad, in world
@@ -387,9 +334,10 @@ struct QuadInstance {
  * - SpriteInstance::atlas
  * - SpriteInstance::id
  *
- * \note Instances of this type will be rendered **after** any 3D instances or
- *       non-sprite quad instances and **before** any text instances in the same
- *       RenderPass.
+ * \note Instances of this type will be rendered **after** any 3D instances,
+ *       **together with** other quad instances and **before** any text
+ *       instances in the same RenderPass. Quad instances with the same shader
+ *       and texture will be batched and rendered together.
  *
  * \sa TextureInstance
  * \sa RectangleInstance
@@ -397,11 +345,22 @@ struct QuadInstance {
  */
 struct SpriteInstance {
 	/**
-	 * Shared pointer to the texture atlas in which the sprite resides.
+	 * Non-owning pointer to a custom shader to use when rendering this sprite,
+	 * or nullptr to use the default shader specified in the RendererOptions of
+	 * the Renderer.
 	 *
-	 * \warning Must not be nullptr.
+	 * \warning Unless nullptr, the pointed-to shader must remain valid for the
+	 *          duration of its use in the RenderPass.
 	 */
-	std::shared_ptr<const SpriteAtlas> atlas;
+	Shader2D* shader = nullptr;
+
+	/**
+	 * Non-owning pointer to the texture atlas in which the sprite resides.
+	 *
+	 * \warning The pointed-to atlas must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
+	 */
+	const SpriteAtlas* atlas;
 
 	/**
 	 * Identifier of the specific sprite in the SpriteInstance::atlas that is to
@@ -459,15 +418,17 @@ struct SpriteInstance {
  * - TextInstance::text
  *
  * \note Instances of this type will be rendered **after** any 3D instances or
- *       other 2D instances in the same RenderPass.
+ *       other 2D instances in the same RenderPass. Text instances with the same
+ *       font will be batched and rendered together.
  */
 struct TextInstance {
 	/**
-	 * Shared pointer to the font from which the text was shaped.
+	 * Non-owning pointer to the font from which the text was shaped.
 	 *
-	 * \warning Must not be nullptr.
+	 * \warning The pointed-to font must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
 	 */
-	std::shared_ptr<const Font> font;
+	const Font* font;
 
 	/**
 	 * Shaped text to be drawn, which should have been obtained from the font
@@ -489,24 +450,11 @@ struct TextInstance {
 
 /**
  * Graphics drawing queue for batch rendering using a Renderer.
- *
- * An instance of this class should generally be kept for multiple calls to
- * Renderer::render in order to allow allocated instance memory to be reused,
- * e.g. across frames. This can be done by calling RenderPass::reset() before
- * the draw calls for each render.
  */
 class RenderPass {
 public:
 	/**
 	 * Reset the render pass to a clear state.
-	 *
-	 * \note This preserves all of the memory allocated for instances drawn in
-	 *       previous renders whose shared resources, such as textures and
-	 *       fonts, are still alive, since they are likely to be used again in
-	 *       subsequent renders.
-	 * \note To reclaim all memory and force new allocations to be made for
-	 *       subsequent draw calls, the RenderPass object can simply be
-	 *       destroyed and replaced by a new object, e.g. by `renderPass = {}`.
 	 */
 	void reset() noexcept;
 
@@ -516,14 +464,6 @@ public:
 	 * \sa ModelInstance
 	 */
 	void draw(ModelInstance&& model);
-
-	/**
-	 * Enqueue a TransientTextureInstance to be drawn when the render pass is
-	 * rendered.
-	 *
-	 * \sa TransientTextureInstance
-	 */
-	void draw(TransientTextureInstance&& transientTexture);
 
 	/**
 	 * Enqueue a TextureInstance to be drawn when the render pass is rendered.
@@ -564,80 +504,101 @@ private:
 	friend Renderer;
 
 	template <typename Shader>
-	[[nodiscard]] static std::strong_ordering compareShaders(const std::shared_ptr<Shader>& a, const std::shared_ptr<Shader>& b) noexcept {
+	[[nodiscard]] static std::strong_ordering compareShaders(const Shader* a, const Shader* b) noexcept {
 		const int orderIndexA = (a) ? a->options.orderIndex : 0;
 		const int orderIndexB = (b) ? b->options.orderIndex : 0;
 		return orderIndexA <=> orderIndexB;
 	}
 
 	struct ModelObjectInstancesFromModel {
-		std::shared_ptr<Shader3D> shader;
-		std::shared_ptr<const Model> model;
-		std::vector<std::vector<Model::Object::Instance>> objectInstances;
+		Shader3D* shader;
+		const Model* model;
+		std::pmr::vector<std::pmr::vector<Model::Object::Instance>> objectInstances;
+
+		using allocator_type = std::pmr::polymorphic_allocator<std::pmr::vector<Model::Object::Instance>>;
+
+		ModelObjectInstancesFromModel(ModelObjectInstancesFromModel&& other, const allocator_type& alloc) noexcept
+			: shader(other.shader)
+			, model(other.model)
+			, objectInstances(other.objectInstances.begin(), other.objectInstances.end(), alloc) {}
+
+		ModelObjectInstancesFromModel(Shader3D* shader, const Model* model, const allocator_type& alloc)
+			: shader(shader)
+			, model(model)
+			, objectInstances(alloc) {}
 
 		[[nodiscard]] std::strong_ordering operator<=>(const ModelObjectInstancesFromModel& other) const {
 			const std::strong_ordering shaderOrdering = compareShaders(shader, other.shader);
-			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : model.get() <=> other.model.get();
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : model <=> other.model;
 		}
 
 		[[nodiscard]] std::strong_ordering operator<=>(const ModelInstance& instance) const {
 			const std::strong_ordering shaderOrdering = compareShaders(shader, instance.shader);
-			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : model.get() <=> instance.model.get();
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : model <=> instance.model;
 		}
 	};
 
-	struct TexturedQuadInstanceFromTransientTexture {
-		const Texture* texture;
-		TexturedQuad::Instance instance;
-	};
-
 	struct TexturedQuadInstancesFromQuad {
-		std::shared_ptr<Shader2D> shader;
-		std::shared_ptr<const Texture> texture;
-		std::vector<TexturedQuad::Instance> instances;
+		Shader2D* shader;
+		const Texture* texture;
+		std::pmr::vector<TexturedQuad::Instance> instances;
+
+		using allocator_type = std::pmr::polymorphic_allocator<TexturedQuad::Instance>;
+
+		TexturedQuadInstancesFromQuad(TexturedQuadInstancesFromQuad&& other, const allocator_type& alloc) noexcept
+			: shader(other.shader)
+			, texture(other.texture)
+			, instances(other.instances.begin(), other.instances.end(), alloc) {}
+
+		TexturedQuadInstancesFromQuad(Shader2D* shader, const Texture* texture, const allocator_type& alloc)
+			: shader(shader)
+			, texture(texture)
+			, instances(alloc) {}
 
 		[[nodiscard]] std::strong_ordering operator<=>(const TexturedQuadInstancesFromQuad& other) const {
 			const std::strong_ordering shaderOrdering = compareShaders(shader, other.shader);
-			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : texture.get() <=> other.texture.get();
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : texture <=> other.texture;
 		}
 
 		[[nodiscard]] std::strong_ordering operator<=>(const QuadInstance& instance) const {
 			const std::strong_ordering shaderOrdering = compareShaders(shader, instance.shader);
-			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : texture.get() <=> instance.texture.get();
-		}
-	};
-
-	struct TexturedQuadInstancesFromSprite {
-		std::shared_ptr<const SpriteAtlas> atlas;
-		std::vector<TexturedQuad::Instance> instances;
-
-		[[nodiscard]] std::strong_ordering operator<=>(const TexturedQuadInstancesFromSprite& other) const {
-			return atlas.get() <=> other.atlas.get();
-		}
-
-		[[nodiscard]] std::strong_ordering operator<=>(const SpriteInstance& instance) const {
-			return atlas.get() <=> instance.atlas.get();
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : texture <=> instance.texture;
 		}
 	};
 
 	struct TexturedQuadInstancesFromText {
-		std::shared_ptr<const Font> font;
-		std::vector<TexturedQuad::Instance> instances;
+		const Font* font;
+		std::pmr::vector<TexturedQuad::Instance> instances;
+
+		using allocator_type = std::pmr::polymorphic_allocator<TexturedQuad::Instance>;
+
+		TexturedQuadInstancesFromText(TexturedQuadInstancesFromText&& other, const allocator_type& alloc) noexcept
+			: font(other.font)
+			, instances(other.instances.begin(), other.instances.end(), alloc) {}
+
+		TexturedQuadInstancesFromText(const Font* font, const allocator_type& alloc)
+			: font(font)
+			, instances(alloc) {}
 
 		[[nodiscard]] std::strong_ordering operator<=>(const TexturedQuadInstancesFromText& other) const {
-			return font.get() <=> other.font.get();
+			return font <=> other.font;
 		}
 
 		[[nodiscard]] std::strong_ordering operator<=>(const TextInstance& instance) const {
-			return font.get() <=> instance.font.get();
+			return font <=> instance.font;
 		}
 	};
 
-	std::vector<ModelObjectInstancesFromModel> objectsSortedByShaderAndModel{};
-	std::vector<TexturedQuadInstanceFromTransientTexture> transientTextures{};
-	std::vector<TexturedQuadInstancesFromQuad> quadsSortedByShaderAndTexture{};
-	std::vector<TexturedQuadInstancesFromSprite> spritesSortedByAtlas{};
-	std::vector<TexturedQuadInstancesFromText> glyphsSortedByFont{};
+	struct InstanceBuffers {
+		InstanceBuffers() {} // NOLINT(modernize-use-equals-default) // Note: Clang 14 cries if this constructor is not present.
+
+		std::pmr::monotonic_buffer_resource memoryResource{};
+		std::pmr::vector<ModelObjectInstancesFromModel> objectsSortedByShaderAndModel{&memoryResource};
+		std::pmr::vector<TexturedQuadInstancesFromQuad> quadsSortedByShaderAndTexture{&memoryResource};
+		std::pmr::vector<TexturedQuadInstancesFromText> glyphsSortedByFont{&memoryResource};
+	};
+
+	std::optional<InstanceBuffers> buffers{std::in_place};
 };
 
 } // namespace graphics
