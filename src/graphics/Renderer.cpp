@@ -1,8 +1,8 @@
 #include <donut/Variant.hpp>
 #include <donut/graphics/Font.hpp>
 #include <donut/graphics/Framebuffer.hpp>
+#include <donut/graphics/Model.hpp>
 #include <donut/graphics/Renderer.hpp>
-#include <donut/graphics/Scene.hpp>
 #include <donut/graphics/SpriteAtlas.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
@@ -44,9 +44,9 @@ void useShader(Shader3D& shader, const glm::mat4& projectionViewMatrix) {
 	shader.program.clearUniformUploadQueue();
 
 	glUniformMatrix4fv(shader.projectionViewMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(projectionViewMatrix));
-	glUniform1i(shader.diffuseMap.getLocation(), Scene::Object::TEXTURE_UNIT_DIFFUSE);
-	glUniform1i(shader.specularMap.getLocation(), Scene::Object::TEXTURE_UNIT_SPECULAR);
-	glUniform1i(shader.normalMap.getLocation(), Scene::Object::TEXTURE_UNIT_NORMAL);
+	glUniform1i(shader.diffuseMap.getLocation(), Model::Object::TEXTURE_UNIT_DIFFUSE);
+	glUniform1i(shader.specularMap.getLocation(), Model::Object::TEXTURE_UNIT_SPECULAR);
+	glUniform1i(shader.normalMap.getLocation(), Model::Object::TEXTURE_UNIT_NORMAL);
 
 	if (shader.options.clearDepthBuffer) {
 		glClear(GL_DEPTH_BUFFER_BIT);
@@ -137,32 +137,32 @@ void useShader(Shader2D& shader, const glm::mat4& projectionViewMatrix) {
 	}
 }
 
-void renderInstances(Shader3D&, const Scene::Object& object, std::span<const Scene::Object::Instance> instances) {
+void renderInstances(Shader3D&, const Model::Object& object, std::span<const Model::Object::Instance> instances) {
 	glBufferData(
-		GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(instances.size() * sizeof(Scene::Object::Instance)), instances.data(), static_cast<GLenum>(Scene::Object::INSTANCES_USAGE));
-	glDrawElementsInstanced(static_cast<GLenum>(Scene::Object::PRIMITIVE_TYPE),
+		GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(instances.size() * sizeof(Model::Object::Instance)), instances.data(), static_cast<GLenum>(Model::Object::INSTANCES_USAGE));
+	glDrawElementsInstanced(static_cast<GLenum>(Model::Object::PRIMITIVE_TYPE),
 		static_cast<GLsizei>(object.indexCount),
-		static_cast<GLenum>(Scene::Object::INDEX_TYPE),
+		static_cast<GLenum>(Model::Object::INDEX_TYPE),
 		nullptr,
 		static_cast<GLsizei>(instances.size()));
 }
 
-void renderInstances(Shader3D& shader, std::span<const Scene::Object> objects, std::span<const std::vector<Scene::Object::Instance>> objectInstances, const Texture& whiteTexture,
+void renderInstances(Shader3D& shader, std::span<const Model::Object> objects, std::span<const std::vector<Model::Object::Instance>> objectInstances, const Texture& whiteTexture,
 	const Texture& grayTexture, const Texture& normalTexture) {
 	assert(objects.size() == objectInstances.size());
 	for (std::size_t i = 0; i < objects.size(); ++i) {
-		const Scene::Object& object = objects[i];
+		const Model::Object& object = objects[i];
 
 		glBindVertexArray(object.mesh.get());
 		glBindBuffer(GL_ARRAY_BUFFER, object.mesh.getInstanceBuffer());
 
-		glActiveTexture(GL_TEXTURE0 + Scene::Object::TEXTURE_UNIT_DIFFUSE);
+		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_DIFFUSE);
 		glBindTexture(GL_TEXTURE_2D, (object.material.diffuseMap) ? object.material.diffuseMap.get() : whiteTexture.get());
 
-		glActiveTexture(GL_TEXTURE0 + Scene::Object::TEXTURE_UNIT_SPECULAR);
+		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_SPECULAR);
 		glBindTexture(GL_TEXTURE_2D, (object.material.specularMap) ? object.material.specularMap.get() : grayTexture.get());
 
-		glActiveTexture(GL_TEXTURE0 + Scene::Object::TEXTURE_UNIT_NORMAL);
+		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_NORMAL);
 		glBindTexture(GL_TEXTURE_2D, (object.material.normalMap) ? object.material.normalMap.get() : normalTexture.get());
 
 		glUniform1f(shader.specularExponent.getLocation(), object.material.specularExponent);
@@ -192,27 +192,27 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 	// Setup viewport.
 	glViewport(viewport.position.x, viewport.position.y, viewport.size.x, viewport.size.y);
 
-	// Render 3D scene objects.
+	// Render 3D objects.
 	{
 		// Render models.
-		if (!renderPass.modelsSortedByShaderAndScene.empty()) {
-			const RenderPass::SceneObjectInstancesFromModel& firstModels = renderPass.modelsSortedByShaderAndScene.front();
+		if (!renderPass.objectsSortedByShaderAndModel.empty()) {
+			const RenderPass::ModelObjectInstancesFromModel& firstModels = renderPass.objectsSortedByShaderAndModel.front();
 
 			Shader3D* shader = firstModels.shader.get();
 			Shader3D* actualShader = (shader) ? shader : &modelShader;
 			useShader(*actualShader, projectionViewMatrix);
 
-			const Scene* scene = firstModels.scene.get();
-			renderInstances(*actualShader, scene->objects, firstModels.objectInstances, whiteTexture, grayTexture, normalTexture);
+			const Model* model = firstModels.model.get();
+			renderInstances(*actualShader, model->objects, firstModels.objectInstances, whiteTexture, grayTexture, normalTexture);
 
-			for (const RenderPass::SceneObjectInstancesFromModel& models : std::span{renderPass.modelsSortedByShaderAndScene}.subspan(1)) {
+			for (const RenderPass::ModelObjectInstancesFromModel& models : std::span{renderPass.objectsSortedByShaderAndModel}.subspan(1)) {
 				if (shader != models.shader.get()) {
 					shader = models.shader.get();
 					actualShader = (shader) ? shader : &modelShader;
 					useShader(*actualShader, projectionViewMatrix);
 				}
 
-				renderInstances(*actualShader, models.scene->objects, models.objectInstances, whiteTexture, grayTexture, normalTexture);
+				renderInstances(*actualShader, models.model->objects, models.objectInstances, whiteTexture, grayTexture, normalTexture);
 			}
 		}
 	}

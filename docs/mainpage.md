@@ -30,7 +30,7 @@ The main API of libdonut is organized into the following modules, listed along w
     - [ImageLDR](@ref donut::graphics::ImageLDR) - Low dynamic range image loading/saving
     - [Renderer](@ref donut::graphics::Renderer) - Rendering onto a framebuffer
     - [RenderPass](@ref donut::graphics::RenderPass) - Graphics drawing queue for batch rendering
-    - [Scene](@ref donut::graphics::Scene) - Scene loading of 3D models
+    - [Model](@ref donut::graphics::Model) - Loading of 3D models
     - [Shader2D](@ref donut::graphics::Shader2D) - Shader program for instanced 2D textured quads
     - [Shader3D](@ref donut::graphics::Shader3D) - Shader program for instanced 3D models
     - [SpriteAtlas](@ref donut::graphics::SpriteAtlas) - Packing of sprites into an expandable spritesheet

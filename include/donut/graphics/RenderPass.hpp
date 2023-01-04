@@ -3,7 +3,7 @@
 
 #include <donut/Color.hpp>
 #include <donut/graphics/Font.hpp>
-#include <donut/graphics/Scene.hpp>
+#include <donut/graphics/Model.hpp>
 #include <donut/graphics/Shader2D.hpp>
 #include <donut/graphics/Shader3D.hpp>
 #include <donut/graphics/SpriteAtlas.hpp>
@@ -23,10 +23,10 @@ namespace donut {
 namespace graphics {
 
 /**
- * Configuration of a 3D Scene instance, for drawing as part of a RenderPass.
+ * Configuration of a 3D Model instance, for drawing as part of a RenderPass.
  *
  * Required fields:
- * - ModelInstance::scene
+ * - ModelInstance::model
  *
  * \note Instances of this type will be rendered **before** any 2D instances in
  *       the same RenderPass.
@@ -44,11 +44,11 @@ struct ModelInstance {
 	std::shared_ptr<Shader3D> shader{};
 
 	/**
-	 * Shared pointer to the scene that represents the model to be drawn.
+	 * Shared pointer to the model to be drawn.
 	 *
 	 * \warning Must not be nullptr.
 	 */
-	std::shared_ptr<const Scene> scene;
+	std::shared_ptr<const Model> model;
 
 	/**
 	 * Transformation matrix to apply to every vertex position of the model, in
@@ -588,19 +588,19 @@ private:
 		return orderIndexA <=> orderIndexB;
 	}
 
-	struct SceneObjectInstancesFromModel {
+	struct ModelObjectInstancesFromModel {
 		std::shared_ptr<Shader3D> shader;
-		std::shared_ptr<const Scene> scene;
-		std::vector<std::vector<Scene::Object::Instance>> objectInstances;
+		std::shared_ptr<const Model> model;
+		std::vector<std::vector<Model::Object::Instance>> objectInstances;
 
-		[[nodiscard]] std::strong_ordering operator<=>(const SceneObjectInstancesFromModel& other) const {
+		[[nodiscard]] std::strong_ordering operator<=>(const ModelObjectInstancesFromModel& other) const {
 			const std::strong_ordering shaderOrdering = compareShaders(shader, other.shader);
-			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : scene.get() <=> other.scene.get();
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : model.get() <=> other.model.get();
 		}
 
-		[[nodiscard]] std::strong_ordering operator<=>(const ModelInstance& model) const {
-			const std::strong_ordering shaderOrdering = compareShaders(shader, model.shader);
-			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : scene.get() <=> model.scene.get();
+		[[nodiscard]] std::strong_ordering operator<=>(const ModelInstance& instance) const {
+			const std::strong_ordering shaderOrdering = compareShaders(shader, instance.shader);
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : model.get() <=> instance.model.get();
 		}
 	};
 
@@ -619,9 +619,9 @@ private:
 			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : texture.get() <=> other.texture.get();
 		}
 
-		[[nodiscard]] std::strong_ordering operator<=>(const QuadInstance& quad) const {
-			const std::strong_ordering shaderOrdering = compareShaders(shader, quad.shader);
-			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : texture.get() <=> quad.texture.get();
+		[[nodiscard]] std::strong_ordering operator<=>(const QuadInstance& instance) const {
+			const std::strong_ordering shaderOrdering = compareShaders(shader, instance.shader);
+			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : texture.get() <=> instance.texture.get();
 		}
 	};
 
@@ -633,8 +633,8 @@ private:
 			return atlas.get() <=> other.atlas.get();
 		}
 
-		[[nodiscard]] std::strong_ordering operator<=>(const SpriteInstance& sprite) const {
-			return atlas.get() <=> sprite.atlas.get();
+		[[nodiscard]] std::strong_ordering operator<=>(const SpriteInstance& instance) const {
+			return atlas.get() <=> instance.atlas.get();
 		}
 	};
 
@@ -646,13 +646,13 @@ private:
 			return font.get() <=> other.font.get();
 		}
 
-		[[nodiscard]] std::strong_ordering operator<=>(const TextInstance& text) const {
-			return font.get() <=> text.font.get();
+		[[nodiscard]] std::strong_ordering operator<=>(const TextInstance& instance) const {
+			return font.get() <=> instance.font.get();
 		}
 	};
 
 	std::optional<Color> backgroundColor{};
-	std::vector<SceneObjectInstancesFromModel> modelsSortedByShaderAndScene{};
+	std::vector<ModelObjectInstancesFromModel> objectsSortedByShaderAndModel{};
 	std::vector<TexturedQuadInstanceFromTransientTexture> transientTextures{};
 	std::vector<TexturedQuadInstancesFromQuad> quadsSortedByShaderAndTexture{};
 	std::vector<TexturedQuadInstancesFromSprite> spritesSortedByAtlas{};

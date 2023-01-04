@@ -3,7 +3,7 @@
 #include <donut/graphics/ImageHDR.hpp>
 #include <donut/graphics/ImageLDR.hpp>
 #include <donut/graphics/Mesh.hpp>
-#include <donut/graphics/Scene.hpp>
+#include <donut/graphics/Model.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/obj.hpp>
 
@@ -39,7 +39,7 @@ public:
 		}
 	}
 
-	[[nodiscard]] Scene::Object::Index insert(Scene::Object::Index vertexIndex, const obj::FaceVertex& newVertex) {
+	[[nodiscard]] Model::Object::Index insert(Model::Object::Index vertexIndex, const obj::FaceVertex& newVertex) {
 		for (obj::FaceVertex& vertex : std::span{vertices}.subspan(newVertex.vertexIndex * MAX_DUPLICATE_VERTICES, MAX_DUPLICATE_VERTICES)) {
 			if (vertex.vertexIndex == static_cast<decltype(vertex.vertexIndex)>(-1)) {
 				vertex.vertexIndex = vertexIndex;
@@ -51,15 +51,15 @@ public:
 				return vertex.vertexIndex;
 			}
 		}
-		throw Error{"Too many duplicate vertices in scene."};
+		throw Error{"Too many duplicate vertices in model."};
 	}
 
 private:
 	std::vector<obj::FaceVertex> vertices;
 };
 
-void generateNormals(std::span<Scene::Object::Vertex> vertices, std::span<const Scene::Object::Index> indices) {
-	for (Scene::Object::Vertex& vertex : vertices) {
+void generateNormals(std::span<Model::Object::Vertex> vertices, std::span<const Model::Object::Index> indices) {
+	for (Model::Object::Vertex& vertex : vertices) {
 		vertex.normal = {0.0f, 0.0f, 0.0f};
 	}
 
@@ -95,13 +95,13 @@ void generateNormals(std::span<Scene::Object::Vertex> vertices, std::span<const 
 		vertices[indexC].normal += normal * angleBC;
 	}
 
-	for (Scene::Object::Vertex& vertex : vertices) {
+	for (Model::Object::Vertex& vertex : vertices) {
 		vertex.normal = glm::normalize(vertex.normal);
 	}
 }
 
-void generateTangentSpace(std::span<Scene::Object::Vertex> vertices, std::span<const Scene::Object::Index> indices) {
-	for (Scene::Object::Vertex& vertex : vertices) {
+void generateTangentSpace(std::span<Model::Object::Vertex> vertices, std::span<const Model::Object::Index> indices) {
+	for (Model::Object::Vertex& vertex : vertices) {
 		vertex.tangent = {0.0f, 0.0f, 0.0f};
 		vertex.bitangent = {0.0f, 0.0f, 0.0f};
 	}
@@ -130,7 +130,7 @@ void generateTangentSpace(std::span<Scene::Object::Vertex> vertices, std::span<c
 		vertices[indexC].tangent += tangent;
 	}
 
-	for (Scene::Object::Vertex& vertex : vertices) {
+	for (Model::Object::Vertex& vertex : vertices) {
 		vertex.tangent = glm::normalize(vertex.tangent - glm::dot(vertex.tangent, vertex.normal) * vertex.normal);
 		vertex.bitangent = glm::cross(vertex.normal, vertex.tangent);
 	}
@@ -140,7 +140,7 @@ void generateTangentSpace(std::span<Scene::Object::Vertex> vertices, std::span<c
 	return (filepath.ends_with(".hdr")) ? Texture{ImageHDR{filepath.c_str()}} : Texture{ImageLDR{filepath.c_str()}};
 }
 
-void loadScene(Scene& output, const obj::Scene& scene) {
+void loadObjScene(Model& output, const obj::Scene& scene) {
 	std::vector<obj::mtl::Library> materialLibraries{};
 	materialLibraries.reserve(scene.materialLibraryFilenames.size());
 	for (const std::string& materialLibraryFilename : scene.materialLibraryFilenames) {
@@ -151,8 +151,8 @@ void loadScene(Scene& output, const obj::Scene& scene) {
 
 	output.objects.reserve(scene.objects.size());
 	for (const obj::Object& object : scene.objects) {
-		std::vector<Scene::Object::Vertex> vertices{};
-		std::vector<Scene::Object::Index> indices{};
+		std::vector<Model::Object::Vertex> vertices{};
+		std::vector<Model::Object::Index> indices{};
 
 		indexMap.clear();
 
@@ -162,7 +162,7 @@ void loadScene(Scene& output, const obj::Scene& scene) {
 					for (std::size_t faceVertexIndex = 1; faceVertexIndex + 1 < face.vertices.size(); ++faceVertexIndex) {
 						for (const std::size_t faceVertexIndex : {std::size_t{0}, faceVertexIndex, faceVertexIndex + 1}) {
 							const obj::FaceVertex& faceVertex = face.vertices[faceVertexIndex];
-							const Scene::Object::Index newVertexIndex = indexMap.insert(static_cast<Scene::Object::Index>(vertices.size()), faceVertex);
+							const Model::Object::Index newVertexIndex = indexMap.insert(static_cast<Model::Object::Index>(vertices.size()), faceVertex);
 							if (newVertexIndex == vertices.size()) {
 								vertices.push_back({
 									.position = (faceVertex.vertexIndex < scene.vertices.size()) ? scene.vertices[faceVertex.vertexIndex] : glm::vec3{0.0f, 0.0f, 0.0f},
@@ -186,7 +186,7 @@ void loadScene(Scene& output, const obj::Scene& scene) {
 		}
 		generateTangentSpace(vertices, indices);
 
-		Scene::Object::Material objectMaterial{.diffuseMap{}, .specularMap{}, .normalMap{}, .specularExponent = 0.0f};
+		Model::Object::Material objectMaterial{.diffuseMap{}, .specularMap{}, .normalMap{}, .specularExponent = 0.0f};
 		if (!object.materialName.empty()) {
 			for (const obj::mtl::Library& materialLibrary : materialLibraries) {
 				if (const auto it = std::find_if(materialLibrary.materials.begin(),
@@ -210,7 +210,7 @@ void loadScene(Scene& output, const obj::Scene& scene) {
 		}
 
 		output.objects.push_back({
-			.mesh{Scene::Object::VERTICES_USAGE, Scene::Object::INDICES_USAGE, Scene::Object::INSTANCES_USAGE, vertices, indices, {}},
+			.mesh{Model::Object::VERTICES_USAGE, Model::Object::INDICES_USAGE, Model::Object::INSTANCES_USAGE, vertices, indices, {}},
 			.material = std::move(objectMaterial),
 			.indexCount = indices.size(),
 		});
@@ -219,9 +219,9 @@ void loadScene(Scene& output, const obj::Scene& scene) {
 
 } // namespace
 
-Scene::Scene(const char* filepath) {
+Model::Model(const char* filepath) {
 	try {
-		loadScene(*this, obj::Scene::parse(InputFileStream::open(filepath).readAllIntoString()));
+		loadObjScene(*this, obj::Scene::parse(InputFileStream::open(filepath).readAllIntoString()));
 	} catch (const obj::Error& e) {
 		throw Error{fmt::format("Failed to load scene \"{}\": Line {}: {}", filepath, e.lineNumber, e.what())};
 	} catch (const std::exception& e) {

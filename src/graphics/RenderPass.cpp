@@ -14,18 +14,18 @@ namespace graphics {
 void RenderPass::reset() noexcept {
 	backgroundColor.reset();
 
-	std::erase_if(
-		modelsSortedByShaderAndScene, [](const SceneObjectInstancesFromModel& models) -> bool { return (models.shader && models.shader.use_count() <= 1) || models.scene.use_count() <= 1; });
-	for (SceneObjectInstancesFromModel& models : modelsSortedByShaderAndScene) {
-		for (std::vector<Scene::Object::Instance>& objectInstance : models.objectInstances) {
+	std::erase_if(objectsSortedByShaderAndModel,
+		[](const ModelObjectInstancesFromModel& objects) -> bool { return (objects.shader && objects.shader.use_count() <= 1) || objects.model.use_count() <= 1; });
+	for (ModelObjectInstancesFromModel& objects : objectsSortedByShaderAndModel) {
+		for (std::vector<Model::Object::Instance>& objectInstance : objects.objectInstances) {
 			objectInstance.clear();
 		}
 	}
 
 	transientTextures.clear();
 
-	std::erase_if(
-		quadsSortedByShaderAndTexture, [](const TexturedQuadInstancesFromQuad& quads) -> bool { return (quads.shader && quads.shader.use_count() <= 1) || (quads.texture && quads.texture.use_count() <= 1); });
+	std::erase_if(quadsSortedByShaderAndTexture,
+		[](const TexturedQuadInstancesFromQuad& quads) -> bool { return (quads.shader && quads.shader.use_count() <= 1) || (quads.texture && quads.texture.use_count() <= 1); });
 	for (TexturedQuadInstancesFromQuad& quads : quadsSortedByShaderAndTexture) {
 		quads.instances.clear();
 	}
@@ -42,24 +42,24 @@ void RenderPass::reset() noexcept {
 }
 
 void RenderPass::draw(ModelInstance&& model) {
-	assert(model.scene);
+	assert(model.model);
 
 	const glm::mat4 transformation = glm::scale(model.transformation, {1.0f, -1.0f, 1.0f});
 	const glm::mat3 normalMatrix = glm::inverseTranspose(glm::mat3{transformation});
 
-	const std::size_t objectCount = model.scene->objects.size();
+	const std::size_t objectCount = model.model->objects.size();
 
-	std::vector<std::vector<Scene::Object::Instance>>* objectInstances = nullptr;
-	const auto it = std::lower_bound(modelsSortedByShaderAndScene.begin(), modelsSortedByShaderAndScene.end(), model);
-	if (it == modelsSortedByShaderAndScene.end()) {
-		modelsSortedByShaderAndScene.push_back({.shader = std::move(model.shader), .scene = std::move(model.scene), .objectInstances{}});
-		objectInstances = &modelsSortedByShaderAndScene.back().objectInstances;
+	std::vector<std::vector<Model::Object::Instance>>* objectInstances = nullptr;
+	const auto it = std::lower_bound(objectsSortedByShaderAndModel.begin(), objectsSortedByShaderAndModel.end(), model);
+	if (it == objectsSortedByShaderAndModel.end()) {
+		objectsSortedByShaderAndModel.push_back({.shader = std::move(model.shader), .model = std::move(model.model), .objectInstances{}});
+		objectInstances = &objectsSortedByShaderAndModel.back().objectInstances;
 		objectInstances->resize(objectCount);
-	} else if (it->shader == model.shader && it->scene == model.scene) {
+	} else if (it->shader == model.shader && it->model == model.model) {
 		objectInstances = &it->objectInstances;
 		assert(objectInstances->size() == objectCount);
 	} else {
-		objectInstances = &modelsSortedByShaderAndScene.insert(it, {.shader = std::move(model.shader), .scene = std::move(model.scene), .objectInstances{}})->objectInstances;
+		objectInstances = &objectsSortedByShaderAndModel.insert(it, {.shader = std::move(model.shader), .model = std::move(model.model), .objectInstances{}})->objectInstances;
 		objectInstances->resize(objectCount);
 	}
 	for (std::size_t i = 0; i < objectCount; ++i) {

@@ -472,7 +472,7 @@ private:
 		carrotCakeTransformation = glm::rotate(carrotCakeTransformation, frameInfo.elapsedTime * 2.0f, {0.0f, 0.0f, 1.0f});
 		carrotCakeTransformation = glm::translate(carrotCakeTransformation, {0.0f, 0.05f, 0.0f});
 		renderPass.draw(gfx::ModelInstance{
-			.scene = carrotCakeModel,
+			.model = carrotCakeModel,
 			.transformation = carrotCakeTransformation,
 		});
 
@@ -484,7 +484,7 @@ private:
 		shadedCarrotCakeTransformation = glm::translate(shadedCarrotCakeTransformation, {0.0f, 0.05f, 0.0f});
 		renderPass.draw(gfx::ModelInstance{
 			.shader = testShader3D,
-			.scene = carrotCakeModel,
+			.model = carrotCakeModel,
 			.transformation = shadedCarrotCakeTransformation,
 		});
 	}
@@ -594,7 +594,7 @@ private:
 	glm::mat4 screenProjectionViewMatrix{};
 	glm::mat4 worldProjectionViewMatrix{};
 	std::shared_ptr<const gfx::Texture> testTexture = std::make_shared<gfx::Texture>(gfx::ImageLDR{"textures/test.png"});
-	std::shared_ptr<const gfx::Scene> carrotCakeModel = std::make_shared<gfx::Scene>("models/carrot_cake.obj");
+	std::shared_ptr<const gfx::Model> carrotCakeModel = std::make_shared<gfx::Model>("models/carrot_cake.obj");
 	std::shared_ptr<gfx::SpriteAtlas> spriteAtlas = std::make_shared<gfx::SpriteAtlas>();
 	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas->insert(renderer, gfx::ImageLDR{"textures/test.png"});
 	std::shared_ptr<gfx::Font> mainFont = std::make_shared<gfx::Font>("fonts/unscii/unscii-8.ttf");

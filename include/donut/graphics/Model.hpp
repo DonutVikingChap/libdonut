@@ -1,5 +1,5 @@
-#ifndef DONUT_GRAPHICS_SCENE_HPP
-#define DONUT_GRAPHICS_SCENE_HPP
+#ifndef DONUT_GRAPHICS_MODEL_HPP
+#define DONUT_GRAPHICS_MODEL_HPP
 
 #include <donut/graphics/Mesh.hpp>
 #include <donut/graphics/Texture.hpp>
@@ -12,7 +12,7 @@
 namespace donut {
 namespace graphics {
 
-struct Scene {
+struct Model {
 	struct Object final {
 		struct Vertex {
 			glm::vec3 position;
@@ -53,7 +53,7 @@ struct Scene {
 		std::size_t indexCount;
 	};
 
-	explicit Scene(const char* filepath);
+	explicit Model(const char* filepath);
 
 	std::vector<Object> objects;
 };

@@ -27,7 +27,7 @@ Note: This library is currently a **work in progress** and makes no guarantees r
         - Sprite rendering with automatic [SpriteAtlas](include/donut/graphics/SpriteAtlas.hpp) packing.
         - Text rendering and [Font](include/donut/graphics/Font.hpp) loading using [libschrift](https://github.com/tomolt/libschrift).
     - [Renderer](include/donut/graphics/Renderer.hpp) supporting arbitrary [Framebuffer](include/donut/graphics/Framebuffer.hpp) targets and [Viewport](include/donut/graphics/Viewport.hpp) areas with optional integer scaling.
-    - [Scene](include/donut/graphics/Scene.hpp) loading from OBJ files.
+    - [Model](include/donut/graphics/Model.hpp) loading from OBJ files.
     - [Image](include/donut/graphics/Image.hpp) loading/saving in both 8-bit [LDR](include/donut/graphics/ImageLDR.hpp) and floating-point [HDR](include/donut/graphics/ImageHDR.hpp) using [stbi](https://github.com/nothings/stb).
 - Utilities:
     - [AtlasPacker](include/donut/AtlasPacker.hpp) for packing rectangles into expandable square texture atlases.
