@@ -101,44 +101,10 @@ public:
 	 *
 	 * \param framebuffer the framebuffer to clear the depth of.
 	 *
-	 * \sa clearFramebufferStencil()
-	 * \sa clearFramebufferDepthAndStencil()
 	 * \sa clearFramebufferColor()
 	 * \sa clearFramebufferColorAndDepth()
-	 * \sa clearFramebufferColorAndStencil()
-	 * \sa clearFramebufferColorAndDepthAndStencil()
 	 */
 	void clearFramebufferDepth(Framebuffer& framebuffer);
-
-	/**
-	 * Clear the stencil buffer contents of a Framebuffer.
-	 *
-	 * \param framebuffer the framebuffer to clear the stencil of.
-	 * \param stencilValue value to fill the stencil buffer with.
-	 *
-	 * \sa clearFramebufferDepth()
-	 * \sa clearFramebufferDepthAndStencil()
-	 * \sa clearFramebufferColor()
-	 * \sa clearFramebufferColorAndDepth()
-	 * \sa clearFramebufferColorAndStencil()
-	 * \sa clearFramebufferColorAndDepthAndStencil()
-	 */
-	void clearFramebufferStencil(Framebuffer& framebuffer, std::int32_t stencilValue);
-
-	/**
-	 * Clear the depth and stencil buffer contents of a Framebuffer.
-	 *
-	 * \param framebuffer the framebuffer to clear the depth and stencil of.
-	 * \param stencilValue value to fill the stencil buffer with.
-	 *
-	 * \sa clearFramebufferDepth()
-	 * \sa clearFramebufferStencil()
-	 * \sa clearFramebufferColor()
-	 * \sa clearFramebufferColorAndDepth()
-	 * \sa clearFramebufferColorAndStencil()
-	 * \sa clearFramebufferColorAndDepthAndStencil()
-	 */
-	void clearFramebufferDepthAndStencil(Framebuffer& framebuffer, std::int32_t stencilValue);
 
 	/**
 	 * Clear the color contents of a Framebuffer.
@@ -147,11 +113,7 @@ public:
 	 * \param color color to clear the framebuffer to.
 	 *
 	 * \sa clearFramebufferDepth()
-	 * \sa clearFramebufferStencil()
-	 * \sa clearFramebufferDepthAndStencil()
 	 * \sa clearFramebufferColorAndDepth()
-	 * \sa clearFramebufferColorAndStencil()
-	 * \sa clearFramebufferColorAndDepthAndStencil()
 	 */
 	void clearFramebufferColor(Framebuffer& framebuffer, Color color);
 
@@ -162,46 +124,9 @@ public:
 	 * \param color color to clear the framebuffer to.
 	 *
 	 * \sa clearFramebufferDepth()
-	 * \sa clearFramebufferStencil()
-	 * \sa clearFramebufferDepthAndStencil()
 	 * \sa clearFramebufferColor()
-	 * \sa clearFramebufferColorAndStencil()
-	 * \sa clearFramebufferColorAndDepthAndStencil()
 	 */
 	void clearFramebufferColorAndDepth(Framebuffer& framebuffer, Color color);
-
-	/**
-	 * Clear the color and stencil buffer contents of a Framebuffer.
-	 *
-	 * \param framebuffer the framebuffer to clear the color and stencil of.
-	 * \param color color to clear the framebuffer to.
-	 * \param stencilValue value to fill the stencil buffer with.
-	 *
-	 * \sa clearFramebufferDepth()
-	 * \sa clearFramebufferStencil()
-	 * \sa clearFramebufferDepthAndStencil()
-	 * \sa clearFramebufferColor()
-	 * \sa clearFramebufferColorAndDepth()
-	 * \sa clearFramebufferColorAndDepthAndStencil()
-	 */
-	void clearFramebufferColorAndStencil(Framebuffer& framebuffer, Color color, std::int32_t stencilValue);
-
-	/**
-	 * Clear the color, depth and stencil buffer contents of a Framebuffer.
-	 *
-	 * \param framebuffer the framebuffer to clear the color, depth and stencil
-	 *        of.
-	 * \param color color to clear the framebuffer to.
-	 * \param stencilValue value to fill the stencil buffer with.
-	 *
-	 * \sa clearFramebufferDepth()
-	 * \sa clearFramebufferStencil()
-	 * \sa clearFramebufferDepthAndStencil()
-	 * \sa clearFramebufferColor()
-	 * \sa clearFramebufferColorAndDepth()
-	 * \sa clearFramebufferColorAndStencil()
-	 */
-	void clearFramebufferColorAndDepthAndStencil(Framebuffer& framebuffer, Color color, std::int32_t stencilValue);
 
 	/**
 	 * Render the contents of a RenderPass to a Framebuffer.

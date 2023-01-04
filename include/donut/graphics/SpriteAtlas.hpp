@@ -40,7 +40,7 @@ public:
 
 		atlasTexture.pasteImage2D(image, x, y);
 
-		const glm::vec2 textureSize = atlasTexture.getSize();
+		const glm::vec2 textureSize = atlasTexture.getSize2D();
 		const glm::vec2 position{static_cast<float>(x), static_cast<float>(y)};
 		const glm::vec2 size{static_cast<float>(image.getWidth()), static_cast<float>(image.getHeight())};
 		const std::size_t index = sprites.size();
@@ -69,7 +69,7 @@ private:
 		if (atlasTexture) {
 			if (resized) {
 				atlasTexture.grow2D(renderer, atlasPacker.getResolution(), atlasPacker.getResolution(), Color::INVISIBLE);
-				const glm::vec2 textureSize = atlasTexture.getSize();
+				const glm::vec2 textureSize = atlasTexture.getSize2D();
 				for (Sprite& sprite : sprites) {
 					sprite.textureOffset = sprite.position / textureSize;
 					sprite.textureScale = sprite.size / textureSize;

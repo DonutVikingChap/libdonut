@@ -5,6 +5,7 @@
 #include <donut/graphics/RenderPass.hpp>
 #include <donut/graphics/Renderer.hpp>
 #include <donut/graphics/Texture.hpp>
+#include <donut/graphics/Viewport.hpp>
 #include <donut/graphics/opengl.hpp>
 
 #include <cassert>                       // assert
@@ -316,16 +317,12 @@ void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHe
 	{
 		Framebuffer framebuffer{};
 		const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(newTexture);
-
 		if (backgroundColor) {
 			renderer.clearFramebufferColor(framebuffer, *backgroundColor);
 		}
-
-		RenderPass renderPass{};
-		renderPass.draw(TextureInstance{.texture = this});
 		renderer.render(framebuffer,
-			renderPass,
-			{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
+			RenderPass{}.draw(TextureInstance{.texture = this}),
+			Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
 			glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
 	}
 	newTexture.setOptions2D(options);
@@ -337,12 +334,9 @@ Texture Texture::copy2D(Renderer& renderer) const {
 	{
 		Framebuffer framebuffer{};
 		const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(newTexture);
-
-		RenderPass renderPass{};
-		renderPass.draw(TextureInstance{.texture = this});
 		renderer.render(framebuffer,
-			renderPass,
-			{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
+			RenderPass{}.draw(TextureInstance{.texture = this}),
+			Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
 			glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
 	}
 	newTexture.setOptions2D(options);

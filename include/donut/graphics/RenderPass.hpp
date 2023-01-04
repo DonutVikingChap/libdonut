@@ -15,8 +15,6 @@
 #include <glm/ext/matrix_transform.hpp> // glm::identity
 #include <glm/glm.hpp>                  // glm::...
 #include <memory_resource>              // std::pmr::...
-#include <optional>                     // std::optional, std::in_place
-#include <utility>                      // std::move
 #include <vector>                       // std::vector
 
 namespace donut {
@@ -454,51 +452,58 @@ struct TextInstance {
 class RenderPass {
 public:
 	/**
-	 * Reset the render pass to a clear state.
-	 */
-	void reset() noexcept;
-
-	/**
 	 * Enqueue a ModelInstance to be drawn when the render pass is rendered.
+	 *
+	 * \return *this, for chaining.
 	 *
 	 * \sa ModelInstance
 	 */
-	void draw(ModelInstance&& model);
+	RenderPass& draw(const ModelInstance& model);
 
 	/**
 	 * Enqueue a TextureInstance to be drawn when the render pass is rendered.
 	 *
+	 * \return *this, for chaining.
+	 *
 	 * \sa TextureInstance
 	 */
-	void draw(TextureInstance&& texture);
+	RenderPass& draw(const TextureInstance& texture);
 
 	/**
 	 * Enqueue a RectangleInstance to be drawn when the render pass is rendered.
 	 *
+	 * \return *this, for chaining.
+	 *
 	 * \sa RectangleInstance
 	 */
-	void draw(RectangleInstance&& rectangle);
+	RenderPass& draw(const RectangleInstance& rectangle);
 
 	/**
 	 * Enqueue a QuadInstance to be drawn when the render pass is rendered.
 	 *
+	 * \return *this, for chaining.
+	 *
 	 * \sa QuadInstance
 	 */
-	void draw(QuadInstance&& quad);
+	RenderPass& draw(const QuadInstance& quad);
 
 	/**
 	 * Enqueue a SpriteInstance to be drawn when the render pass is rendered.
 	 *
+	 * \return *this, for chaining.
+	 *
 	 * \sa SpriteInstance
 	 */
-	void draw(SpriteInstance&& sprite);
+	RenderPass& draw(const SpriteInstance& sprite);
 
 	/**
 	 * Enqueue a TextInstance to be drawn when the render pass is rendered.
 	 *
+	 * \return *this, for chaining.
+	 *
 	 * \sa TextInstance
 	 */
-	void draw(TextInstance&& text);
+	RenderPass& draw(const TextInstance& text);
 
 private:
 	friend Renderer;
@@ -589,16 +594,10 @@ private:
 		}
 	};
 
-	struct InstanceBuffers {
-		InstanceBuffers() {} // NOLINT(modernize-use-equals-default) // Note: Clang 14 cries if this constructor is not present.
-
-		std::pmr::monotonic_buffer_resource memoryResource{};
-		std::pmr::vector<ModelObjectInstancesFromModel> objectsSortedByShaderAndModel{&memoryResource};
-		std::pmr::vector<TexturedQuadInstancesFromQuad> quadsSortedByShaderAndTexture{&memoryResource};
-		std::pmr::vector<TexturedQuadInstancesFromText> glyphsSortedByFont{&memoryResource};
-	};
-
-	std::optional<InstanceBuffers> buffers{std::in_place};
+	std::pmr::monotonic_buffer_resource memoryResource{};
+	std::pmr::vector<ModelObjectInstancesFromModel> objectsSortedByShaderAndModel{&memoryResource};
+	std::pmr::vector<TexturedQuadInstancesFromQuad> quadsSortedByShaderAndTexture{&memoryResource};
+	std::pmr::vector<TexturedQuadInstancesFromText> glyphsSortedByFont{&memoryResource};
 };
 
 } // namespace graphics

@@ -133,18 +133,6 @@ void Renderer::clearFramebufferDepth(Framebuffer& framebuffer) {
 	glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer::clearFramebufferStencil(Framebuffer& framebuffer, std::int32_t stencilValue) {
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
-	glClearStencil(static_cast<GLint>(stencilValue));
-	glClear(GL_STENCIL_BUFFER_BIT);
-}
-
-void Renderer::clearFramebufferDepthAndStencil(Framebuffer& framebuffer, std::int32_t stencilValue) {
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
-	glClearStencil(static_cast<GLint>(stencilValue));
-	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-}
-
 void Renderer::clearFramebufferColor(Framebuffer& framebuffer, Color color) {
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
 	glClearColor(color.getRedComponent(), color.getGreenComponent(), color.getBlueComponent(), color.getAlphaComponent());
@@ -157,36 +145,18 @@ void Renderer::clearFramebufferColorAndDepth(Framebuffer& framebuffer, Color col
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer::clearFramebufferColorAndStencil(Framebuffer& framebuffer, Color color, std::int32_t stencilValue) {
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
-	glClearColor(color.getRedComponent(), color.getGreenComponent(), color.getBlueComponent(), color.getAlphaComponent());
-	glClearStencil(static_cast<GLint>(stencilValue));
-	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-}
-
-void Renderer::clearFramebufferColorAndDepthAndStencil(Framebuffer& framebuffer, Color color, std::int32_t stencilValue) {
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
-	glClearColor(color.getRedComponent(), color.getGreenComponent(), color.getBlueComponent(), color.getAlphaComponent());
-	glClearStencil(static_cast<GLint>(stencilValue));
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-}
-
 void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const glm::mat4& projectionViewMatrix) {
-	assert(renderPass.buffers);
-
 	// Bind framebuffer.
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
 
 	// Setup viewport.
 	glViewport(viewport.position.x, viewport.position.y, viewport.size.x, viewport.size.y);
 
-	const RenderPass::InstanceBuffers& buffers = *renderPass.buffers;
-
 	// Render 3D objects.
 	{
 		// Render models.
-		if (!buffers.objectsSortedByShaderAndModel.empty()) {
-			const RenderPass::ModelObjectInstancesFromModel& firstModels = buffers.objectsSortedByShaderAndModel.front();
+		if (!renderPass.objectsSortedByShaderAndModel.empty()) {
+			const RenderPass::ModelObjectInstancesFromModel& firstModels = renderPass.objectsSortedByShaderAndModel.front();
 
 			Shader3D* shader = firstModels.shader;
 			Shader3D* actualShader = (shader) ? shader : &modelShader;
@@ -195,7 +165,7 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 			const Model* model = firstModels.model;
 			renderModelObjectInstances(*actualShader, model->objects, firstModels.objectInstances, whiteTexture, grayTexture, normalTexture);
 
-			for (const RenderPass::ModelObjectInstancesFromModel& models : std::span{buffers.objectsSortedByShaderAndModel}.subspan(1)) {
+			for (const RenderPass::ModelObjectInstancesFromModel& models : std::span{renderPass.objectsSortedByShaderAndModel}.subspan(1)) {
 				if (shader != models.shader) {
 					shader = models.shader;
 					actualShader = (shader) ? shader : &modelShader;
@@ -215,8 +185,8 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 		glActiveTexture(GL_TEXTURE0 + TexturedQuad::TEXTURE_UNIT);
 
 		// Render quads.
-		if (!buffers.quadsSortedByShaderAndTexture.empty()) {
-			const RenderPass::TexturedQuadInstancesFromQuad& firstQuads = buffers.quadsSortedByShaderAndTexture.front();
+		if (!renderPass.quadsSortedByShaderAndTexture.empty()) {
+			const RenderPass::TexturedQuadInstancesFromQuad& firstQuads = renderPass.quadsSortedByShaderAndTexture.front();
 
 			Shader2D* shader = firstQuads.shader;
 			Shader2D* actualShader = (shader) ? shader : &defaultShader;
@@ -228,7 +198,7 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 
 			renderTexturedQuadInstances(firstQuads.instances);
 
-			for (const RenderPass::TexturedQuadInstancesFromQuad& quads : std::span{buffers.quadsSortedByShaderAndTexture}.subspan(1)) {
+			for (const RenderPass::TexturedQuadInstancesFromQuad& quads : std::span{renderPass.quadsSortedByShaderAndTexture}.subspan(1)) {
 				if (shader != quads.shader) {
 					shader = quads.shader;
 					actualShader = (shader) ? shader : &defaultShader;
@@ -246,8 +216,8 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 		}
 
 		// Render text.
-		if (!buffers.glyphsSortedByFont.empty()) {
-			const RenderPass::TexturedQuadInstancesFromText& firstGlyphs = buffers.glyphsSortedByFont.front();
+		if (!renderPass.glyphsSortedByFont.empty()) {
+			const RenderPass::TexturedQuadInstancesFromText& firstGlyphs = renderPass.glyphsSortedByFont.front();
 
 			useShader(glyphShader, projectionViewMatrix);
 
@@ -257,7 +227,7 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 
 			renderTexturedQuadInstances(firstGlyphs.instances);
 
-			for (const RenderPass::TexturedQuadInstancesFromText& glyphs : std::span{buffers.glyphsSortedByFont}.subspan(1)) {
+			for (const RenderPass::TexturedQuadInstancesFromText& glyphs : std::span{renderPass.glyphsSortedByFont}.subspan(1)) {
 				if (font != glyphs.font) {
 					font = glyphs.font;
 					assert(font);

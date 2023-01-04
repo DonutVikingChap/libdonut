@@ -103,7 +103,7 @@ public:
 
 	[[nodiscard]] Texture copy2D(Renderer& renderer) const;
 
-	[[nodiscard]] glm::vec2 getSize() const noexcept {
+	[[nodiscard]] glm::vec2 getSize2D() const noexcept {
 		return {static_cast<float>(width), static_cast<float>(height)};
 	}
 

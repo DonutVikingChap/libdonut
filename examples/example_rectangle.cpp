@@ -20,6 +20,8 @@ namespace app = donut::application;
 namespace gfx = donut::graphics;
 using Color = donut::Color;
 
+namespace {
+
 class RectangleApplication : public app::Application {
 public:
 	explicit RectangleApplication(const char* programFilepath)
@@ -41,14 +43,14 @@ protected:
 		constexpr glm::vec2 RECTANGLE_SIZE{100.0f, 60.0f};
 
 		renderer.clearFramebufferColor(framebuffer, Color::BLACK);
-
-		renderPass.reset();
-		renderPass.draw(gfx::RectangleInstance{
-			.position = glm::vec2{viewport.size / 2} - RECTANGLE_SIZE * 0.5f,
-			.size = RECTANGLE_SIZE,
-			.tintColor = Color::LIME,
-		});
-		renderer.render(framebuffer, renderPass, viewport, projectionViewMatrix);
+		renderer.render(framebuffer,
+			gfx::RenderPass{}.draw(gfx::RectangleInstance{
+				.position = glm::vec2{viewport.size / 2} - RECTANGLE_SIZE * 0.5f,
+				.size = RECTANGLE_SIZE,
+				.tintColor = Color::LIME,
+			}),
+			viewport,
+			projectionViewMatrix);
 	}
 
 private:
@@ -56,8 +58,9 @@ private:
 	gfx::Viewport viewport{};
 	glm::mat4 projectionViewMatrix{};
 	gfx::Renderer renderer{};
-	gfx::RenderPass renderPass{};
 };
+
+} // namespace
 
 int main(int /*argc*/, char* argv[]) {
 	RectangleApplication application{argv[0]};

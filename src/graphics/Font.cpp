@@ -56,7 +56,7 @@ Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize
 	for (auto it = codePoints.begin(); it != codePoints.end();) {
 		if (const char32_t codePoint = *it++; codePoint == '\n') {
 			offset.x = xBegin;
-			offset.y += std::floor(getLineMetrics(characterSize).height * scale.y);
+			offset.y -= std::floor(getLineMetrics(characterSize).height * scale.y);
 			++result.rowCount;
 		} else {
 			const Glyph& glyph = loadGlyph(renderer, characterSize, codePoint);
@@ -79,8 +79,7 @@ Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize
 			result.extentsMax.x = std::max(result.extentsMax.x, glyphOffset.x + glyphSize.x);
 			result.extentsMax.y = std::max(result.extentsMax.y, glyphOffset.y + glyphSize.y);
 			const glm::vec2 kerning = getKerning(characterSize, codePoint, (it == codePoints.end()) ? char32_t{0} : *it);
-			offset.x += (glyph.advance + kerning.x) * scale.x;
-			offset.y += kerning.y * scale.y;
+			offset += glm::vec2{glyph.advance + kerning.x, kerning.y} * scale;
 		}
 	}
 	return result;
@@ -99,7 +98,7 @@ Font::LineMetrics Font::getLineMetrics(std::uint32_t characterSize) const noexce
 		.yScale = static_cast<double>(characterSize),
 		.xOffset = 0.0,
 		.yOffset = 0.0,
-		.flags = SFT_DOWNWARD_Y,
+		.flags = 0,
 	};
 
 	SFT_LMetrics lmetrics{};
@@ -121,7 +120,7 @@ glm::vec2 Font::getKerning(std::uint32_t characterSize, char32_t left, char32_t 
 		.yScale = static_cast<double>(characterSize),
 		.xOffset = 0.0,
 		.yOffset = 0.0,
-		.flags = SFT_DOWNWARD_Y,
+		.flags = 0,
 	};
 
 	SFT_Glyph leftGlyph{};
@@ -146,7 +145,7 @@ void Font::prepareAtlasTexture(Renderer& renderer, bool resized) {
 	if (atlasTexture) {
 		if (resized) {
 			atlasTexture.grow2D(renderer, atlasPacker.getResolution(), atlasPacker.getResolution(), Color::INVISIBLE);
-			const glm::vec2 textureSize = atlasTexture.getSize();
+			const glm::vec2 textureSize = atlasTexture.getSize2D();
 			for (auto& [codePoint, glyph] : glyphs) {
 				glyph.textureOffset = glyph.position / textureSize;
 				glyph.textureScale = glyph.size / textureSize;
@@ -170,7 +169,7 @@ Font::Glyph Font::renderGlyph(Renderer& renderer, std::uint32_t characterSize, c
 		.yScale = static_cast<double>(characterSize),
 		.xOffset = 0.0,
 		.yOffset = 0.0,
-		.flags = SFT_DOWNWARD_Y,
+		.flags = 0,
 	};
 
 	SFT_Glyph glyph{};
@@ -194,7 +193,7 @@ Font::Glyph Font::renderGlyph(Renderer& renderer, std::uint32_t characterSize, c
 		atlasTexture.pasteImage2D(width, height, TextureFormat::R, TextureComponentType::U8, pixels.data(), x, y);
 	}
 
-	const glm::vec2 textureSize = atlasTexture.getSize();
+	const glm::vec2 textureSize = atlasTexture.getSize2D();
 	const glm::vec2 position{static_cast<float>(x), static_cast<float>(y)};
 	const glm::vec2 size{static_cast<float>(width), static_cast<float>(height)};
 	const glm::vec2 bearing{static_cast<float>(gmetrics.leftSideBearing), static_cast<float>(gmetrics.yOffset)};

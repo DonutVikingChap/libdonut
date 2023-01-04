@@ -24,10 +24,10 @@ namespace graphics {
 
 namespace {
 
-constexpr std::size_t MAX_DUPLICATE_VERTICES = 32;
-
 class IndexMap {
 public:
+	static constexpr std::size_t MAX_DUPLICATE_VERTICES = 32;
+
 	explicit IndexMap(std::size_t totalVertexCount)
 		: vertices(totalVertexCount * MAX_DUPLICATE_VERTICES) {}
 
@@ -137,7 +137,7 @@ void generateTangentSpace(std::span<Model::Object::Vertex> vertices, std::span<c
 }
 
 [[nodiscard]] Texture loadTexture(const std::string& filepath) {
-	return (filepath.ends_with(".hdr")) ? Texture{ImageHDR{filepath.c_str()}} : Texture{ImageLDR{filepath.c_str()}};
+	return (filepath.ends_with(".hdr")) ? Texture{ImageHDR{filepath.c_str(), {.flipVertically = true}}} : Texture{ImageLDR{filepath.c_str(), {.flipVertically = true}}};
 }
 
 void loadObjScene(Model& output, const obj::Scene& scene) {

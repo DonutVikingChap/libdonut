@@ -28,7 +28,6 @@ const char* const Shader3D::vertexShaderSourceCodeInstancedModel = R"GLSL(
         ioTangent = instanceNormalMatrix * inTangent;
         ioBitangent = instanceNormalMatrix * inBitangent;
         ioTextureCoordinates = inTextureCoordinates;
-        ioTextureCoordinates.y = 1.0 - ioTextureCoordinates.y;
         ioTintColor = instanceTintColor;
         gl_Position = projectionViewMatrix * vec4(ioFragmentPosition, 1.0);
     }
