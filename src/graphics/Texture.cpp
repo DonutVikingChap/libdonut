@@ -18,7 +18,7 @@
 namespace donut {
 namespace graphics {
 
-std::size_t Texture::getChannelCount(TextureFormat format) {
+std::size_t Texture::getChannelCount(TextureFormat format) noexcept {
 	switch (format) {
 		case TextureFormat::NONE: return 0;
 		case TextureFormat::R: return 1;
@@ -29,7 +29,7 @@ std::size_t Texture::getChannelCount(TextureFormat format) {
 	return 0;
 }
 
-std::size_t Texture::getInternalChannelCount(TextureInternalFormat internalFormat) {
+std::size_t Texture::getInternalChannelCount(TextureInternalFormat internalFormat) noexcept {
 	switch (internalFormat) {
 		case TextureInternalFormat::NONE: return 0;
 		case TextureInternalFormat::R8: [[fallthrough]];
@@ -48,7 +48,7 @@ std::size_t Texture::getInternalChannelCount(TextureInternalFormat internalForma
 	return 0;
 }
 
-TextureComponentType Texture::getInternalComponentType(TextureInternalFormat internalFormat) {
+TextureComponentType Texture::getInternalComponentType(TextureInternalFormat internalFormat) noexcept {
 	switch (internalFormat) {
 		case TextureInternalFormat::NONE: return TextureComponentType::U8;
 		case TextureInternalFormat::R8: [[fallthrough]];
@@ -78,7 +78,7 @@ TextureFormat Texture::getPixelFormat(std::size_t channelCount) {
 	throw Error{fmt::format("Invalid texture channel count \"{}\"!", channelCount)};
 }
 
-TextureInternalFormat Texture::getInternalPixelFormatU8(std::size_t channelCount) {
+TextureInternalFormat Texture::getTexelFormatU8(std::size_t channelCount) {
 	switch (channelCount) {
 		case 1: return TextureInternalFormat::R8;
 		case 2: return TextureInternalFormat::RG8;
@@ -89,7 +89,7 @@ TextureInternalFormat Texture::getInternalPixelFormatU8(std::size_t channelCount
 	throw Error{fmt::format("Invalid texture channel count \"{}\"!", channelCount)};
 }
 
-TextureInternalFormat Texture::getInternalPixelFormatF16(std::size_t channelCount) {
+TextureInternalFormat Texture::getTexelFormatF16(std::size_t channelCount) {
 	switch (channelCount) {
 		case 1: return TextureInternalFormat::R16F;
 		case 2: return TextureInternalFormat::RG16F;
@@ -100,7 +100,7 @@ TextureInternalFormat Texture::getInternalPixelFormatF16(std::size_t channelCoun
 	throw Error{fmt::format("Invalid texture channel count \"{}\"!", channelCount)};
 }
 
-TextureInternalFormat Texture::getInternalPixelFormatF32(std::size_t channelCount) {
+TextureInternalFormat Texture::getTexelFormatF32(std::size_t channelCount) {
 	switch (channelCount) {
 		case 1: return TextureInternalFormat::R32F;
 		case 2: return TextureInternalFormat::RG32F;
@@ -185,12 +185,15 @@ Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::s
 Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, const TextureOptions& options)
 	: Texture(internalFormat, width, height, getPixelFormat(getInternalChannelCount(internalFormat)), getInternalComponentType(internalFormat), nullptr, options) {}
 
+Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, std::size_t depth, const TextureOptions& options)
+	: Texture(internalFormat, width, height, depth, getPixelFormat(getInternalChannelCount(internalFormat)), getInternalComponentType(internalFormat), nullptr, options) {}
+
 Texture::Texture(const ImageLDRView& image, const TextureOptions& options)
-	: Texture(getInternalPixelFormatU8(image.getChannelCount()), image.getWidth(), image.getHeight(), getPixelFormat(image.getChannelCount()), TextureComponentType::U8,
-		  image.getPixels(), options) {}
+	: Texture(getTexelFormatU8(image.getChannelCount()), image.getWidth(), image.getHeight(), getPixelFormat(image.getChannelCount()), TextureComponentType::U8, image.getPixels(),
+		  options) {}
 
 Texture::Texture(const ImageHDRView& image, const TextureOptions& options)
-	: Texture(getInternalPixelFormatF16(image.getChannelCount()), image.getWidth(), image.getHeight(), getPixelFormat(image.getChannelCount()), TextureComponentType::F32,
+	: Texture(getTexelFormatF16(image.getChannelCount()), image.getWidth(), image.getHeight(), getPixelFormat(image.getChannelCount()), TextureComponentType::F32,
 		  image.getPixels(),
 		  {
 			  .repeat = options.repeat,

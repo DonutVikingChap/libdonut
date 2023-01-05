@@ -7,23 +7,52 @@
 namespace donut {
 namespace graphics {
 
+/**
+ * Rectangular region of a framebuffer.
+ */
 struct Viewport {
-	[[nodiscard]] static constexpr std::pair<Viewport, int> createIntegerScaled(glm::ivec2 windowSize, glm::ivec2 renderResolution) noexcept {
+	/**
+	 * Create an integer-scaled viewport that fits into the middle of a
+	 * framebuffer at the largest positive integer scale of an original render
+	 * resolution that still fits within the framebuffer.
+	 *
+	 * \param framebufferSize the size of the framebuffer to fit the viewport
+	 *        into, in pixels.
+	 * \param renderResolution the original rendered size to be scaled into the
+	 *        framebuffer, in pixels.
+	 *
+	 * \return a pair where:
+	 *         - the first element contains the new scaled viewport, and
+	 *         - the second element contains the integer scale that was chosen.
+	 *
+	 * \note If the original render resolution cannot fit within the
+	 *       framebuffer, then a viewport with the original render resolution
+	 *       will be returned along with a scale of 1.
+	 */
+	[[nodiscard]] static constexpr std::pair<Viewport, int> createIntegerScaled(glm::ivec2 framebufferSize, glm::ivec2 renderResolution) noexcept {
 		Viewport result{.position{}, .size = renderResolution};
 		int scale = 1;
 		while (true) {
 			const glm::ivec2 nextViewportSize = renderResolution * (scale + 1);
-			if (nextViewportSize.x > windowSize.x || nextViewportSize.y > windowSize.y) {
+			if (nextViewportSize.x > framebufferSize.x || nextViewportSize.y > framebufferSize.y) {
 				break;
 			}
 			result.size = nextViewportSize;
 			++scale;
 		}
-		result.position = (windowSize - result.size) / 2;
+		result.position = (framebufferSize - result.size) / 2;
 		return {result, scale};
 	}
 
+	/**
+	 * The offset of the viewport, in pixels, from the bottom left of the
+	 * framebuffer.
+	 */
 	glm::ivec2 position;
+
+	/**
+	 * The width and height of the viewport, in pixels.
+	 */
 	glm::ivec2 size;
 };
 

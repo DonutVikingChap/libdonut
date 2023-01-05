@@ -454,7 +454,9 @@ public:
 	/**
 	 * Enqueue a ModelInstance to be drawn when the render pass is rendered.
 	 *
-	 * \return *this, for chaining.
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \sa ModelInstance
 	 */
@@ -463,7 +465,9 @@ public:
 	/**
 	 * Enqueue a TextureInstance to be drawn when the render pass is rendered.
 	 *
-	 * \return *this, for chaining.
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \sa TextureInstance
 	 */
@@ -472,7 +476,9 @@ public:
 	/**
 	 * Enqueue a RectangleInstance to be drawn when the render pass is rendered.
 	 *
-	 * \return *this, for chaining.
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \sa RectangleInstance
 	 */
@@ -481,7 +487,9 @@ public:
 	/**
 	 * Enqueue a QuadInstance to be drawn when the render pass is rendered.
 	 *
-	 * \return *this, for chaining.
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \sa QuadInstance
 	 */
@@ -490,7 +498,9 @@ public:
 	/**
 	 * Enqueue a SpriteInstance to be drawn when the render pass is rendered.
 	 *
-	 * \return *this, for chaining.
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \sa SpriteInstance
 	 */
@@ -499,7 +509,9 @@ public:
 	/**
 	 * Enqueue a TextInstance to be drawn when the render pass is rendered.
 	 *
-	 * \return *this, for chaining.
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \sa TextInstance
 	 */

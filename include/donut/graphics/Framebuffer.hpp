@@ -7,7 +7,7 @@
 namespace donut {
 namespace graphics {
 
-class Texture; // Forward declaration to avoid including Texture.hpp.
+class Texture; // Forward declaration, to avoid including Texture.hpp.
 
 /**
  * Handle that is either a non-owning handle to the default framebuffer or a

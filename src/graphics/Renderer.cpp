@@ -53,21 +53,23 @@ void applyShaderOptions(const auto& options) {
 
 void uploadShaderUniforms(ShaderProgram& program) {
 	for (const auto& [location, value] : program.getUniformUploadQueue()) {
-		match(value)([location = location](float v) -> void { glUniform1f(location, v); },
-			[location = location](glm::vec2 v) -> void { glUniform2f(location, v.x, v.y); },
-			[location = location](glm::vec3 v) -> void { glUniform3f(location, v.x, v.y, v.z); },
-			[location = location](glm::vec4 v) -> void { glUniform4f(location, v.x, v.y, v.z, v.w); },
-			[location = location](glm::i32 v) -> void { glUniform1i(location, v); },
-			[location = location](glm::i32vec2 v) -> void { glUniform2i(location, v.x, v.y); },
-			[location = location](glm::i32vec3 v) -> void { glUniform3i(location, v.x, v.y, v.z); },
-			[location = location](glm::i32vec4 v) -> void { glUniform4i(location, v.x, v.y, v.z, v.w); },
-			[location = location](glm::u32 v) -> void { glUniform1ui(location, v); },
-			[location = location](glm::u32vec2 v) -> void { glUniform2ui(location, v.x, v.y); },
-			[location = location](glm::u32vec3 v) -> void { glUniform3ui(location, v.x, v.y, v.z); },
-			[location = location](glm::u32vec4 v) -> void { glUniform4ui(location, v.x, v.y, v.z, v.w); },
-			[location = location](const glm::mat2& v) -> void { glUniformMatrix2fv(location, 1, GL_FALSE, glm::value_ptr(v)); },
-			[location = location](const glm::mat3& v) -> void { glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(v)); },
-			[location = location](const glm::mat4& v) -> void { glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(v)); });
+		const GLint loc = location;
+		match(value)( //
+			[loc](float v) -> void { glUniform1f(loc, v); },
+			[loc](glm::vec2 v) -> void { glUniform2f(loc, v.x, v.y); },
+			[loc](glm::vec3 v) -> void { glUniform3f(loc, v.x, v.y, v.z); },
+			[loc](glm::vec4 v) -> void { glUniform4f(loc, v.x, v.y, v.z, v.w); },
+			[loc](glm::i32 v) -> void { glUniform1i(loc, v); },
+			[loc](glm::i32vec2 v) -> void { glUniform2i(loc, v.x, v.y); },
+			[loc](glm::i32vec3 v) -> void { glUniform3i(loc, v.x, v.y, v.z); },
+			[loc](glm::i32vec4 v) -> void { glUniform4i(loc, v.x, v.y, v.z, v.w); },
+			[loc](glm::u32 v) -> void { glUniform1ui(loc, v); },
+			[loc](glm::u32vec2 v) -> void { glUniform2ui(loc, v.x, v.y); },
+			[loc](glm::u32vec3 v) -> void { glUniform3ui(loc, v.x, v.y, v.z); },
+			[loc](glm::u32vec4 v) -> void { glUniform4ui(loc, v.x, v.y, v.z, v.w); },
+			[loc](const glm::mat2& v) -> void { glUniformMatrix2fv(loc, 1, GL_FALSE, glm::value_ptr(v)); },
+			[loc](const glm::mat3& v) -> void { glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(v)); },
+			[loc](const glm::mat4& v) -> void { glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(v)); });
 	}
 	program.clearUniformUploadQueue();
 }

@@ -43,14 +43,15 @@ protected:
 		constexpr glm::vec2 RECTANGLE_SIZE{100.0f, 60.0f};
 
 		renderer.clearFramebufferColor(framebuffer, Color::BLACK);
-		renderer.render(framebuffer,
-			gfx::RenderPass{}.draw(gfx::RectangleInstance{
-				.position = glm::vec2{viewport.size / 2} - RECTANGLE_SIZE * 0.5f,
-				.size = RECTANGLE_SIZE,
-				.tintColor = Color::LIME,
-			}),
-			viewport,
-			projectionViewMatrix);
+
+		gfx::RenderPass renderPass{};
+		renderPass.draw(gfx::RectangleInstance{
+			.position = glm::vec2{viewport.size / 2} - RECTANGLE_SIZE * 0.5f,
+			.size = RECTANGLE_SIZE,
+			.tintColor = Color::LIME,
+		});
+
+		renderer.render(framebuffer, renderPass, viewport, projectionViewMatrix);
 	}
 
 private:

@@ -41,8 +41,8 @@ struct TickInfo {
 	 *
 	 * To achieve a higher perceived update rate for the user, some form of
 	 * interpolation and/or extrapolation should be used in the variable-rate
-	 * Application::prepareForDisplay() method in order to smooth out the result
-	 * of the fixed-rate ticks when applicable.
+	 * Application::prepareForDisplay() callback in order to smooth out the
+	 * result of the fixed-rate ticks when applicable.
 	 */
 	float tickInterval;
 };
@@ -80,8 +80,9 @@ struct FrameInfo {
  */
 struct ApplicationOptions {
 	/**
-	 * Null-terminated UTF8 string that commonly identifies the publisher of
-	 * the application, such as an organization name, alias or internet domain.
+	 * Non-owning pointer to a null-terminated UTF-8 string that commonly
+	 * identifies the publisher of the application, such as an organization
+	 * name, alias or internet domain.
 	 *
 	 * This will be used as the name of the organization folder in the
 	 * user/platform-specific preferences directory where the application folder
@@ -95,8 +96,9 @@ struct ApplicationOptions {
 	const char* organizationName = nullptr;
 
 	/**
-	 * Null-terminated UTF8 string that uniquely identifies the application
-	 * among all other applications released by the same organization.
+	 * Non-owning pointer to a null-terminated UTF-8 string that uniquely
+	 * identifies the application among all other applications released by the
+	 * same organization.
 	 *
 	 * This will be used as name of the application folder, that will be created
 	 * if it doesn't exist, under the organization folder in the
@@ -110,8 +112,9 @@ struct ApplicationOptions {
 	const char* applicationName = nullptr;
 
 	/**
-	 * Null-terminated UTF8 string of the native filepath to the main data
-	 * directory which will be mounted for reading application resources.
+	 * Non-owning pointer to a null-terminated UTF-8 string of the native
+	 * filepath to the main data directory which will be mounted for reading
+	 * application resources.
 	 *
 	 * This may be either an absolute path or a path relative to the program's
 	 * working directory.
@@ -124,7 +127,8 @@ struct ApplicationOptions {
 	const char* dataDirectoryFilepath = ".";
 
 	/**
-	 * Null-terminated UTF8 string of the filename extension for mod archives.
+	 * Non-owning pointer to a null-terminated UTF-8 string of the filename
+	 * extension for mod archives.
 	 *
 	 * All mounted directories will be automatically searched for archives with
 	 * this extension at application startup. Any found archives will be mounted
@@ -140,7 +144,8 @@ struct ApplicationOptions {
 	const char* archiveFilenameExtension = nullptr;
 
 	/**
-	 * Null-terminated UTF8 string of the displayed title of the main window.
+	 * Non-owning pointer to a null-terminated UTF-8 string of the displayed
+	 * title of the main window.
 	 *
 	 * \warning Must not be set to nullptr.
 	 */
@@ -372,8 +377,8 @@ public:
 	/**
 	 * Set the displayed title of the main window.
 	 *
-	 * \param title null-terminated UTF8 string containing the title.
-	 *        Must not be nullptr.
+	 * \param title non-owning pointer to a null-terminated UTF-8 string
+	 *        containing the title. Must not be nullptr.
 	 *
 	 * \sa ApplicationOptions::windowTitle
 	 */

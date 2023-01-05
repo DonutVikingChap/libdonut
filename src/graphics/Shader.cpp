@@ -62,10 +62,6 @@ void ShaderStage::ShaderDeleter::operator()(Handle handle) const noexcept {
 ShaderProgram::ShaderProgram(const ShaderProgramOptions& options)
 	: vertexShader(ShaderStageType::VERTEX_SHADER, options.definitions, options.vertexShaderSourceCode)
 	, fragmentShader(ShaderStageType::FRAGMENT_SHADER, options.definitions, options.fragmentShaderSourceCode) {
-	if (!options.vertexShaderSourceCode && !options.fragmentShaderSourceCode) {
-		return;
-	}
-
 	const Handle handle = glCreateProgram();
 	if (!handle) {
 		throw Error{"Failed to create shader program object!"};
@@ -161,7 +157,7 @@ void ShaderProgram::ProgramDeleter::operator()(Handle handle) const noexcept {
 }
 
 ShaderUniform::ShaderUniform(const ShaderProgram& program, const char* name)
-	: location((program) ? glGetUniformLocation(program.get(), name) : -1) {}
+	: location(glGetUniformLocation(program.get(), name)) {}
 
 } // namespace graphics
 } // namespace donut

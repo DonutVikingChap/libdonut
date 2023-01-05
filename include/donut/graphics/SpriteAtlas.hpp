@@ -13,10 +13,17 @@
 namespace donut {
 namespace graphics {
 
-class Renderer;
+class Renderer; // Forward declaration, to avoid including Renderer.hpp.
 
+/**
+ * Expandable texture atlas for packing LDR 2D images into a spritesheet to
+ * enable batch rendering.
+ */
 class SpriteAtlas {
 public:
+	/**
+	 * Identifier for a specific image in the spritesheet.
+	 */
 	struct SpriteId {
 	private:
 		friend SpriteAtlas;
@@ -27,13 +34,30 @@ public:
 		std::size_t index;
 	};
 
+	/**
+	 * Information about a specific image in the spritesheet.
+	 */
 	struct Sprite {
-		glm::vec2 textureOffset{};
-		glm::vec2 textureScale{};
-		glm::vec2 position{};
-		glm::vec2 size{};
+		glm::vec2 textureOffset{}; ///< Texture coordinate offset of the image in the texture atlas.
+		glm::vec2 textureScale{};  ///< Texture coordinate scale of the image in the texture atlas.
+		glm::vec2 position{};      ///< Position of the image in the texture atlas, in texels.
+		glm::vec2 size{};          ///< Size of the image in the texture atlas, in texels.
 	};
 
+	/**
+	 * Add a new image to the spritesheet, possibly expanding the texture atlas
+	 * in order to make space for it.
+	 *
+	 * \param renderer renderer to use for expanding the texture atlas, if
+	 *        needed.
+	 * \param image non-owning view over the image to copy into the spritesheet.
+	 *
+	 * \return an identifier for the inserted image.
+	 *
+	 * \throws graphics::Error on failure to copy the image or expand the
+	 *         texture atlas.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	[[nodiscard]] SpriteId insert(Renderer& renderer, const ImageLDRView& image) {
 		const auto [x, y, resized] = atlasPacker.insertRectangle(image.getWidth(), image.getHeight());
 		prepareAtlasTexture(renderer, resized);
@@ -53,10 +77,28 @@ public:
 		return SpriteId{index};
 	}
 
-	[[nodiscard]] const Sprite& getSprite(SpriteId id) const noexcept {
+	/**
+	 * Get information about a specific image in the spritesheet.
+	 *
+	 * \param id identifier for the image to get the information of. Must have
+	 *        been obtained from a previous call to insert() on the same
+	 *        SpriteAtlas object as the one that this function is called on.
+	 *
+	 * \return a read-only reference to the sprite information that is valid
+	 *         until the next call to insert(), or until the SpriteAtlas is
+	 *         destroyed, whichever happens first.
+	 */
+	[[nodiscard]] const Sprite& getSprite(SpriteId id) const {
 		return sprites[id.index];
 	}
 
+	/**
+	 * Get a reference to the internal texture atlas.
+	 *
+	 * \return a read-only reference to the texture atlas containing the
+	 *         sprite image data that is valid until the next call to insert(),
+	 *         or until the SpriteAtlas is destroyed, whichever happens first.
+	 */
 	[[nodiscard]] const Texture& getAtlasTexture() const noexcept {
 		return atlasTexture;
 	}

@@ -223,11 +223,11 @@ Model::Model(const char* filepath) {
 	try {
 		loadObjScene(*this, obj::Scene::parse(InputFileStream::open(filepath).readAllIntoString()));
 	} catch (const obj::Error& e) {
-		throw Error{fmt::format("Failed to load scene \"{}\": Line {}: {}", filepath, e.lineNumber, e.what())};
+		throw Error{fmt::format("Failed to load model \"{}\": Line {}: {}", filepath, e.lineNumber, e.what())};
 	} catch (const std::exception& e) {
-		throw Error{fmt::format("Failed to load scene \"{}\": {}", filepath, e.what())};
+		throw Error{fmt::format("Failed to load model \"{}\": {}", filepath, e.what())};
 	} catch (...) {
-		throw Error{fmt::format("Failed to load scene \"{}\".", filepath)};
+		throw Error{fmt::format("Failed to load model \"{}\".", filepath)};
 	}
 }
 

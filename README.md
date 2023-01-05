@@ -90,18 +90,6 @@ Follow these steps to create a new application project using libdonut:
     ```
     CMake will then use FetchContent to automatically download a copy of libdonut and all of the required dependencies, and save them under `build/_deps/`.
 
-### Documentation
-
-If you have [Doxygen](https://www.doxygen.nl/) installed, you can build the API reference for libdonut as follows.
-
-After configuring your new project, run the following command from inside the `build/` directory to generate the documentation for libdonut's API:
-
-```sh
-cmake --build . --target donut-generate-documentation
-```
-
-The generated HTML file at `build/_deps/donut-build/docs/html/index.html` can then be opened in your favorite web browser to read the documentation and navigate it like a website.
-
 ## Building
 
 After performing the configuration steps described above, the project can be built from the `build/` folder at any time using the following command to compile in debug mode:
@@ -125,6 +113,18 @@ When adding new source files to your project, make sure to also add their filepa
 ## Debugging
 
 When running the compiled executable, make sure that the current working directory is set to point to the folder where your main data directory is located, if you have one. Otherwise, your application will likely fail to run due to missing resources.
+
+## Documentation
+
+If you have [Doxygen](https://www.doxygen.nl/) installed, you can build the API reference for libdonut as follows.
+
+After configuring your new project, run the following command from inside the `build/` directory to generate the documentation for libdonut's API:
+
+```sh
+cmake --build . --target donut-generate-documentation
+```
+
+The generated HTML file at `build/_deps/donut-build/docs/html/index.html` can then be opened in your favorite web browser to read the documentation and navigate it like a website.
 
 ## Distribution
 
