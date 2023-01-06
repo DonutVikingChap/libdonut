@@ -9,8 +9,8 @@ namespace donut {
 namespace graphics {
 
 /**
- * Optional read-only non-owning view over a 2D image where each pixel comprises
- * a uniform number of 32-bit floating-point components, for high dynamic range.
+ * Read-only non-owning view over a 2D image where each pixel comprises a
+ * uniform number of 32-bit floating-point components, for high dynamic range.
  *
  * \sa ImageHDR
  */

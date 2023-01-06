@@ -11,7 +11,7 @@ namespace donut {
 namespace graphics {
 
 /**
- * Optional read-only non-owning view over a 2D image with any pixel format.
+ * Read-only non-owning view over a 2D image with any pixel format.
  *
  * \sa ImageLDRView
  * \sa ImageHDRView

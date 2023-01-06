@@ -403,9 +403,9 @@ private:
 		detail::bufferArrayBufferData(sizeof(Vertex) * vertices.size(), vertices.data(), usage);
 		Vertex dummyVertex{};
 		reflection::forEach(reflection::fields(dummyVertex), [&dummyVertex, &attributeOffset]<typename T>(T& dummyField) {
-			const std::byte* const basePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyVertex));
-			const std::byte* const attributePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyField));
-			const std::uintptr_t offset = static_cast<std::uintptr_t>(attributePtr - basePtr);
+			const std::byte* const basePointer = reinterpret_cast<const std::byte*>(std::addressof(dummyVertex));
+			const std::byte* const attributePointer = reinterpret_cast<const std::byte*>(std::addressof(dummyField));
+			const std::uintptr_t offset = static_cast<std::uintptr_t>(attributePointer - basePointer);
 			attributeOffset = detail::setupVertexAttribute<false, T>(attributeOffset, sizeof(Vertex), offset);
 		});
 	}
@@ -422,9 +422,9 @@ private:
 		detail::bufferArrayBufferData(sizeof(Instance) * instances.size(), instances.data(), usage);
 		Instance dummyInstance{};
 		reflection::forEach(reflection::fields(dummyInstance), [&dummyInstance, &attributeOffset]<typename T>(T& dummyField) {
-			const std::byte* const basePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyInstance));
-			const std::byte* const attributePtr = reinterpret_cast<const std::byte*>(std::addressof(dummyField));
-			const std::uintptr_t offset = static_cast<std::uintptr_t>(attributePtr - basePtr);
+			const std::byte* const basePointer = reinterpret_cast<const std::byte*>(std::addressof(dummyInstance));
+			const std::byte* const attributePointer = reinterpret_cast<const std::byte*>(std::addressof(dummyField));
+			const std::uintptr_t offset = static_cast<std::uintptr_t>(attributePointer - basePointer);
 			attributeOffset = detail::setupVertexAttribute<true, T>(attributeOffset, sizeof(Instance), offset);
 		});
 	}

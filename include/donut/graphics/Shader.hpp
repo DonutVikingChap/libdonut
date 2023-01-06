@@ -28,7 +28,7 @@ enum class ShaderStageType : unsigned {
 };
 
 /**
- * Optional compiled GPU code for a specific stage of a ShaderProgram.
+ * Compiled GPU code for a specific stage of a ShaderProgram.
  */
 class ShaderStage {
 public:

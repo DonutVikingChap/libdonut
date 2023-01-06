@@ -94,9 +94,8 @@ struct TextureOptions {
 };
 
 /**
- * Optional storage for multidimensional data, such as 2D images, on the GPU,
- * combined with a sampler configuration that defines how to render the stored
- * data.
+ * Storage for multidimensional data, such as 2D images, on the GPU, combined
+ * with a sampler configuration that defines how to render the stored data.
  */
 class Texture {
 public:

@@ -9,8 +9,8 @@ namespace donut {
 namespace graphics {
 
 /**
- * Optional read-only non-owning view over a 2D image where each pixel comprises
- * a uniform number of 8-bit unsigned integer components, for low dynamic range.
+ * Read-only non-owning view over a 2D image where each pixel comprises a
+ * uniform number of 8-bit unsigned integer components, for low dynamic range.
  *
  * \sa ImageLDR
  */

@@ -12,8 +12,18 @@
 namespace donut {
 namespace obj {
 
+/**
+ * Exception type for errors originating from the OBJ API.
+ */
 struct Error : std::runtime_error {
+	/**
+	 * Iterator into the source OBJ string where the error originated from.
+	 */
 	std::string_view::iterator position;
+
+	/**
+	 * Line number, starting at 1 for the first line, where the error occured.
+	 */
 	std::size_t lineNumber;
 
 	Error(const std::string& message, std::string_view::iterator position, std::size_t lineNumber)
@@ -27,77 +37,120 @@ struct Error : std::runtime_error {
 		, lineNumber(lineNumber) {}
 };
 
+/**
+ * Single vertex of a polygonal Face element.
+ */
 struct FaceVertex {
-	std::uint32_t vertexIndex = 0;
-	std::uint32_t textureCoordinateIndex = 0;
-	std::uint32_t normalIndex = 0;
+	std::uint32_t vertexIndex = 0;            ///< Index of the vertex coordinates in the Scene that define the vertex position.
+	std::uint32_t textureCoordinateIndex = 0; ///< Index of the texture coordinates in the Scene that define the texture coordinates of the vertex.
+	std::uint32_t normalIndex = 0;            ///< Index of the normal vector in the Scene that define the vertex normal.
 };
 
+/**
+ * Face element forming a single polygon of FaceVertex vertices.
+ */
 struct Face {
-	std::vector<FaceVertex> vertices{};
+	std::vector<FaceVertex> vertices{}; ///< List of vertices that make up the polygon.
 };
 
+/**
+ * Group containing polygonal Face elements within an Object.
+ */
 struct Group {
-	std::string name{};
-	std::vector<Face> faces{};
+	std::string name{};        ///< Name of the group, or empty if no name was specified.
+	std::vector<Face> faces{}; ///< List of faces belonging to this group.
 };
 
+/**
+ * Object mesh containing Group elements within a Scene.
+ */
 struct Object {
-	std::string name{};
-	std::string materialName{};
-	std::vector<Group> groups{};
+	std::string name{};          ///< Name of the object, or empty if no name was specified.
+	std::string materialName{};  ///< Name of the material of this object, which should be found in one of the associated material libraries.
+	std::vector<Group> groups{}; ///< List of groups belonging to this object.
 };
 
+/**
+ * Scene of Object elements defined by an OBJ file.
+ */
 struct Scene {
+	/**
+	 * Parse a scene from an OBJ string.
+	 *
+	 * \param objString read-only view over the OBJ string to parse.
+	 *
+	 * \return the parsed scene.
+	 *
+	 * \throws Error on failure to parse any element of the scene.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	[[nodiscard]] static Scene parse(std::string_view objString);
 
-	std::vector<std::string> materialLibraryFilenames{};
-	std::vector<glm::vec3> vertices{};
-	std::vector<glm::vec2> textureCoordinates{};
-	std::vector<glm::vec3> normals{};
-	std::vector<Object> objects{};
+	std::vector<std::string> materialLibraryFilenames{}; ///< List of relative filepaths of the material libraries associated with this scene.
+	std::vector<glm::vec3> vertices{};                   ///< List of vertex positions referenced by the face vertices defined in this scene.
+	std::vector<glm::vec2> textureCoordinates{};         ///< List of texture coordinates referenced by the face vertices defined in this scene.
+	std::vector<glm::vec3> normals{};                    ///< List of normal vectors referenced by the face vertices defined in this scene.
+	std::vector<Object> objects{};                       ///< List of objects belonging to this scene.
 };
 
 namespace mtl {
 
+/**
+ * Illumination model to use when rendering a specific Material.
+ */
 enum class IlluminationModel : std::uint8_t {
-	FLAT = 0,
-	LAMBERT = 1,
-	BLINN_PHONG = 2,
-	BLINN_PHONG_RAYTRACE = 3,
-	BLINN_PHONG_RAYTRACE_GLASS = 4,
-	BLINN_PHONG_RAYTRACE_FRESNEL = 5,
-	BLINN_PHONG_RAYTRACE_REFRACT = 6,
-	BLINN_PHONG_RAYTRACE_REFRACT_FRESNEL = 7,
-	BLINN_PHONG_REFLECT = 8,
-	BLINN_PHONG_REFLECT_GLASS = 9,
-	SHADOW = 10,
-	// NOTE: Keep "COUNT" at the end of the enumeration!
-	COUNT,
+	FLAT = 0,                                 ///< \hideinitializer
+	LAMBERT = 1,                              ///< \hideinitializer
+	BLINN_PHONG = 2,                          ///< \hideinitializer
+	BLINN_PHONG_RAYTRACE = 3,                 ///< \hideinitializer
+	BLINN_PHONG_RAYTRACE_GLASS = 4,           ///< \hideinitializer
+	BLINN_PHONG_RAYTRACE_FRESNEL = 5,         ///< \hideinitializer
+	BLINN_PHONG_RAYTRACE_REFRACT = 6,         ///< \hideinitializer
+	BLINN_PHONG_RAYTRACE_REFRACT_FRESNEL = 7, ///< \hideinitializer
+	BLINN_PHONG_REFLECT = 8,                  ///< \hideinitializer
+	BLINN_PHONG_REFLECT_GLASS = 9,            ///< \hideinitializer
+	SHADOW = 10,                              ///< \hideinitializer
 };
 
+/**
+ * Material properties of an Object.
+ */
 struct Material {
-	std::string name{};
-	std::string ambientMapName{};
-	std::string diffuseMapName{};
-	std::string specularMapName{};
-	std::string emissiveMapName{};
-	std::string specularExponentMapName{};
-	std::string dissolveFactorMapName{};
-	std::string bumpMapName{};
-	glm::vec3 ambientColor{};
-	glm::vec3 diffuseColor{};
-	glm::vec3 specularColor{};
-	glm::vec3 emissiveColor{};
-	float specularExponent = 0.0f;
-	float dissolveFactor = 0.0f;
-	IlluminationModel illuminationModel = IlluminationModel::FLAT;
+	std::string name{};                                            ///< Name of the material.
+	std::string ambientMapName{};                                  ///< Relative filepath of the ambient map image, or empty for no ambient map.
+	std::string diffuseMapName{};                                  ///< Relative filepath of the diffuse map image, or empty for no diffuse map.
+	std::string specularMapName{};                                 ///< Relative filepath of the specular map image, or empty for no specular map.
+	std::string emissiveMapName{};                                 ///< Relative filepath of the emissive map image, or empty for no emissive map.
+	std::string specularExponentMapName{};                         ///< Relative filepath of the specular exponent map image, or empty for no specular exponent map.
+	std::string dissolveFactorMapName{};                           ///< Relative filepath of the dissolve factor map image, or empty for no dissolve factor map.
+	std::string bumpMapName{};                                     ///< Relative filepath of the bump/normal map image, or empty for no bump/normal map.
+	glm::vec3 ambientColor{1.0f, 1.0f, 1.0f};                      ///< Ambient color factor to multiply the sampled ambient map value by.
+	glm::vec3 diffuseColor{1.0f, 1.0f, 1.0f};                      ///< Diffuse color factor to multiply the sampled diffuse map value by.
+	glm::vec3 specularColor{1.0f, 1.0f, 1.0f};                     ///< Specular color factor to multiply the sampled specular map value by.
+	glm::vec3 emissiveColor{0.0f, 0.0f, 0.0f};                     ///< Emissive color factor to multiply the sampled emissive map value by.
+	float specularExponent = 0.0f;                                 ///< Specular exponent factor to multiply th sampled specular exponent map value by.
+	float dissolveFactor = 0.0f;                                   ///< Dissolve factor to multiply the sampled dissolve factor map value by.
+	IlluminationModel illuminationModel = IlluminationModel::FLAT; ///< Illumination model to use for rendering this material.
 };
 
+/**
+ * Material library that stores the material properties for objects defined in a
+ * Scene.
+ */
 struct Library {
+	/**
+	 * Parse a material library from an MTL string.
+	 *
+	 * \param mtlString read-only view over the MTL string to parse.
+	 *
+	 * \return the parsed material library.
+	 *
+	 * \throws Error on failure to parse any element of the material library.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	[[nodiscard]] static Library parse(std::string_view mtlString);
 
-	std::vector<Material> materials;
+	std::vector<Material> materials{}; ///< List of materials belonging to this library.
 };
 
 } // namespace mtl

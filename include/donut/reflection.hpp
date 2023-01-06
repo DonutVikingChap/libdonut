@@ -60,10 +60,31 @@ requires std::is_aggregate_v<T>
 struct aggregate_size : std::integral_constant<std::size_t, detail::aggregateSizeImpl<T>(detail::AggregateSizeTag<26>{})> {};
 /// \endcond
 
+/**
+ * The number of fields in a given aggregate type.
+ *
+ * \tparam T aggregate type to get the number of fields in.
+ *
+ * \warning Only sizes up to 26 are supported. If the template is instantiated
+ *          with an aggregate type containing more than 26 fields, the program
+ *          is ill-formed.
+ */
 template <typename T>
 inline constexpr std::size_t aggregate_size_v = aggregate_size<T>::value;
 
-[[nodiscard]] constexpr auto fields(auto&& aggregate) {
+/**
+ * Get a tuple of references to each of the fields of an aggregate.
+ *
+ * \param aggregate a forwarding reference to an object of aggregate type.
+ *
+ * \return a tuple where each element is an lvalue reference to the respective
+ *         field of the aggregate, based on the declaration order of the fields.
+ *
+ * \warning Only aggregate sizes up to 26 are supported. If the function is
+ *          instantiated with an aggregate type containing more than 26 fields,
+ *          the program is ill-formed.
+ */
+[[nodiscard]] constexpr auto fields(auto&& aggregate) noexcept {
 	using T = std::remove_cvref_t<decltype(aggregate)>;
 	static_assert(std::is_aggregate_v<T>);
 	constexpr std::size_t FIELD_COUNT = aggregate_size_v<T>;
@@ -150,6 +171,21 @@ inline constexpr std::size_t aggregate_size_v = aggregate_size<T>::value;
 	}
 }
 
+/**
+ * Execute a function once for each index in the sequence from 0 up to, but not
+ * including, a given count N.
+ *
+ * The callback function is passed an instance of
+ * std::integral_constant<std::size_t, I> where I is the corresponding index.
+ *
+ * \tparam N the number of indices in the sequence.
+ *
+ * \param fn the function to execute. Must accept an object of type
+ *        std::integral_constant<std::size_t, I> as a parameter, where I is any
+ *        integer from 0 up to, but not including, N.
+ *
+ * \throws any exception thrown by fn.
+ */
 template <std::size_t N>
 constexpr void forEachIndex(auto fn) {
 	[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
@@ -158,6 +194,18 @@ constexpr void forEachIndex(auto fn) {
 	(std::make_index_sequence<N>{});
 }
 
+/**
+ * Execute a function once for each element in a given tuple, sequentially.
+ *
+ * The callback function is passed a reference to the element at each respective
+ * index of the tuple.
+ *
+ * \param tuple the tuple to iterate.
+ * \param fn the function to execute. Must accept a reference to each of the
+ *        types in the tuple as a parameter.
+ *
+ * \throws any exception thrown by fn.
+ */
 constexpr void forEach(auto&& tuple, auto fn) {
 	[&]<std::size_t... Indices>(std::index_sequence<Indices...>) {
 		(fn(std::get<Indices>(tuple)), ...);
@@ -165,6 +213,19 @@ constexpr void forEach(auto&& tuple, auto fn) {
 	(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(tuple)>>>{});
 }
 
+/**
+ * Execute a function for each element in a given tuple and return a tuple
+ * containing the results.
+ *
+ * The callback function is passed a reference to the element at each respective
+ * index of the tuple.
+ *
+ * \param tuple the tuple to transform.
+ * \param fn the function to execute. Must accept a reference to each of the
+ *        types in the tuple as a parameter and return a non-void value.
+ *
+ * \throws any exception thrown by fn, or by making a tuple from the results.
+ */
 [[nodiscard]] constexpr auto transform(auto&& tuple, auto fn) {
 	return [&]<std::size_t... Indices>(std::index_sequence<Indices...>) {
 		return std::make_tuple(fn(std::get<Indices>(tuple))...);

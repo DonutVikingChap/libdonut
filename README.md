@@ -46,7 +46,7 @@ Note: This library is currently a **work in progress** and makes no guarantees r
         - Extensible serialization/deserialization of arbitrary types.
         - Supports [JSON5](https://json5.org/) features (comments, trailing commas, identifier keys, etc.).
     - [OBJ](include/donut/obj.hpp) model/material parsing.
-    - Fast [pseudo-random number generation engine](include/donut/random.hpp) using [Xoroshiro128++](https://prng.di.unimi.it/):
+    - Fast [pseudo-random number generation engine](include/donut/random.hpp) using [xoroshiro128++](https://prng.di.unimi.it/):
         - Designed to be used as a URBG in conjunction with the [standard C++ distributions](https://en.cppreference.com/w/cpp/numeric/random#Random_number_distributions).
     - [Compile-time reflection](include/donut/reflection.hpp) of aggregate types through some dark template magic.
         - Supports iterating references to the fields of an instance of any plain struct, with full type information available.

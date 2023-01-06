@@ -43,7 +43,7 @@ RenderPass& RenderPass::draw(const ModelInstance& model) {
 RenderPass& RenderPass::draw(const TextureInstance& texture) {
 	assert(texture.texture);
 
-	draw(RectangleInstance{
+	return draw(RectangleInstance{
 		.shader = texture.shader,
 		.texture = texture.texture,
 		.position = texture.position,
@@ -54,7 +54,6 @@ RenderPass& RenderPass::draw(const TextureInstance& texture) {
 		.textureScale = texture.textureScale,
 		.tintColor = texture.tintColor,
 	});
-	return *this;
 }
 
 RenderPass& RenderPass::draw(const RectangleInstance& rectangle) {
@@ -63,7 +62,7 @@ RenderPass& RenderPass::draw(const RectangleInstance& rectangle) {
 	transformation = glm::rotate(transformation, rectangle.angle, {0.0f, 0.0f, 1.0f});
 	transformation = glm::scale(transformation, {rectangle.size, 1.0f});
 	transformation = glm::translate(transformation, {-rectangle.origin, 0.0f});
-	draw(QuadInstance{
+	return draw(QuadInstance{
 		.shader = rectangle.shader,
 		.texture = rectangle.texture,
 		.transformation = transformation,
@@ -71,7 +70,6 @@ RenderPass& RenderPass::draw(const RectangleInstance& rectangle) {
 		.textureScale = rectangle.textureScale,
 		.tintColor = rectangle.tintColor,
 	});
-	return *this;
 }
 
 RenderPass& RenderPass::draw(const QuadInstance& quad) {
@@ -98,7 +96,7 @@ RenderPass& RenderPass::draw(const SpriteInstance& sprite) {
 
 	const SpriteAtlas::Sprite& atlasSprite = sprite.atlas->getSprite(sprite.id);
 
-	draw(RectangleInstance{
+	return draw(RectangleInstance{
 		.shader = sprite.shader,
 		.texture = &sprite.atlas->getAtlasTexture(),
 		.position = sprite.position,
@@ -109,7 +107,6 @@ RenderPass& RenderPass::draw(const SpriteInstance& sprite) {
 		.textureScale = atlasSprite.textureScale,
 		.tintColor = sprite.tintColor,
 	});
-	return *this;
 }
 
 RenderPass& RenderPass::draw(const TextInstance& text) {

@@ -38,11 +38,13 @@ std::string InputFileStream::readAllIntoString() && {
 }
 
 std::size_t InputFileStream::size() const noexcept {
-	return static_cast<std::size_t>(PHYSFS_fileLength(static_cast<PHYSFS_File*>(file.get())));
+	const PHYSFS_sint64 length = PHYSFS_fileLength(static_cast<PHYSFS_File*>(file.get()));
+	return (length < 0) ? NPOS : static_cast<std::size_t>(length);
 }
 
 std::size_t InputFileStream::tell() const noexcept {
-	return static_cast<std::size_t>(PHYSFS_tell(static_cast<PHYSFS_File*>(file.get())));
+	const PHYSFS_sint64 position = PHYSFS_tell(static_cast<PHYSFS_File*>(file.get()));
+	return (position < 0) ? NPOS : static_cast<std::size_t>(position);
 }
 
 std::size_t InputFileStream::read(std::span<std::byte> data) noexcept {
@@ -50,14 +52,15 @@ std::size_t InputFileStream::read(std::span<std::byte> data) noexcept {
 	return (bytesRead < 0) ? std::size_t{0} : static_cast<std::size_t>(bytesRead);
 }
 
-void InputFileStream::seek(std::size_t position) const noexcept {
-	PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position));
+bool InputFileStream::seek(std::size_t position) noexcept {
+	return PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position)) != 0;
 }
 
-void InputFileStream::skip(std::ptrdiff_t n) noexcept {
+bool InputFileStream::skip(std::ptrdiff_t n) noexcept {
 	if (const PHYSFS_sint64 position = PHYSFS_tell(static_cast<PHYSFS_File*>(file.get())); position > 0) {
-		PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position + n));
+		return PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position + n)) != 0;
 	}
+	return false;
 }
 
 bool InputFileStream::eof() const noexcept {

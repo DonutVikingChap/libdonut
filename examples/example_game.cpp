@@ -617,8 +617,8 @@ private:
 	glm::vec3 carrotCakeVelocity{0.0f, 0.0f, 0.0f};
 	Timer timerA{};
 	Timer timerB{};
-	int counterA = 0;
-	int counterB = 0;
+	unsigned counterA = 0u;
+	unsigned counterB = 0u;
 };
 
 void parseOptionValue(int argc, char* argv[], int& i, std::string_view optionName, const char*& output) {

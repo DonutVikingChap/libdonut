@@ -5,6 +5,9 @@
 
 namespace donut {
 
+/**
+ * Normalized floating-point RGBA color type with 32 bits per component.
+ */
 class Color {
 public:
 	static const Color INVISIBLE;
@@ -157,103 +160,295 @@ public:
 	static const Color YELLOW;
 	static const Color YELLOW_GREEN;
 
+	/**
+	 * Construct a transparent color with a value of 0 in all components.
+	 */
 	constexpr Color() noexcept = default;
 
-	constexpr Color(float r, float g, float b, float a = 1.0f)
+	/**
+	 * Construct a color with given values for each component.
+	 *
+	 * \param r value of the red color component.
+	 * \param g value of the green color component.
+	 * \param b value of the blue color component.
+	 * \param a value of the alpha component. Defaults to fully opaque, i.e. a
+	 *        value of 1.
+	 */
+	constexpr Color(float r, float g, float b, float a = 1.0f) noexcept
 		: rgba(r, g, b, a) {}
 
-	constexpr Color(glm::vec3 rgb)
+	/**
+	 * Construct a color from a vector with 3 components, XYZ, that map to the
+	 * color components RGB, respectively.
+	 *
+	 * The alpha component is set to fully opaque, i.e. a value of 1.
+	 *
+	 * \param rgb input vector containing values for the red, green, and blue
+	 *        components.
+	 */
+	constexpr Color(glm::vec3 rgb) noexcept
 		: rgba(rgb, 1.0f) {}
 
-	constexpr Color(glm::vec4 rgba)
+	/**
+	 * Construct a color from a vector with 4 components, XYZW, that map to the
+	 * color components RGBA, respectively.
+	 *
+	 * \param rgba input vector containing values for the red, green, blue and
+	 *        alpha components.
+	 */
+	constexpr Color(glm::vec4 rgba) noexcept
 		: rgba(rgba) {}
 
+	/**
+	 * Convert the color to a vector with 3 components, XYZ, that are mapped
+	 * from the color components RGB, respectively.
+	 *
+	 * \return the RGB components of the color as a vector.
+	 */
+	constexpr operator glm::vec3() const noexcept {
+		return glm::vec3{rgba};
+	}
+
+	/**
+	 * Convert the color to a vector with 4 components, XYZW, that are mapped
+	 * from the color components RGBA, respectively.
+	 *
+	 * \return the RGBA components of the color as a vector.
+	 */
 	constexpr operator glm::vec4() const noexcept {
 		return rgba;
 	}
 
+	/**
+	 * Add the component values of another color to the respective component
+	 * values of this color.
+	 *
+	 * \param color the other color to add to this color.
+	 *
+	 * \return `*this`, for chaining.
+	 */
 	constexpr Color& operator+=(const Color& other) noexcept {
 		rgba += other.rgba;
 		return *this;
 	}
 
+	/**
+	 * Subtract the component values of another color from the respective
+	 * component values of this color.
+	 *
+	 * \param color the other color to subtract from this color.
+	 *
+	 * \return `*this`, for chaining.
+	 */
 	constexpr Color& operator-=(const Color& other) noexcept {
 		rgba -= other.rgba;
 		return *this;
 	}
 
+	/**
+	 * Multiply the component values of this color with the respective component
+	 * values of another color.
+	 *
+	 * \param color the other color to multiply this color by.
+	 *
+	 * \return `*this`, for chaining.
+	 */
 	constexpr Color& operator*=(const Color& other) noexcept {
 		rgba *= other.rgba;
 		return *this;
 	}
 
+	/**
+	 * Divide the component values of this color with the respective component
+	 * values of another color.
+	 *
+	 * \param color the other color to divide this color by.
+	 *
+	 * \return `*this`, for chaining.
+	 */
 	constexpr Color& operator/=(const Color& other) noexcept {
 		rgba /= other.rgba;
 		return *this;
 	}
 
+	/**
+	 * Multiply each of the component values of this color by a scalar value.
+	 *
+	 * \param scalar the scalar value to multiply this color by.
+	 *
+	 * \return `*this`, for chaining.
+	 */
 	constexpr Color& operator*=(float scalar) noexcept {
 		rgba *= scalar;
 		return *this;
 	}
 
+	/**
+	 * Divide each of the component values of this color by a scalar value.
+	 *
+	 * \param scalar the scalar value to divide this color by.
+	 *
+	 * \return `*this`, for chaining.
+	 */
 	constexpr Color& operator/=(float scalar) noexcept {
 		rgba /= scalar;
 		return *this;
 	}
 
+	/**
+	 * Get the component-wise additive identity of a color.
+	 *
+	 * \param a color to get the additive identity of.
+	 *
+	 * \return the additive identity of the given color.
+	 */
 	[[nodiscard]] friend Color operator+(const Color& a) {
-		return a;
+		return Color{+a.rgba};
 	}
 
+	/**
+	 * Get the component-wise additive inverse of a color.
+	 *
+	 * \param a color to get the additive inverse of.
+	 *
+	 * \return the additive inverse of the given color.
+	 */
 	[[nodiscard]] friend Color operator-(const Color& a) {
 		return Color{-a.rgba};
 	}
 
+	/**
+	 * Get the result of component-wise addition between two colors.
+	 *
+	 * \param a left-hand side of the addition.
+	 * \param b right-hand side of the addition.
+	 *
+	 * \return a color containing a + b, component-wise.
+	 */
 	[[nodiscard]] friend Color operator+(const Color& a, const Color& b) {
 		return Color{a.rgba + b.rgba};
 	}
 
+	/**
+	 * Get the result of component-wise subtraction between two colors.
+	 *
+	 * \param a left-hand side of the subtraction.
+	 * \param b right-hand side of the subtraction.
+	 *
+	 * \return a color containing a - b, component-wise.
+	 */
 	[[nodiscard]] friend Color operator-(const Color& a, const Color& b) {
 		return Color{a.rgba - b.rgba};
 	}
 
+	/**
+	 * Get the result of component-wise multiplication between two colors.
+	 *
+	 * \param a left-hand side of the multiplication.
+	 * \param b right-hand side of the multiplication.
+	 *
+	 * \return a color containing a * b, component-wise.
+	 */
 	[[nodiscard]] friend Color operator*(const Color& a, const Color& b) {
 		return Color{a.rgba * b.rgba};
 	}
 
+	/**
+	 * Get the result of component-wise division between two colors.
+	 *
+	 * \param a left-hand side of the division.
+	 * \param b right-hand side of the division.
+	 *
+	 * \return a color containing a / b, component-wise.
+	 */
 	[[nodiscard]] friend Color operator/(const Color& a, const Color& b) {
 		return Color{a.rgba / b.rgba};
 	}
 
+	/**
+	 * Get the result of multiplication between a color and a scalar.
+	 *
+	 * \param a left-hand side of the multiplication.
+	 * \param b right-hand side of the multiplication.
+	 *
+	 * \return a color containing the result of multiplying each component of a
+	 *         by b.
+	 */
 	[[nodiscard]] friend Color operator*(const Color& a, float b) {
 		return Color{a.rgba * b};
 	}
 
+	/**
+	 * Get the result of multiplication between a scalar and a color.
+	 *
+	 * \param a left-hand side of the multiplication.
+	 * \param b right-hand side of the multiplication.
+	 *
+	 * \return a color containing the result of multiplying a by each component
+	 *         of b.
+	 */
 	[[nodiscard]] friend Color operator*(float a, const Color& b) {
 		return Color{a * b.rgba};
 	}
 
+	/**
+	 * Get the result of division between a color and a scalar.
+	 *
+	 * \param a left-hand side of the division.
+	 * \param b right-hand side of the division.
+	 *
+	 * \return a color containing the result of dividing each component of a by
+	 *         b.
+	 */
 	[[nodiscard]] friend Color operator/(const Color& a, float b) {
 		return Color{a.rgba / b};
 	}
 
+	/**
+	 * Get the result of division between a scalar and a color.
+	 *
+	 * \param a left-hand side of the division.
+	 * \param b right-hand side of the division.
+	 *
+	 * \return a color containing the result of dividing a by each component of
+	 *         b.
+	 */
 	[[nodiscard]] friend Color operator/(float a, const Color& b) {
 		return Color{a / b.rgba};
 	}
 
+	/**
+	 * Get the value of the red component of this color.
+	 *
+	 * \return the value of the red color component.
+	 */
 	[[nodiscard]] constexpr float getRedComponent() const noexcept {
 		return rgba.x;
 	}
 
+	/**
+	 * Get the value of the green component of this color.
+	 *
+	 * \return the value of the green color component.
+	 */
 	[[nodiscard]] constexpr float getGreenComponent() const noexcept {
 		return rgba.y;
 	}
 
+	/**
+	 * Get the value of the blue component of this color.
+	 *
+	 * \return the value of the blue color component.
+	 */
 	[[nodiscard]] constexpr float getBlueComponent() const noexcept {
 		return rgba.z;
 	}
 
+	/**
+	 * Get the value of the alpha component of this color.
+	 *
+	 * \return the value of the alpha component.
+	 */
 	[[nodiscard]] constexpr float getAlphaComponent() const noexcept {
 		return rgba.w;
 	}

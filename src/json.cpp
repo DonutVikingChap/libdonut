@@ -547,10 +547,10 @@ template <typename It>
 Number Parser<It>::parseNumberContents(Token<It> token, int radix) {
 	const char* numberStringBegin = token.string.c_str();
 	char* const numberStringEnd = token.string.data() + token.string.size();
-	char* endPtr = numberStringEnd;
+	char* endPointer = numberStringEnd;
 	if (radix == 10) {
-		const double numberValue = std::strtod(numberStringBegin, &endPtr);
-		if (endPtr != numberStringEnd) {
+		const double numberValue = std::strtod(numberStringBegin, &endPointer);
+		if (endPointer != numberStringEnd) {
 			throw Error{"Invalid number.", token.source};
 		}
 		return Number{numberValue};
@@ -560,8 +560,8 @@ Number Parser<It>::parseNumberContents(Token<It> token, int radix) {
 		negative = true;
 		++numberStringBegin;
 	}
-	const unsigned long long integerNumberValue = std::strtoull(numberStringBegin, &endPtr, radix);
-	if (endPtr != numberStringEnd) {
+	const unsigned long long integerNumberValue = std::strtoull(numberStringBegin, &endPointer, radix);
+	if (endPointer != numberStringEnd) {
 		throw Error{"Invalid number.", token.source};
 	}
 	const double numberValue = static_cast<double>(integerNumberValue);

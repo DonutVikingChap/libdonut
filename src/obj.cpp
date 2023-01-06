@@ -278,7 +278,7 @@ private:
 
 	[[nodiscard]] mtl::IlluminationModel parseIlluminationModel() {
 		const std::uint8_t illum = parseUnsignedInteger<std::uint8_t>();
-		if (illum > static_cast<std::uint8_t>(mtl::IlluminationModel::COUNT)) {
+		if (illum > 10) {
 			throw Error{"Invalid illumination model.", it, lineNumber};
 		}
 		return static_cast<mtl::IlluminationModel>(illum);

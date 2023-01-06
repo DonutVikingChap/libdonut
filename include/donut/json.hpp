@@ -38,12 +38,31 @@ concept number = std::is_arithmetic_v<T> && !std::is_same_v<T, bool> && !std::is
 
 } // namespace detail
 
+/**
+ * Line and column numbers of a location in a JSON source string.
+ */
 struct SourceLocation {
+	/**
+	 * Line number, starting at 1 for the first line. A value of 0 means no
+	 * particular line.
+	 */
 	std::size_t lineNumber;
+
+	/**
+	 * Column number, starting at 1 for the first column. A value of 0 means no
+	 * particular column.
+	 */
 	std::size_t columnNumber;
 };
 
+/**
+ * Exception type for errors originating from the JSON API.
+ */
 struct Error : std::runtime_error {
+	/**
+	 * Location in the JSON source string that the error originated from, or
+	 * (0, 0) if the error did not originate from a specific location.
+	 */
 	SourceLocation source;
 
 	Error(const std::string& message, const SourceLocation& source)
@@ -55,16 +74,32 @@ struct Error : std::runtime_error {
 		, source(source) {}
 };
 
+// Forward declaration of the definition below, so that Object and Array can contain objects of type Value through indirection, despite Value being defined in terms of them.
 class Value;
 
+/**
+ * JSON null type.
+ */
 using Null = Monostate;
 
+/**
+ * JSON boolean type.
+ */
 using Boolean = bool;
 
+/**
+ * JSON string type.
+ */
 using String = std::string;
 
+/**
+ * JSON number type.
+ */
 using Number = double;
 
+/**
+ * JSON object type whose API mimics that of std::multimap<String, Value>.
+ */
 class Object {
 public:
 	using key_type = String;
@@ -181,6 +216,9 @@ private:
 	std::vector<value_type> membersSortedByName;
 };
 
+/**
+ * JSON array type whose API mimics that of std::vector<Value>.
+ */
 class Array {
 public:
 	using value_type = Value;
@@ -284,60 +322,214 @@ private:
 	std::vector<value_type> values;
 };
 
+/**
+ * JSON value type.
+ *
+ * Holds a value of one of the following types:
+ * - Null
+ * - Boolean
+ * - String
+ * - Number
+ * - Object
+ * - Array
+ */
 class Value : public Variant<Null, Boolean, String, Number, Object, Array> {
 public:
+	/**
+	 * Parse a value of any JSON type from a UTF-8 JSON string.
+	 *
+	 * The parser supports JSON5 features such as comments, unquoted identifiers
+	 * and trailing commas.
+	 *
+	 * \param jsonString read-only view over the JSON string to parse a value
+	 *        from.
+	 *
+	 * \return the parsed value.
+	 *
+	 * \throws Error on failure to parse a JSON value.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	[[nodiscard]] static Value parse(std::u8string_view jsonString);
+
+	/**
+	 * Parse a value of any JSON type from a JSON string of bytes, interpreted
+	 * as UTF-8.
+	 *
+	 * The parser supports JSON5 features such as comments, unquoted identifiers
+	 * and trailing commas.
+	 *
+	 * \param jsonString read-only view over the JSON string to parse a value
+	 *        from.
+	 *
+	 * \return the parsed value.
+	 *
+	 * \throws Error on failure to parse a JSON value.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	[[nodiscard]] static Value parse(std::string_view jsonString);
 
+	/**
+	 * Construct a Null value.
+	 */
 	Value() noexcept = default;
 
-	Value(Null value) noexcept
-		: Variant(value) {}
+	/**
+	 * Construct a Null value.
+	 */
+	Value(Null) noexcept {}
 
-	Value(std::nullptr_t) noexcept
-		: Variant(Null{}) {}
+	/**
+	 * Construct a Null value.
+	 */
+	Value(std::nullptr_t) noexcept {}
 
+	/**
+	 * Construct a Boolean value with the given underlying value.
+	 *
+	 * \param value value to copy.
+	 */
 	Value(Boolean value) noexcept
 		: Variant(value) {}
 
-	Value(const String& value) noexcept
+	/**
+	 * Construct a String value with the given underlying value.
+	 *
+	 * \param value value to copy.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	Value(const String& value)
 		: Variant(value) {}
 
+	/**
+	 * Construct a String value from the given underlying value.
+	 *
+	 * \param value value to take.
+	 */
 	Value(String&& value) noexcept
 		: Variant(std::move(value)) {}
 
-	Value(const char* value) noexcept
+	/**
+	 * Construct a String value with the given underlying value.
+	 *
+	 * \param value read-only pointer to the null-terminated string to copy the
+	 *        contents of.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	Value(const char* value)
 		: Variant(String{value}) {}
 
-	Value(std::string_view value) noexcept
+	/**
+	 * Construct a String value with the given underlying value.
+	 *
+	 * \param value read-only view over the string to copy the contents of.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	Value(std::string_view value)
 		: Variant(String{value}) {}
 
-	Value(const char8_t* value) noexcept
+	/**
+	 * Construct a String value with the given underlying value.
+	 *
+	 * \param value read-only pointer to the null-terminated UTF-8 string to
+	 *        copy the contents of.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	Value(const char8_t* value)
 		: Variant(String{reinterpret_cast<const char*>(value)}) {
 		static_assert(sizeof(char) == sizeof(char8_t));
 		static_assert(alignof(char) == alignof(char8_t));
 	}
 
-	Value(std::u8string_view value) noexcept
+	/**
+	 * Construct a String value with the given underlying value.
+	 *
+	 * \param value read-only view over the UTF-8 string to copy the contents
+	 *        of.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	Value(std::u8string_view value)
 		: Variant(String{value.begin(), value.end()}) {}
 
+	/**
+	 * Construct a Number value with the given underlying value.
+	 *
+	 * \param value value to copy. May be of any fundamental arithmetic type
+	 *        except for bool and character types.
+	 */
 	Value(detail::number auto value) noexcept
 		: Variant(static_cast<Number>(value)) {}
 
-	Value(const Object& value) noexcept
+	/**
+	 * Construct an Object value with the given underlying value.
+	 *
+	 * \param value value to copy.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	Value(const Object& value)
 		: Variant(value) {}
 
+	/**
+	 * Construct an Object value from the given underlying value.
+	 *
+	 * \param value value to take.
+	 */
 	Value(Object&& value) noexcept
 		: Variant(std::move(value)) {}
 
-	Value(const Array& value) noexcept
+	/**
+	 * Construct an Array value with the given underlying value.
+	 *
+	 * \param value value to copy.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	Value(const Array& value)
 		: Variant(value) {}
 
+	/**
+	 * Construct an Array value from the given underlying value.
+	 *
+	 * \param value value to take.
+	 */
 	Value(Array&& value) noexcept
 		: Variant(std::move(value)) {}
 
+	/**
+	 * Get a JSON string representation of the value.
+	 *
+	 * \return a JSON string containing a representation of the value that is as
+	 *         if the value had been serialized to an ASCII output stream with
+	 *         the default SerializationOptions.
+	 *
+	 * \throws Error on failure to serialize the value.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	[[nodiscard]] std::string toString() const;
 
+	/**
+	 * Compare this value to another for equality.
+	 *
+	 * \param other the value to compare this value to.
+	 *
+	 * \return true if the values are equal, false otherwise.
+	 */
+	[[nodiscard]] bool operator==(const Value& other) const {
+		return static_cast<const Variant&>(*this) == static_cast<const Variant&>(other);
+	}
+
+	/**
+	 * Compare this value to another.
+	 *
+	 * \param other the value to compare this value to.
+	 *
+	 * \return a partial ordering between the two values.
+	 */
 	[[nodiscard]] std::partial_ordering operator<=>(const Value& other) const {
 		return static_cast<const Variant&>(*this) <=> static_cast<const Variant&>(other);
 	}
@@ -457,32 +649,143 @@ template <typename T>
 
 } // namespace detail
 
+/**
+ * Base template to specialize in order to implement JSON serialization for a
+ * specific type. The specialization should have a member function with one of
+ * the following signatures:
+ * ```
+ * void serialize(SerializationState& state, const T& value)
+ * void serialize(SerializationState& state, T value)
+ * ```
+ * where T is the specialized template type parameter, and should write the
+ * output using the provided SerializationState.
+ *
+ * \tparam T the type that this serializer serializes.
+ */
 template <typename T>
 struct Serializer;
 
+/**
+ * Base template to specialize in order to implement JSON deserialization for a
+ * specific type. The specialization should have a member function with the
+ * following signature:
+ * ```
+ * void deserialize(DeserializationState& state, T& value)
+ * ```
+ * where T is the specialized template type parameter, and should read the
+ * input using the provided DeserializationState.
+ *
+ * \tparam T the type that this deserializer deserializes.
+ */
 template <typename T>
 struct Deserializer;
 
+/**
+ * Options for JSON serialization.
+ */
 struct SerializationOptions {
+	/**
+	 * The starting indentation level, expressed as the number of indentation
+	 * characters.
+	 */
 	std::size_t indentation = 0;
+
+	/**
+	 * The number of indentation characters that each new level of indentation
+	 * will add.
+	 */
 	std::size_t relativeIndentation = 4;
+
+	/**
+	 * The character to use when performing indentation.
+	 */
 	char indentationCharacter = ' ';
+
+	/**
+	 * Format the output in a way that is nicely human-readable. Disable to use
+	 * a more compact layout without whitespace or indentation.
+	 */
 	bool prettyPrint = true;
 };
 
+/**
+ * Options for JSON deserialization.
+ */
 struct DeserializationOptions {};
 
+/**
+ * Serialize a value of any JSON-serializable type to an ASCII output stream.
+ *
+ * \param stream stream to write the output to.
+ * \param value value to serialize.
+ * \param options serialization options, see SerializationOptions.
+ *
+ * \throws Error on failure to serialize the value.
+ * \throws std::ios_base::failure if thrown by the output stream.
+ * \throws std::bad_alloc on allocation failure.
+ * \throws any exception thrown by a user-defined implementation of Serializer,
+ *         if one is used in the serialization of the given value type.
+ *
+ * \note Serialization of user-defined types can be defined by implementing a
+ *       specialization of the Serializer template.
+ */
 template <typename T>
 void serialize(std::ostream& stream, const T& value, const SerializationOptions& options = {});
 
+/**
+ * Deserialize a value of any JSON-serializable type from an ASCII input stream.
+ *
+ * \param stream stream to read the input from.
+ * \param value value to deserialize to.
+ * \param options deserialization options, see DeserializationOptions.
+ *
+ * \throws Error on failure to parse the value from the stream.
+ * \throws std::ios_base::failure if thrown by the input stream.
+ * \throws std::bad_alloc on allocation failure.
+ * \throws any exception thrown by a user-defined implementation of
+ *         Deserializer, if one is used in the deserialization of the given
+ *         value type.
+ *
+ * \note Deserialization of user-defined types can be defined by implementing a
+ *       specialization of the Deserializer template.
+ */
 template <typename T>
 void deserialize(std::istream& stream, T& value, const DeserializationOptions& options = {});
 
+/**
+ * Write a JSON value to an ASCII output stream using the default serialization
+ * options.
+ *
+ * \param stream stream to write the output to.
+ * \param value the JSON value to serialize.
+ *
+ * \return a reference to the stream parameter, for chaining.
+ *
+ * \throws Error on failure to serialize the value.
+ * \throws std::ios_base::failure if thrown by the output stream.
+ * \throws std::bad_alloc on allocation failure.
+ */
 inline std::ostream& operator<<(std::ostream& stream, const Value& value) {
 	json::serialize(stream, value);
 	return stream;
 }
 
+/**
+ * Read a JSON value from an ASCII input stream using the default
+ * deserialization options.
+ *
+ * If the function fails to parse a JSON value from the stream,
+ * std::ios_base::failbit is set on the stream, which may or may not
+ * cause an exception to be thrown.
+ *
+ * \param stream stream to read the input from.
+ * \param value the JSON value to deserialize to.
+ *
+ * \return a reference to the stream parameter, for chaining.
+ *
+ * \throws std::ios_base::failure if thrown by the input stream.
+ * \throws std::bad_alloc on allocation failure.
+ */
 inline std::istream& operator>>(std::istream& stream, Value& value) {
 	try {
 		json::deserialize(stream, value);
@@ -492,11 +795,17 @@ inline std::istream& operator>>(std::istream& stream, Value& value) {
 	return stream;
 }
 
+/**
+ * Stateful wrapper object of an ASCII output stream for JSON serialization.
+ */
 struct SerializationState {
 private:
 	std::ostream& stream;
 
 public:
+	/**
+	 * The current options of the serialization process.
+	 */
 	SerializationOptions options;
 
 	void write(char byte) {
@@ -744,6 +1053,9 @@ private:
 		, options(options) {}
 };
 
+/**
+ * Stateful wrapper object of an ASCII input stream for JSON deserialization.
+ */
 struct DeserializationState {
 private:
 	using TokenType = detail::TokenType;
@@ -752,6 +1064,9 @@ private:
 	detail::Parser<std::istreambuf_iterator<char>> parser;
 
 public:
+	/**
+	 * The current options of the deserialization process.
+	 */
 	DeserializationOptions options;
 
 	SourceLocation readNull() {

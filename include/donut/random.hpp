@@ -12,6 +12,20 @@
 namespace donut {
 namespace random {
 
+/**
+ * Implementation of the SplitMix64 pseudorandom number generator that provides
+ * the API required for a standard uniform random bit generator, so that it can
+ * be plugged into any of the random number distributions provided by the
+ * standard library.
+ *
+ * This engine should typically only be used for seeding the
+ * Xoroshiro128PlusPlusEngine, which should be preferred for general use.
+ *
+ * \warning This engine does not produce cryptographcially secure randomness and
+ *          should not be used for such purposes.
+ *
+ * \sa Xoroshiro128PlusPlusEngine
+ */
 class SplitMix64Engine {
 public:
 	using result_type = std::uint64_t;
@@ -37,10 +51,10 @@ public:
 	}
 
 	constexpr result_type operator()() noexcept {
-		state += 0x9E3779B97F4A7C15;
+		state += 0x9E3779B97F4A7C15ull;
 		std::uint64_t z = state;
-		z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9;
-		z = (z ^ (z >> 27)) * 0x94D049BB133111EB;
+		z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull;
+		z = (z ^ (z >> 27)) * 0x94D049BB133111EBull;
 		return z ^ (z >> 31);
 	}
 
@@ -68,6 +82,20 @@ private:
 	std::uint64_t state;
 };
 
+/**
+ * Implementation of the xoroshiro128++ pseudorandom number generator that
+ * provides the API required for a standard uniform random bit generator, so
+ * that it can be plugged into any of the random number distributions provided
+ * by the standard library.
+ *
+ * This engine is small, fast and fairly high quality compared to most of the
+ * pseudorandom number generators in the standard library.
+ *
+ * \warning This engine does not produce cryptographcially secure randomness and
+ *          should not be used for such purposes.
+ *
+ * \sa https://prng.di.unimi.it/ for more information.
+ */
 class Xoroshiro128PlusPlusEngine {
 public:
 	using result_type = std::uint64_t;
@@ -110,7 +138,9 @@ public:
 		}
 	}
 
-	// Advance the internal state 2^64 times.
+	/**
+	 * Advance the internal state 2^64 times.
+	 */
 	constexpr void jump() noexcept {
 		std::uint64_t s0 = 0;
 		std::uint64_t s1 = 0;
@@ -127,7 +157,9 @@ public:
 		state[1] = s1;
 	}
 
-	// Advance the internal state 2^96 times.
+	/**
+	 * Advance the internal state 2^96 times.
+	 */
 	constexpr void longJump() noexcept {
 		std::uint64_t s0 = 0;
 		std::uint64_t s1 = 0;
