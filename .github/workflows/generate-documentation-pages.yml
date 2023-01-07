@@ -1,0 +1,51 @@
+name: Generate Doxygen Documentation Pages
+
+on:
+  push:
+    branches: [main]
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Doxygen
+        run: sudo apt-get install doxygen graphviz -y
+        
+      - name: Generate Documentation
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DDONUT_ENABLE_LIBRARY=OFF -DDONUT_ENABLE_DOCUMENTATION=ON
+          cmake --build . --target donut-generate-documentation
+      
+      - name: Create .nojekyll file
+        run: touch build/docs/html/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: build/docs/html
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
