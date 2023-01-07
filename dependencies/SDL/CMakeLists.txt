@@ -12,7 +12,7 @@ set(HAVE_LIBUNWIND_H OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(SDL
 	GIT_REPOSITORY https://github.com/libsdl-org/SDL
-	GIT_TAG 0bfeed061b10ea7dd37c88d9bae1824bad760f3a # 2.26.0
+	GIT_TAG f070c83a6059c604cbd098680ddaee391b0a7341 # 2.26.2
 )
 
 FetchContent_MakeAvailable(SDL)

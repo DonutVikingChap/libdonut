@@ -307,7 +307,8 @@ public:
 	 *       destructor in order to perform any necessary cleanup when the main
 	 *       loop has ended. It is therefore expected that any application-
 	 *       specific cleanup or shutdown code be called from the overriden
-	 *       destructor, rather than after run() has finished.
+	 *       destructor, rather than being called from main after run() has
+	 *       finished.
 	 *
 	 * \throws any unhandled exception which was thrown during the execution of
 	 *         the main loop, unless running under emscripten, in which case

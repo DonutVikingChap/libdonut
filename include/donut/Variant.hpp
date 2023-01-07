@@ -17,6 +17,14 @@
 
 namespace donut {
 
+/**
+ * Tagged union value type that holds a value of one of the given types.
+ *
+ * Its API mimics that of std::variant, with some added convenience functions
+ * such as Variant::is(), Variant::as() and match().
+ *
+ * \tparam Ts type alternatives that can be held by the variant.
+ */
 template <typename... Ts>
 class Variant;
 
@@ -30,14 +38,14 @@ concept derived_from_template_specialization_of = requires(const T& t) {
 	derivedFromTemplateSpecializationTest<Template>(t);
 };
 
-template <typename T, std::size_t index, typename... Ts>
+template <typename T, std::size_t Index, typename... Ts>
 struct VariantIndexImpl;
 
-template <typename T, std::size_t index, typename First, typename... Rest>
-struct VariantIndexImpl<T, index, First, Rest...> : VariantIndexImpl<T, index + 1, Rest...> {};
+template <typename T, std::size_t Index, typename First, typename... Rest>
+struct VariantIndexImpl<T, Index, First, Rest...> : VariantIndexImpl<T, Index + 1, Rest...> {};
 
-template <typename T, std::size_t index, typename... Rest>
-struct VariantIndexImpl<T, index, T, Rest...> : std::integral_constant<std::size_t, index> {};
+template <typename T, std::size_t Index, typename... Rest>
+struct VariantIndexImpl<T, Index, T, Rest...> : std::integral_constant<std::size_t, Index> {};
 
 template <typename... Functors>
 struct Overloaded : Functors... {
@@ -73,6 +81,12 @@ template <typename T, typename... Rest>
 struct variant_has_alternative<T, Variant<T, Rest...>> : std::true_type {};
 /// \endcond
 
+/**
+ * Check if a variant type has a given type as one of its possible alternatives.
+ *
+ * \tparam T alternative type to check for.
+ * \tparam V variant type.
+ */
 template <typename T, typename V>
 inline constexpr bool variant_has_alternative_v = variant_has_alternative<T, V>::value;
 
@@ -86,11 +100,11 @@ struct variant_index<T, Variant<Ts...>> : detail::VariantIndexImpl<T, 0, Ts...> 
 template <typename T, typename V>
 inline constexpr std::size_t variant_index_v = variant_index<T, V>::value;
 
-template <std::size_t index, typename V>
+template <std::size_t Index, typename V>
 struct variant_alternative;
 
-template <std::size_t index, typename First, typename... Rest>
-struct variant_alternative<index, Variant<First, Rest...>> : variant_alternative<index - 1, Variant<Rest...>> {};
+template <std::size_t Index, typename First, typename... Rest>
+struct variant_alternative<Index, Variant<First, Rest...>> : variant_alternative<Index - 1, Variant<Rest...>> {};
 
 template <typename T, typename... Rest>
 struct variant_alternative<0, Variant<T, Rest...>> {
@@ -98,8 +112,14 @@ struct variant_alternative<0, Variant<T, Rest...>> {
 };
 /// \endcond
 
-template <std::size_t index, typename V>
-using variant_alternative_t = typename variant_alternative<index, V>::type;
+/**
+ * Get the type of the variant alternative with a given index in a variant type.
+ *
+ * \tparam Index index of the variant alternative type to get.
+ * \tparam V variant type.
+ */
+template <std::size_t Index, typename V>
+using variant_alternative_t = typename variant_alternative<Index, V>::type;
 
 /// \cond
 template <typename V>
@@ -109,21 +129,51 @@ template <typename... Ts>
 struct variant_size<Variant<Ts...>> : std::integral_constant<std::size_t, sizeof...(Ts)> {};
 /// \endcond
 
+/**
+ * Get the number of alternative types of a variant type.
+ *
+ * \tparam V variant type.
+ */
 template <typename V>
 inline constexpr std::size_t variant_size_v = variant_size<V>::value;
 
+/**
+ * Unit type for representing an empty alternative in Variant.
+ *
+ * A Variant can use Monostate as its first alternative type to make sure that
+ * the variant type is default-constructible.
+ */
 struct Monostate {};
 
+/**
+ * Compare two monostates for equality.
+ *
+ * This function always returns true, since monostates are empty unit values
+ * containing no state, meaning they are always equal.
+ *
+ * \return true.
+ */
 constexpr bool operator==(Monostate, Monostate) noexcept {
 	return true;
 }
 
+/**
+ * Compare two monostates.
+ *
+ * This function always returns equal, since monostates are empty unit values
+ * containing no state, meaning they are always equal.
+ *
+ * \return a strong ordering representing equality.
+ */
 constexpr std::strong_ordering operator<=>(Monostate, Monostate) noexcept {
 	return std::strong_ordering::equal;
 }
 
 } // namespace donut
 
+/**
+ * Specialization of std::hash for donut::Monostate.
+ */
 template <>
 class std::hash<donut::Monostate> {
 public:
@@ -134,6 +184,11 @@ public:
 
 namespace donut {
 
+/**
+ * Exception type that is thrown on an attempt to erroneously access an inactive
+ * alternative of a Variant when using a safe access function such as
+ * Variant::get().
+ */
 class BadVariantAccess : public std::exception {
 public:
 	BadVariantAccess() noexcept = default;
@@ -176,6 +231,13 @@ private:
 
 public:
 	// clang-format off
+	/**
+	 * Index type used to encode the active alternative type.
+	 *
+	 * This is automatically sized to the smallest possible standard unsigned
+	 * integer type that can represent all of the possible variant alternatives,
+	 * including the valueless by exception state.
+	 */
     using index_type =
         std::conditional_t<sizeof...(Ts) < 255ull, std::uint8_t,
         std::conditional_t<sizeof...(Ts) < 65535ull, std::uint16_t,
@@ -183,13 +245,35 @@ public:
         std::uint64_t>>>;
 	// clang-format on
 
+	/**
+	 * Invalid alternative index, representing the valueless by exception state.
+	 */
 	static constexpr index_type npos = static_cast<index_type>(-1);
 
+	/**
+	 * Default-construct a variant with the first variant alternative, if it is
+	 * default-constructible.
+	 *
+	 * \throws any exception thrown by the underlying constructor of the first
+	 *         alternative type.
+	 */
 	Variant() noexcept(std::is_nothrow_default_constructible_v<FirstAlternative>) requires(HAS_DEFAULT_CONSTRUCTOR)
 		: activeTypeIndex(0) {
 		std::construct_at(reinterpret_cast<FirstAlternative*>(&storage));
 	}
 
+	/**
+	 * Converting constructor.
+	 *
+	 * Chooses the variant alternative type to construct based on the
+	 * overloading rules specified by std::variant.
+	 *
+	 * \param value underlying value to construct the variant from. Must be
+	 *        convertible to one of the variant's listed alternative types.
+	 *
+	 * \throws any exception thrown by the underlying constructor of the
+	 *         relevant alternative type.
+	 */
 	template <typename U>
 	Variant(U&& value) noexcept(std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value)))>) requires(!std::is_same_v<std::remove_cvref_t<U>, Variant> &&
 		variant_has_alternative_v<decltype(F(std::forward<U>(value))), Variant> && std::is_constructible_v<decltype(F(std::forward<U>(value))), U>)
@@ -197,12 +281,38 @@ public:
 		std::construct_at(reinterpret_cast<decltype(F(std::forward<U>(value)))*>(&storage), std::forward<U>(value));
 	}
 
+	/**
+	 * Construct a variant alternative in-place given its type.
+	 *
+	 * \param 0 std::in_place_type<T>, where T is the alternative type to
+	 *        construct, which must be one of the variant's listed alternative
+	 *        types.
+	 * \param args arguments to pass to the underlying value's constructor.
+	 *
+	 * \throws any exception thrown by the underlying constructor of the
+	 *         relevant alternative type.
+	 */
 	template <typename T, typename... Args>
 	explicit Variant(std::in_place_type_t<T>, Args&&... args) requires(variant_has_alternative_v<T, Variant>&& std::is_constructible_v<T, Args...>)
 		: activeTypeIndex(variant_index_v<T, Variant>) {
 		std::construct_at(reinterpret_cast<T*>(&storage), std::forward<Args>(args)...);
 	}
 
+	/**
+	 * Construct a variant alternative in-place given its type, with an
+	 * initializer list as the first constructor argument.
+	 *
+	 * \param 0 std::in_place_type<T>, where T is the alternative type to
+	 *        construct, which must be one of the variant's listed alternative
+	 *        types.
+	 * \param ilist first argument to pass to the underlying value's
+	 *        constructor.
+	 * \param args subsequent arguments to pass to the underlying value's
+	 *        constructor.
+	 *
+	 * \throws any exception thrown by the underlying constructor of the
+	 *         relevant alternative type.
+	 */
 	template <typename T, typename U, typename... Args>
 	explicit Variant(std::in_place_type_t<T>, std::initializer_list<U> ilist, Args&&... args) requires(
 		variant_has_alternative_v<T, Variant>&& std::is_constructible_v<T, std::initializer_list<U>&, Args...>)
@@ -210,58 +320,112 @@ public:
 		std::construct_at(reinterpret_cast<T*>(&storage), ilist, std::forward<Args>(args)...);
 	}
 
-	template <std::size_t index, typename... Args>
-	explicit Variant(std::in_place_index_t<index>, Args&&... args) requires(index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<index, Variant>, Args...>)
-		: activeTypeIndex(index) {
-		std::construct_at(reinterpret_cast<variant_alternative_t<index, Variant>*>(&storage), std::forward<Args>(args)...);
+	/**
+	 * Construct a variant alternative in-place given its index.
+	 *
+	 * \param 0 std::in_place_index<Index>, where Index is the alternative index
+	 *        to construct, which must be within the range of the variant's list
+	 *        of alternative types.
+	 * \param args arguments to pass to the underlying value's constructor.
+	 *
+	 * \throws any exception thrown by the underlying constructor of the
+	 *         relevant alternative type.
+	 */
+	template <std::size_t Index, typename... Args>
+	explicit Variant(std::in_place_index_t<Index>, Args&&... args) requires(Index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<Index, Variant>, Args...>)
+		: activeTypeIndex(Index) {
+		std::construct_at(reinterpret_cast<variant_alternative_t<Index, Variant>*>(&storage), std::forward<Args>(args)...);
 	}
 
-	template <std::size_t index, typename U, typename... Args>
-	explicit Variant(std::in_place_index_t<index>, std::initializer_list<U> ilist, Args&&... args) requires(
-		index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<index, Variant>, std::initializer_list<U>&, Args...>)
-		: activeTypeIndex(index) {
-		std::construct_at(reinterpret_cast<variant_alternative_t<index, Variant>*>(&storage), ilist, std::forward<Args>(args)...);
+	/**
+	 * Construct a variant alternative in-place given its index, with an
+	 * initializer list as the first constructor argument.
+	 *
+	 * \param 0 std::in_place_index<Index>, where Index is the alternative index
+	 *        to construct, which must be within the range of the variant's list
+	 *        of alternative types.
+	 * \param ilist first argument to pass to the underlying value's
+	 *        constructor.
+	 * \param args subsequent arguments to pass to the underlying value's
+	 *        constructor.
+	 *
+	 * \throws any exception thrown by the underlying constructor of the
+	 *         relevant alternative type.
+	 */
+	template <std::size_t Index, typename U, typename... Args>
+	explicit Variant(std::in_place_index_t<Index>, std::initializer_list<U> ilist, Args&&... args) requires(
+		Index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<Index, Variant>, std::initializer_list<U>&, Args...>)
+		: activeTypeIndex(Index) {
+		std::construct_at(reinterpret_cast<variant_alternative_t<Index, Variant>*>(&storage), ilist, std::forward<Args>(args)...);
 	}
 
+	/** Destructor. */
 	~Variant() {
 		destroy();
 	}
 
+	/** Trivial destructor. */
 	~Variant() requires(HAS_TRIVIAL_DESTRUCTOR) = default;
 
+	/** Deleted copy constructor. */
 	Variant(const Variant& other) requires(!HAS_COPY_CONSTRUCTOR) = delete;
+
+	/** Trivial copy constructor. */
 	Variant(const Variant& other) requires(HAS_COPY_CONSTRUCTOR&& HAS_TRIVIAL_COPY_CONSTRUCTOR) = default;
+
+	/** Copy constructor. */
 	Variant(const Variant& other) requires(HAS_COPY_CONSTRUCTOR && !HAS_TRIVIAL_COPY_CONSTRUCTOR)
 		: activeTypeIndex(other.activeTypeIndex) {
 		const auto visitor = [&]<typename T>(const T& value) -> void {
 			std::construct_at(reinterpret_cast<T*>(&storage), value);
 		};
-		[&]<std::size_t... indices>(std::index_sequence<indices...>)->void {
-			(void)(((other.template is<indices>()) ? (visitor(other.template as<indices>()), true) : false) || ...);
+		[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
+			(void)(((other.template is<Indices>()) ? (visitor(other.template as<Indices>()), true) : false) || ...);
 		}
 		(std::make_index_sequence<sizeof...(Ts)>{});
 	}
 
+	/** Trivial move constructor. */
 	Variant(Variant&& other) noexcept requires(HAS_MOVE_CONSTRUCTOR&& HAS_TRIVIAL_MOVE_CONSTRUCTOR) = default;
+
+	/** Move constructor. */
 	Variant(Variant&& other) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...)) requires(HAS_MOVE_CONSTRUCTOR && !HAS_TRIVIAL_MOVE_CONSTRUCTOR)
 		: activeTypeIndex(other.activeTypeIndex) {
 		const auto visitor = [&]<typename T>(T& value) -> void {
 			std::construct_at(reinterpret_cast<T*>(&storage), std::move(value));
 		};
-		[&]<std::size_t... indices>(std::index_sequence<indices...>)->void {
-			(void)(((other.template is<indices>()) ? (visitor(other.template as<indices>()), true) : false) || ...);
+		[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
+			(void)(((other.template is<Indices>()) ? (visitor(other.template as<Indices>()), true) : false) || ...);
 		}
 		(std::make_index_sequence<sizeof...(Ts)>{});
 	}
 
+	/** Deleted copy assignment. */
 	Variant& operator=(const Variant& other) requires(!HAS_COPY_ASSIGNMENT) = delete;
+
+	/** Trivial copy assignment. */
 	Variant& operator=(const Variant& other) requires(HAS_COPY_ASSIGNMENT&& HAS_TRIVIAL_COPY_ASSIGNMENT) = default;
+
+	/**
+	 * Copy assignment.
+	 *
+	 * \note If an exception is thrown after the old value has been destroyed,
+	 *       the variant ends up in the valueless by exception state.
+	 */
 	Variant& operator=(const Variant& other) requires(HAS_COPY_ASSIGNMENT && !HAS_TRIVIAL_COPY_ASSIGNMENT) {
 		*this = Variant{other};
 		return *this;
 	}
 
+	/** Trivial move assignment. */
 	Variant& operator=(Variant&& other) noexcept requires(HAS_MOVE_ASSIGNMENT&& HAS_TRIVIAL_MOVE_ASSIGNMENT) = default;
+
+	/**
+	 * Move assignment.
+	 *
+	 * \note If an exception is thrown after the old value has been destroyed,
+	 *       the variant ends up in the valueless by exception state.
+	 */
 	Variant& operator=(Variant&& other) noexcept(((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_move_assignable_v<Ts>)&&...)) requires(
 		HAS_MOVE_ASSIGNMENT && !HAS_TRIVIAL_MOVE_ASSIGNMENT) {
 		if (activeTypeIndex == other.activeTypeIndex) {
@@ -304,6 +468,21 @@ public:
 		return *this;
 	}
 
+	/**
+	 * Converting assignment.
+	 *
+	 * Chooses the variant alternative type to construct or assign based on the
+	 * overloading rules specified by std::variant.
+	 *
+	 * \param value underlying value to construct the new value with. Must be
+	 *        convertible to one of the variant's listed alternative types.
+	 *
+	 * \throws any exception thrown by the underlying constructor or assignment
+	 *         of the relevant alternative type.
+	 *
+	 * \note If an exception is thrown after the old value has been destroyed,
+	 *       the variant ends up in the valueless by exception state.
+	 */
 	template <typename U>
 	Variant& operator=(U&& value) noexcept(std::is_nothrow_assignable_v<decltype(F(std::forward<U>(value)))&, U>&&
 			std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value))), U>) requires(!std::is_same_v<std::remove_cvref_t<U>, Variant> &&
@@ -321,24 +500,70 @@ public:
 		return *this;
 	}
 
+	/**
+	 * Construct an alternative given its type, destroying the old value.
+	 *
+	 * \tparam T the alternative type to construct. Must be one of the variant's
+	 *         listed alternative types.
+	 *
+	 * \param args arguments to pass to the underlying value's constructor.
+	 *
+	 * \throws any exception thrown by the underlying constructor of the
+	 *         relevant alternative type.
+	 *
+	 * \note If an exception is thrown after the old value has been destroyed,
+	 *       the variant ends up in the valueless by exception state.
+	 */
 	template <typename T, typename... Args>
 	T& emplace(Args&&... args) requires(variant_has_alternative_v<T, Variant>&& std::is_constructible_v<T, Args...>) {
 		return emplace<variant_index_v<T, Variant>>(std::forward<Args>(args)...);
 	}
 
+	/**
+	 * Construct an alternative given its type, with an initializer list as the
+	 * first constructor argument, destroying the old value.
+	 *
+	 * \tparam T the alternative type to construct. Must be one of the variant's
+	 *         listed alternative types.
+	 *
+	 * \param ilist first argument to pass to the underlying value's
+	 *        constructor.
+	 * \param args subsequent arguments to pass to the underlying value's
+	 *        constructor.
+	 *
+	 * \throws any exception thrown by the underlying constructor of the
+	 *         relevant alternative type.
+	 *
+	 * \note If an exception is thrown after the old value has been destroyed,
+	 *       the variant ends up in the valueless by exception state.
+	 */
 	template <typename T, typename U, typename... Args>
 	T& emplace(std::initializer_list<U> ilist, Args&&... args) requires(variant_has_alternative_v<T, Variant>&& std::is_constructible_v<T, std::initializer_list<U>&, Args...>) {
 		return emplace<variant_index_v<T, Variant>>(ilist, std::forward<Args>(args)...);
 	}
 
-	template <std::size_t index, typename... Args>
-	variant_alternative_t<index, Variant>& emplace(Args&&... args) requires(std::is_constructible_v<variant_alternative_t<index, Variant>, Args...>) {
-		static_assert(index < sizeof...(Ts));
-		using T = variant_alternative_t<index, Variant>;
+	/**
+	 * Construct an alternative given its index, destroying the old value.
+	 *
+	 * \tparam Index the alternative index to construct. Must be within the
+	 *         range of the variant's list of alternative types.
+	 *
+	 * \param args arguments to pass to the underlying value's constructor.
+	 *
+	 * \throws any exception thrown by the underlying constructor of the
+	 *         relevant alternative type.
+	 *
+	 * \note If an exception is thrown after the old value has been destroyed,
+	 *       the variant ends up in the valueless by exception state.
+	 */
+	template <std::size_t Index, typename... Args>
+	variant_alternative_t<Index, Variant>& emplace(Args&&... args) requires(std::is_constructible_v<variant_alternative_t<Index, Variant>, Args...>) {
+		static_assert(Index < sizeof...(Ts));
+		using T = variant_alternative_t<Index, Variant>;
 		destroy();
 		try {
 			std::construct_at(reinterpret_cast<T*>(&storage), std::forward<Args>(args)...);
-			activeTypeIndex = index;
+			activeTypeIndex = Index;
 		} catch (...) {
 			activeTypeIndex = npos;
 			throw;
@@ -346,15 +571,33 @@ public:
 		return *std::launder(reinterpret_cast<T*>(&storage));
 	}
 
-	template <std::size_t index, typename U, typename... Args>
-	variant_alternative_t<index, Variant>& emplace(std::initializer_list<U> ilist, Args&&... args) requires(
-		std::is_constructible_v<variant_alternative_t<index, Variant>, std::initializer_list<U>&, Args...>) {
-		static_assert(index < sizeof...(Ts));
-		using T = variant_alternative_t<index, Variant>;
+	/**
+	 * Construct an alternative given its index, with an initializer list as the
+	 * first constructor argument, destroying the old value.
+	 *
+	 * \tparam Index the alternative index to construct. Must be within the
+	 *         range of the variant's list of alternative types.
+	 *
+	 * \param ilist first argument to pass to the underlying value's
+	 *        constructor.
+	 * \param args subsequent arguments to pass to the underlying value's
+	 *        constructor.
+	 *
+	 * \throws any exception thrown by the underlying constructor of the
+	 *         relevant alternative type.
+	 *
+	 * \note If an exception is thrown after the old value has been destroyed,
+	 *       the variant ends up in the valueless by exception state.
+	 */
+	template <std::size_t Index, typename U, typename... Args>
+	variant_alternative_t<Index, Variant>& emplace(std::initializer_list<U> ilist, Args&&... args) requires(
+		std::is_constructible_v<variant_alternative_t<Index, Variant>, std::initializer_list<U>&, Args...>) {
+		static_assert(Index < sizeof...(Ts));
+		using T = variant_alternative_t<Index, Variant>;
 		destroy();
 		try {
 			std::construct_at(reinterpret_cast<T*>(&storage), ilist, std::forward<Args>(args)...);
-			activeTypeIndex = index;
+			activeTypeIndex = Index;
 		} catch (...) {
 			activeTypeIndex = npos;
 			throw;
@@ -362,6 +605,18 @@ public:
 		return *std::launder(reinterpret_cast<T*>(&storage));
 	}
 
+	/**
+	 * Swap this variant's value with that of another.
+	 *
+	 * \param other variant to swap with.
+	 *
+	 * \throws any exception thrown by the underlying constructor, assignment or
+	 *         swap implementation of the relevant alternative types.
+	 *
+	 * \note If an exception is thrown after any value has been destroyed,
+	 *       and before it has been replaced with a new value, the associated
+	 *       variant ends up in the valueless by exception state.
+	 */
 	void swap(Variant& other) noexcept(((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_swappable_v<Ts>)&&...)) {
 		if (activeTypeIndex == other.activeTypeIndex) {
 			const auto visitor = [&]<typename T>(T& value) -> void {
@@ -379,128 +634,588 @@ public:
 		}
 	}
 
+	/**
+	 * Swap the values of two variants.
+	 *
+	 * \param a first variant.
+	 * \param b second variant.
+	 *
+	 * \throws any exception thrown by the underlying constructor, assignment or
+	 *         swap implementation of the relevant alternative types.
+	 *
+	 * \note If an exception is thrown after any value has been destroyed,
+	 *       and before it has been replaced with a new value, the associated
+	 *       variant ends up in the valueless by exception state.
+	 */
 	friend void swap(Variant& a, Variant& b) noexcept(noexcept(a.swap(b))) {
 		a.swap(b);
 	}
 
+	/**
+	 * Get the alternative index of the currently active value held by the
+	 * variant.
+	 *
+	 * \return the active alternative index, or #npos if the variant is in the
+	 *         valueless by exception state.
+	 */
 	[[nodiscard]] constexpr index_type index() const noexcept {
 		return activeTypeIndex;
 	}
 
+	/**
+	 * Check if the variant is in the valueless by exception state.
+	 *
+	 * \return true if the variant is in the valueless by exception state, false
+	 *         otherwise.
+	 */
 	[[nodiscard]] constexpr bool valueless_by_exception() const noexcept {
 		return activeTypeIndex == npos;
 	}
 
+	/**
+	 * Check if the variant currently holds the alternative with the given type.
+	 *
+	 * \tparam T alternative type to check for. Must be one of the variant's
+	 *         listed alternative types.
+	 *
+	 * \return true if the variant holds a value of the given type, false
+	 *         otherwise.
+	 */
 	template <typename T>
 	[[nodiscard]] constexpr bool is() const noexcept requires(variant_has_alternative_v<T, Variant>) {
 		return activeTypeIndex == variant_index_v<T, Variant>;
 	}
 
-	template <std::size_t index>
+	/**
+	 * Check if the variant currently holds the alternative with the given
+	 * index.
+	 *
+	 * \tparam Index alternative index to check for. Must be within the range of
+	 *         the variant's list of alternative types.
+	 *
+	 * \return true if the variant holds a value of the given alternative index,
+	 *         false otherwise.
+	 */
+	template <std::size_t Index>
 	[[nodiscard]] constexpr bool is() const noexcept {
-		return activeTypeIndex == index;
+		return activeTypeIndex == Index;
 	}
 
+	/**
+	 * Access the underlying value with the given type without a safety check.
+	 *
+	 * \tparam T type of the currently active value to get. Must be one of the
+	 *         variant's listed alternative types.
+	 *
+	 * \return a reference to the value held by the variant.
+	 *
+	 * \warning The behavior of accessing the underlying value using the
+	 *          incorrect alternative type which is not currently active is
+	 *          undefined. The active alternative type must be known in advance
+	 *          in order to use this function safely, for example by checking if
+	 *          the variant contains the expected alternative using the is()
+	 *          function.
+	 *
+	 * \remark Rather than using this function in conjunction with is(), it is
+	 *         usually more appropriate to use get() or to call get_if() and
+	 *         make sure that the returned pointer is not nullptr. This function
+	 *         is only meant for the cases where it is absolutely certain which
+	 *         alternative the variant currently holds.
+	 *
+	 * \sa get()
+	 * \sa get_if()
+	 */
 	template <typename T>
 	[[nodiscard]] T& as() & noexcept requires(variant_has_alternative_v<T, Variant>) {
 		assert(is<T>());
 		return *std::launder(reinterpret_cast<T*>(&storage));
 	}
 
+	/**
+	 * Access the underlying value with the given type without a safety check.
+	 *
+	 * \tparam T type of the currently active value to get. Must be one of the
+	 *         variant's listed alternative types.
+	 *
+	 * \return a read-only reference to the value held by the variant.
+	 *
+	 * \warning The behavior of accessing the underlying value using the
+	 *          incorrect alternative type which is not currently active is
+	 *          undefined. The active alternative type must be known in advance
+	 *          in order to use this function safely, for example by checking if
+	 *          the variant contains the expected alternative using the is()
+	 *          function.
+	 *
+	 * \remark Rather than using this function in conjunction with is(), it is
+	 *         usually more appropriate to use get() or to call get_if() and
+	 *         make sure that the returned pointer is not nullptr. This function
+	 *         is only meant for the cases where it is absolutely certain which
+	 *         alternative the variant currently holds.
+	 *
+	 * \sa get()
+	 * \sa get_if()
+	 */
 	template <typename T>
 	[[nodiscard]] const T& as() const& noexcept requires(variant_has_alternative_v<T, Variant>) {
 		assert(is<T>());
 		return *std::launder(reinterpret_cast<const T*>(&storage));
 	}
 
+	/**
+	 * Access the underlying value with the given type without a safety check.
+	 *
+	 * \tparam T type of the currently active value to get. Must be one of the
+	 *         variant's listed alternative types.
+	 *
+	 * \return an rvalue reference to the value held by the variant.
+	 *
+	 * \warning The behavior of accessing the underlying value using the
+	 *          incorrect alternative type which is not currently active is
+	 *          undefined. The active alternative type must be known in advance
+	 *          in order to use this function safely, for example by checking if
+	 *          the variant contains the expected alternative using the is()
+	 *          function.
+	 *
+	 * \remark Rather than using this function in conjunction with is(), it is
+	 *         usually more appropriate to use get() or to call get_if() and
+	 *         make sure that the returned pointer is not nullptr. This function
+	 *         is only meant for the cases where it is absolutely certain which
+	 *         alternative the variant currently holds.
+	 *
+	 * \sa get()
+	 * \sa get_if()
+	 */
 	template <typename T>
 	[[nodiscard]] T&& as() && noexcept requires(variant_has_alternative_v<T, Variant>) {
 		assert(is<T>());
 		return std::move(*std::launder(reinterpret_cast<T*>(&storage)));
 	}
 
+	/**
+	 * Access the underlying value with the given type without a safety check.
+	 *
+	 * \tparam T type of the currently active value to get. Must be one of the
+	 *         variant's listed alternative types.
+	 *
+	 * \return a read-only rvalue reference to the value held by the variant.
+	 *
+	 * \warning The behavior of accessing the underlying value using the
+	 *          incorrect alternative type which is not currently active is
+	 *          undefined. The active alternative type must be known in advance
+	 *          in order to use this function safely, for example by checking if
+	 *          the variant contains the expected alternative using the is()
+	 *          function.
+	 *
+	 * \remark Rather than using this function in conjunction with is(), it is
+	 *         usually more appropriate to use get() or to call get_if() and
+	 *         make sure that the returned pointer is not nullptr. This function
+	 *         is only meant for the cases where it is absolutely certain which
+	 *         alternative the variant currently holds.
+	 *
+	 * \sa get()
+	 * \sa get_if()
+	 */
 	template <typename T>
 	[[nodiscard]] const T&& as() const&& noexcept requires(variant_has_alternative_v<T, Variant>) {
 		assert(is<T>());
 		return std::move(*std::launder(reinterpret_cast<const T*>(&storage)));
 	}
 
-	template <std::size_t index>
-	[[nodiscard]] variant_alternative_t<index, Variant>& as() & noexcept {
-		assert(is<index>());
-		return *std::launder(reinterpret_cast<variant_alternative_t<index, Variant>*>(&storage));
+	/**
+	 * Access the underlying value with the given index without a safety check.
+	 *
+	 * \tparam Index alternative index of the currently active value to get.
+	 *         Must be within the range of the variant's list of alternative
+	 *         types.
+	 *
+	 * \return a reference to the value held by the variant.
+	 *
+	 * \warning The behavior of accessing the underlying value using the
+	 *          incorrect alternative type which is not currently active is
+	 *          undefined. The active alternative type must be known in advance
+	 *          in order to use this function safely, for example by checking if
+	 *          the variant contains the expected alternative using the is()
+	 *          function.
+	 *
+	 * \remark Rather than using this function in conjunction with is(), it is
+	 *         usually more appropriate to use get() or to call get_if() and
+	 *         make sure that the returned pointer is not nullptr. This function
+	 *         is only meant for the cases where it is absolutely certain which
+	 *         alternative the variant currently holds.
+	 *
+	 * \sa get()
+	 * \sa get_if()
+	 */
+	template <std::size_t Index>
+	[[nodiscard]] variant_alternative_t<Index, Variant>& as() & noexcept {
+		assert(is<Index>());
+		return *std::launder(reinterpret_cast<variant_alternative_t<Index, Variant>*>(&storage));
 	}
 
-	template <std::size_t index>
-	[[nodiscard]] const variant_alternative_t<index, Variant>& as() const& noexcept {
-		assert(is<index>());
-		return *std::launder(reinterpret_cast<const variant_alternative_t<index, Variant>*>(&storage));
+	/**
+	 * Access the underlying value with the given index without a safety check.
+	 *
+	 * \tparam Index alternative index of the currently active value to get.
+	 *         Must be within the range of the variant's list of alternative
+	 *         types.
+	 *
+	 * \return a read-only reference to the value held by the variant.
+	 *
+	 * \warning The behavior of accessing the underlying value using the
+	 *          incorrect alternative type which is not currently active is
+	 *          undefined. The active alternative type must be known in advance
+	 *          in order to use this function safely, for example by checking if
+	 *          the variant contains the expected alternative using the is()
+	 *          function.
+	 *
+	 * \remark Rather than using this function in conjunction with is(), it is
+	 *         usually more appropriate to use get() or to call get_if() and
+	 *         make sure that the returned pointer is not nullptr. This function
+	 *         is only meant for the cases where it is absolutely certain which
+	 *         alternative the variant currently holds.
+	 *
+	 * \sa get()
+	 * \sa get_if()
+	 */
+	template <std::size_t Index>
+	[[nodiscard]] const variant_alternative_t<Index, Variant>& as() const& noexcept {
+		assert(is<Index>());
+		return *std::launder(reinterpret_cast<const variant_alternative_t<Index, Variant>*>(&storage));
 	}
 
-	template <std::size_t index>
-	[[nodiscard]] variant_alternative_t<index, Variant>&& as() && noexcept {
-		assert(is<index>());
-		return std::move(*std::launder(reinterpret_cast<variant_alternative_t<index, Variant>*>(&storage)));
+	/**
+	 * Access the underlying value with the given index without a safety check.
+	 *
+	 * \tparam Index alternative index of the currently active value to get.
+	 *         Must be within the range of the variant's list of alternative
+	 *         types.
+	 *
+	 * \return an rvalue reference to the value held by the variant.
+	 *
+	 * \warning The behavior of accessing the underlying value using the
+	 *          incorrect alternative type which is not currently active is
+	 *          undefined. The active alternative type must be known in advance
+	 *          in order to use this function safely, for example by checking if
+	 *          the variant contains the expected alternative using the is()
+	 *          function.
+	 *
+	 * \remark Rather than using this function in conjunction with is(), it is
+	 *         usually more appropriate to use get() or to call get_if() and
+	 *         make sure that the returned pointer is not nullptr. This function
+	 *         is only meant for the cases where it is absolutely certain which
+	 *         alternative the variant currently holds.
+	 *
+	 * \sa get()
+	 * \sa get_if()
+	 */
+	template <std::size_t Index>
+	[[nodiscard]] variant_alternative_t<Index, Variant>&& as() && noexcept {
+		assert(is<Index>());
+		return std::move(*std::launder(reinterpret_cast<variant_alternative_t<Index, Variant>*>(&storage)));
 	}
 
-	template <std::size_t index>
-	[[nodiscard]] const variant_alternative_t<index, Variant>&& as() const&& noexcept {
-		assert(is<index>());
-		return std::move(*std::launder(reinterpret_cast<const variant_alternative_t<index, Variant>*>(&storage)));
+	/**
+	 * Access the underlying value with the given index without a safety check.
+	 *
+	 * \tparam Index alternative index of the currently active value to get.
+	 *         Must be within the range of the variant's list of alternative
+	 *         types.
+	 *
+	 * \return a read-only rvalue reference to the value held by the variant.
+	 *
+	 * \warning The behavior of accessing the underlying value using the
+	 *          incorrect alternative type which is not currently active is
+	 *          undefined. The active alternative type must be known in advance
+	 *          in order to use this function safely, for example by checking if
+	 *          the variant contains the expected alternative using the is()
+	 *          function.
+	 *
+	 * \remark Rather than using this function in conjunction with is(), it is
+	 *         usually more appropriate to use get() or to call get_if() and
+	 *         make sure that the returned pointer is not nullptr. This function
+	 *         is only meant for the cases where it is absolutely certain which
+	 *         alternative the variant currently holds.
+	 *
+	 * \sa get()
+	 * \sa get_if()
+	 */
+	template <std::size_t Index>
+	[[nodiscard]] const variant_alternative_t<Index, Variant>&& as() const&& noexcept {
+		assert(is<Index>());
+		return std::move(*std::launder(reinterpret_cast<const variant_alternative_t<Index, Variant>*>(&storage)));
 	}
 
+	/**
+	 * Access the underlying value with the given type.
+	 *
+	 * \tparam T type of the currently active value to get. Must be one of the
+	 *         variant's listed alternative types.
+	 *
+	 * \return a reference to the value held by the variant.
+	 *
+	 * \throws BadVariantAccess if the variant does not currently hold a value
+	 *         of the given type.
+	 *
+	 * \sa as()
+	 * \sa get_if()
+	 */
 	template <typename T>
-	[[nodiscard]] T& get() requires(variant_has_alternative_v<T, Variant>) {
+		[[nodiscard]] T& get() & requires(variant_has_alternative_v<T, Variant>) {
 		if (!is<T>()) {
 			throw BadVariantAccess{};
 		}
 		return as<T>();
 	}
 
+	/**
+	 * Access the underlying value with the given type.
+	 *
+	 * \tparam T type of the currently active value to get. Must be one of the
+	 *         variant's listed alternative types.
+	 *
+	 * \return a read-only reference to the value held by the variant.
+	 *
+	 * \throws BadVariantAccess if the variant does not currently hold a value
+	 *         of the given type.
+	 *
+	 * \sa as()
+	 * \sa get_if()
+	 */
 	template <typename T>
-	[[nodiscard]] const T& get() const requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] const T& get() const& requires(variant_has_alternative_v<T, Variant>) {
 		if (!is<T>()) {
 			throw BadVariantAccess{};
 		}
 		return as<T>();
 	}
 
-	template <std::size_t index>
-	[[nodiscard]] variant_alternative_t<index, Variant>& get() {
-		if (!is<index>()) {
+	/**
+	 * Access the underlying value with the given type.
+	 *
+	 * \tparam T type of the currently active value to get. Must be one of the
+	 *         variant's listed alternative types.
+	 *
+	 * \return an rvalue reference to the value held by the variant.
+	 *
+	 * \throws BadVariantAccess if the variant does not currently hold a value
+	 *         of the given type.
+	 *
+	 * \sa as()
+	 * \sa get_if()
+	 */
+	template <typename T>
+		[[nodiscard]] T&& get() && requires(variant_has_alternative_v<T, Variant>) {
+		if (!is<T>()) {
 			throw BadVariantAccess{};
 		}
-		return as<index>();
+		return std::move(as<T>());
 	}
 
-	template <std::size_t index>
-	[[nodiscard]] const variant_alternative_t<index, Variant>& get() const {
-		if (!is<index>()) {
+	/**
+	 * Access the underlying value with the given type.
+	 *
+	 * \tparam T type of the currently active value to get. Must be one of the
+	 *         variant's listed alternative types.
+	 *
+	 * \return a read-only rvalue reference to the value held by the variant.
+	 *
+	 * \throws BadVariantAccess if the variant does not currently hold a value
+	 *         of the given type.
+	 *
+	 * \sa as()
+	 * \sa get_if()
+	 */
+	template <typename T>
+	[[nodiscard]] const T&& get() const&& requires(variant_has_alternative_v<T, Variant>) {
+		if (!is<T>()) {
 			throw BadVariantAccess{};
 		}
-		return as<index>();
+		return std::move(as<T>());
 	}
 
+	/**
+	 * Access the underlying value with the given index.
+	 *
+	 * \tparam Index alternative index of the currently active value to get.
+	 *         Must be within the range of the variant's list of alternative
+	 *         types.
+	 *
+	 * \return a reference to the value held by the variant.
+	 *
+	 * \throws BadVariantAccess if the variant does not currently hold the given
+	 *         alternative.
+	 *
+	 * \sa as()
+	 * \sa get_if()
+	 */
+	template <std::size_t Index>
+	[[nodiscard]] variant_alternative_t<Index, Variant>& get() & {
+		if (!is<Index>()) {
+			throw BadVariantAccess{};
+		}
+		return as<Index>();
+	}
+
+	/**
+	 * Access the underlying value with the given index.
+	 *
+	 * \tparam Index alternative index of the currently active value to get.
+	 *         Must be within the range of the variant's list of alternative
+	 *         types.
+	 *
+	 * \return a read-only reference to the value held by the variant.
+	 *
+	 * \throws BadVariantAccess if the variant does not currently hold the given
+	 *         alternative.
+	 *
+	 * \sa as()
+	 * \sa get_if()
+	 */
+	template <std::size_t Index>
+	[[nodiscard]] const variant_alternative_t<Index, Variant>& get() const& {
+		if (!is<Index>()) {
+			throw BadVariantAccess{};
+		}
+		return as<Index>();
+	}
+
+	/**
+	 * Access the underlying value with the given index.
+	 *
+	 * \tparam Index alternative index of the currently active value to get.
+	 *         Must be within the range of the variant's list of alternative
+	 *         types.
+	 *
+	 * \return an rvalue reference to the value held by the variant.
+	 *
+	 * \throws BadVariantAccess if the variant does not currently hold the given
+	 *         alternative.
+	 *
+	 * \sa as()
+	 * \sa get_if()
+	 */
+	template <std::size_t Index>
+	[[nodiscard]] variant_alternative_t<Index, Variant>&& get() && {
+		if (!is<Index>()) {
+			throw BadVariantAccess{};
+		}
+		return std::move(as<Index>());
+	}
+
+	/**
+	 * Access the underlying value with the given index.
+	 *
+	 * \tparam Index alternative index of the currently active value to get.
+	 *         Must be within the range of the variant's list of alternative
+	 *         types.
+	 *
+	 * \return a read-only rvalue reference to the value held by the variant.
+	 *
+	 * \throws BadVariantAccess if the variant does not currently hold the given
+	 *         alternative.
+	 *
+	 * \sa as()
+	 * \sa get_if()
+	 */
+	template <std::size_t Index>
+	[[nodiscard]] const variant_alternative_t<Index, Variant>&& get() const&& {
+		if (!is<Index>()) {
+			throw BadVariantAccess{};
+		}
+		return std::move(as<Index>());
+	}
+
+	/**
+	 * Access the underlying value with the given type if it is the currently
+	 * active alternative.
+	 *
+	 * \tparam T type of the value to get. Must be one of the variant's listed
+	 *         alternative types.
+	 *
+	 * \return a non-owning pointer to the value held by the variant, or nullptr
+	 *         if the variant does not currently hold a value of the given type.
+	 *
+	 * \sa as()
+	 * \sa get()
+	 */
 	template <typename T>
 	[[nodiscard]] T* get_if() noexcept requires(variant_has_alternative_v<T, Variant>) {
 		return (is<T>()) ? &as<T>() : nullptr;
 	}
 
+	/**
+	 * Access the underlying value with the given type if it is the currently
+	 * active alternative.
+	 *
+	 * \tparam T type of the value to get. Must be one of the variant's listed
+	 *         alternative types.
+	 *
+	 * \return a non-owning read-only pointer to the value held by the variant,
+	 *         or nullptr if the variant does not currently hold a value of the
+	 *         given type.
+	 *
+	 * \sa as()
+	 * \sa get()
+	 */
 	template <typename T>
 	[[nodiscard]] const T* get_if() const noexcept requires(variant_has_alternative_v<T, Variant>) {
 		return (is<T>()) ? &as<T>() : nullptr;
 	}
 
-	template <std::size_t index>
-	[[nodiscard]] variant_alternative_t<index, Variant>* get_if() noexcept {
-		return (is<index>()) ? &as<index>() : nullptr;
+	/**
+	 * Access the underlying value with the given index if it is the currently
+	 * active alternative.
+	 *
+	 * \tparam Index alternative index of the value to get. Must be within the
+	 *         range of the variant's list of alternative types.
+	 *
+	 * \return a non-owning pointer to the value held by the variant, or nullptr
+	 *         if the variant does not currently hold the given alternative.
+	 *
+	 * \sa as()
+	 * \sa get()
+	 */
+	template <std::size_t Index>
+	[[nodiscard]] variant_alternative_t<Index, Variant>* get_if() noexcept {
+		return (is<Index>()) ? &as<Index>() : nullptr;
 	}
 
-	template <std::size_t index>
-	[[nodiscard]] const variant_alternative_t<index, Variant>* get_if() const noexcept {
-		return (is<index>()) ? &as<index>() : nullptr;
+	/**
+	 * Access the underlying value with the given index if it is the currently
+	 * active alternative.
+	 *
+	 * \tparam Index alternative index of the value to get. Must be within the
+	 *         range of the variant's list of alternative types.
+	 *
+	 * \return a non-owning read-only pointer to the value held by the variant,
+	 *         or nullptr if the variant does not currently hold the given
+	 *         alternative.
+	 *
+	 * \sa as()
+	 * \sa get()
+	 */
+	template <std::size_t Index>
+	[[nodiscard]] const variant_alternative_t<Index, Variant>* get_if() const noexcept {
+		return (is<Index>()) ? &as<Index>() : nullptr;
 	}
 
+	/**
+	 * Call a visitor functor with the currently active underlying value of a
+	 * variant.
+	 *
+	 * \param visitor callable object that is overloaded to accept any of the
+	 *        variant alternatives as a parameter.
+	 * \param variant variant whose underlying value to pass to the visitor.
+	 *
+	 * \return the result of calling the visitor with the currently active
+	 *         variant alternative value.
+	 *
+	 * \throws BadVariantAccess if the variant is in the valueless by exception
+	 *         state.
+	 * \throws any exception thrown by the visitor.
+	 *
+	 * \sa match()
+	 */
 	template <typename Visitor, typename V>
 	static constexpr decltype(auto) visit(Visitor&& visitor, V&& variant) {
 		constexpr bool IS_ALL_LVALUE_REFERENCE = (std::is_lvalue_reference_v<decltype(std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Ts>()))> &&
@@ -557,65 +1272,241 @@ private:
 	index_type activeTypeIndex;
 };
 
+/**
+ * Call a visitor functor with the currently active underlying value of a
+ * variant.
+ *
+ * \param visitor callable object that is overloaded to accept any of the
+ *        variant alternatives as a parameter.
+ * \param variant variant whose underlying value to pass to the visitor.
+ *
+ * \return the result of calling the visitor with the currently active variant
+ *         alternative value.
+ *
+ * \throws BadVariantAccess if the variant is in the valueless by exception
+ *         state.
+ * \throws any exception thrown by the visitor.
+ *
+ * \sa match()
+ */
 template <typename Visitor, detail::derived_from_template_specialization_of<Variant> V>
 constexpr decltype(auto) visit(Visitor&& visitor, V&& variant) {
 	return std::remove_cvref_t<V>::visit(std::forward<Visitor>(visitor), std::forward<V>(variant));
 }
 
+/**
+ * Check if a variant currently holds the alternative with the given type.
+ *
+ * \tparam T alternative type to check for. Must be one of the variant's listed
+ *         alternative types.
+ *
+ * \param variant the variant to check.
+ *
+ * \return true if the variant holds a value of the given type, false
+ *         otherwise.
+ *
+ * \sa Variant::is()
+ */
 template <typename T, typename... Ts>
 [[nodiscard]] constexpr bool holds_alternative(const Variant<Ts...>& variant) noexcept {
 	return variant.template is<T>();
 }
 
-template <std::size_t index, typename... Ts>
+/**
+ * Check if a variant currently holds the alternative with the given index.
+ *
+ * \tparam Index alternative index to check for. Must be within the range of the
+ *         variant's list of alternative types.
+ *
+ * \param variant the variant to check.
+ *
+ * \return true if the variant holds a value of the given alternative index,
+ *         false otherwise.
+ *
+ * \sa Variant::is()
+ */
+template <std::size_t Index, typename... Ts>
 [[nodiscard]] constexpr bool holds_alternative(const Variant<Ts...>& variant) noexcept {
-	return variant.template is<index>();
+	return variant.template is<Index>();
 }
 
+/**
+ * Access the underlying value with the given type of a variant.
+ *
+ * \tparam T type of the currently active value to get. Must be one of the
+ *         variant's listed alternative types.
+ *
+ * \param variant the variant to get the value of.
+ *
+ * \return a reference to the value held by the variant.
+ *
+ * \throws BadVariantAccess if the variant does not currently hold a value
+ *         of the given type.
+ *
+ * \sa Variant::get()
+ */
 template <typename T, typename... Ts>
 [[nodiscard]] constexpr T& get(Variant<Ts...>& variant) {
 	return variant.template get<T>();
 }
 
+/**
+ * Access the underlying value with the given type of a variant.
+ *
+ * \tparam T type of the currently active value to get. Must be one of the
+ *         variant's listed alternative types.
+ *
+ * \param variant the variant to get the value of.
+ *
+ * \return a read-only reference to the value held by the variant.
+ *
+ * \throws BadVariantAccess if the variant does not currently hold a value
+ *         of the given type.
+ *
+ * \sa Variant::get()
+ */
 template <typename T, typename... Ts>
 [[nodiscard]] constexpr const T& get(const Variant<Ts...>& variant) {
 	return variant.template get<T>();
 }
 
-template <std::size_t index, typename... Ts>
-[[nodiscard]] constexpr variant_alternative_t<index, Variant<Ts...>>* get(Variant<Ts...>& variant) {
-	return variant.template get<index>();
+/**
+ * Access the underlying value with the given index of a variant.
+ *
+ * \tparam Index alternative index of the currently active value to get. Must be
+ *         within the range of the variant's list of alternative types.
+ *
+ * \param variant the variant to get the value of.
+ *
+ * \return a reference to the value held by the variant.
+ *
+ * \throws BadVariantAccess if the variant does not currently hold the given
+ *         alternative.
+ *
+ * \sa Variant::get()
+ */
+template <std::size_t Index, typename... Ts>
+[[nodiscard]] constexpr variant_alternative_t<Index, Variant<Ts...>>& get(Variant<Ts...>& variant) {
+	return variant.template get<Index>();
 }
 
-template <std::size_t index, typename... Ts>
-[[nodiscard]] constexpr const variant_alternative_t<index, Variant<Ts...>>* get(const Variant<Ts...>& variant) {
-	return variant.template get<index>();
+/**
+ * Access the underlying value with the given index of a variant.
+ *
+ * \tparam Index alternative index of the currently active value to get. Must be
+ *         within the range of the variant's list of alternative types.
+ *
+ * \param variant the variant to get the value of.
+ *
+ * \return a read-only reference to the value held by the variant.
+ *
+ * \throws BadVariantAccess if the variant does not currently hold the given
+ *         alternative.
+ *
+ * \sa Variant::get()
+ */
+template <std::size_t Index, typename... Ts>
+[[nodiscard]] constexpr const variant_alternative_t<Index, Variant<Ts...>>& get(const Variant<Ts...>& variant) {
+	return variant.template get<Index>();
 }
 
+/**
+ * Access the underlying value with the given type of a variant if it is the
+ * currently active alternative.
+ *
+ * \tparam T type of the value to get. Must be one of the variant's listed
+ *         alternative types.
+ *
+ * \param variant non-owning pointer to the variant to get the value of. Must
+ *        not be nullptr.
+ *
+ * \return a non-owning pointer to the value held by the variant, or nullptr
+ *         if the variant does not currently hold a value of the given type.
+ *
+ * \sa Variant::get_if()
+ */
 template <typename T, typename... Ts>
 [[nodiscard]] constexpr T* get_if(Variant<Ts...>* variant) noexcept {
 	assert(variant);
 	return variant->template get_if<T>();
 }
 
+/**
+ * Access the underlying value with the given type of a variant if it is the
+ * currently active alternative.
+ *
+ * \tparam T type of the value to get. Must be one of the variant's listed
+ *         alternative types.
+ *
+ * \param variant non-owning read-only pointer to the variant to get the value
+ *        of. Must not be nullptr.
+ *
+ * \return a non-owning read-only pointer to the value held by the variant, or
+ *         nullptr if the variant does not currently hold a value of the given
+ *         type.
+ *
+ * \sa Variant::get_if()
+ */
 template <typename T, typename... Ts>
 [[nodiscard]] constexpr const T* get_if(const Variant<Ts...>* variant) noexcept {
 	assert(variant);
 	return variant->template get_if<T>();
 }
 
-template <std::size_t index, typename... Ts>
-[[nodiscard]] constexpr variant_alternative_t<index, Variant<Ts...>>* get_if(Variant<Ts...>* variant) noexcept {
+/**
+ * Access the underlying value with the given index of a variant if it is the
+ * currently active alternative.
+ *
+ * \tparam Index alternative index of the value to get. Must be within the range
+ *         of the variant's list of alternative types.
+ *
+ * \param variant non-owning pointer to the variant to get the value of. Must
+ *        not be nullptr.
+ *
+ * \return a non-owning pointer to the value held by the variant, or nullptr if
+ *         the variant does not currently hold the given alternative.
+ *
+ * \sa Variant::get_if()
+ */
+template <std::size_t Index, typename... Ts>
+[[nodiscard]] constexpr variant_alternative_t<Index, Variant<Ts...>>* get_if(Variant<Ts...>* variant) noexcept {
 	assert(variant);
-	return variant->template get_if<index>();
+	return variant->template get_if<Index>();
 }
 
-template <std::size_t index, typename... Ts>
-[[nodiscard]] constexpr const variant_alternative_t<index, Variant<Ts...>>* get_if(const Variant<Ts...>* variant) noexcept {
+/**
+ * Access the underlying value with the given index of a variant if it is the
+ * currently active alternative.
+ *
+ * \tparam Index alternative index of the value to get. Must be within the range
+ *         of the variant's list of alternative types.
+ *
+ * \param variant non-owning read-only pointer to the variant to get the value
+ *        of. Must not be nullptr.
+ *
+ * \return a non-owning read-only pointer to the value held by the variant, or
+ *         nullptr if the variant does not currently hold the given alternative.
+ *
+ * \sa Variant::get_if()
+ */
+template <std::size_t Index, typename... Ts>
+[[nodiscard]] constexpr const variant_alternative_t<Index, Variant<Ts...>>* get_if(const Variant<Ts...>* variant) noexcept {
 	assert(variant);
-	return variant->template get_if<index>();
+	return variant->template get_if<Index>();
 }
 
+/**
+ * Compare two variants for equality.
+ *
+ * \param a first variant.
+ * \param b second variant.
+ *
+ * \return true if the first and second variant hold the same alternative and
+ *         their values compare equal, false otherwise.
+ *
+ * \throw any exception thrown by the underlying comparison operator of the
+ *        relevant alternative type.
+ */
 template <typename... Ts>
 [[nodiscard]] constexpr bool operator==(const Variant<Ts...>& a, const Variant<Ts...>& b) {
 	if (a.index() != b.index()) {
@@ -627,6 +1518,18 @@ template <typename... Ts>
 	return visit([&]<typename T>(const T& value) -> bool { return value == b.template as<T>(); }, a);
 }
 
+/**
+ * Compare two variants.
+ *
+ * \param a first variant.
+ * \param b second variant.
+ *
+ * \return an ordering of the first and second variant, based on their active
+ *         alternatives and values.
+ *
+ * \throw any exception thrown by the underlying comparison operator of the
+ *        relevant alternative type.
+ */
 template <typename... Ts>
 [[nodiscard]] constexpr std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...> operator<=>(const Variant<Ts...>& a, const Variant<Ts...>& b) {
 	if (a.valueless_by_exception() && b.valueless_by_exception()) {
@@ -644,6 +1547,24 @@ template <typename... Ts>
 	return visit([&]<typename T>(const T& value) -> std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...> { return value <=> b.template as<T>(); }, a);
 }
 
+/**
+ * Choose a function overload to execute based on the active alternative of a
+ * variant.
+ *
+ * \param variant forwarding reference to the variant to match on.
+ *
+ * \return an object containing the forwarded variant with a call operator that
+ *         accepts a set of overloads that take each of the possible variant
+ *         alternatives as a parameter and calls the overload corresponding to
+ *         the currently active variant alternative. This call operator may
+ *         throw BadVariantAccess if the variant is in the valueless by
+ *         exception state.
+ *
+ * \throws any exception thrown when forwarding the variant to the returned
+ *         object.
+ *
+ * \sa visit()
+ */
 template <typename V>
 [[nodiscard]] constexpr detail::Matcher<V> match(V&& variant) {
 	return detail::Matcher<V>{std::forward<V>(variant)};
@@ -651,6 +1572,9 @@ template <typename V>
 
 } // namespace donut
 
+/**
+ * Specialization of std::hash for donut::Variant.
+ */
 template <typename... Ts>
 class std::hash<donut::Variant<Ts...>> {
 public:

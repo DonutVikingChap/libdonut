@@ -148,7 +148,7 @@ private:
 				parseResult.ec != std::errc{} || parseResult.ptr != codePointEnd || !unicode::isValidCodePoint(static_cast<char32_t>(codePointValue))) {
 				throw Error{"Invalid code point.", codePointStringBegin, lineNumber};
 			}
-			const unicode::UTF8FromCodePointResult codePointUTF8 = unicode::getUTF8FromCodePoint(static_cast<char32_t>(codePointValue));
+			const unicode::EncodeUTF8FromCodePointResult codePointUTF8 = unicode::encodeUTF8FromCodePoint(static_cast<char32_t>(codePointValue));
 			output.append(std::string_view{reinterpret_cast<const char*>(codePointUTF8.codeUnits.data()), codePointUTF8.size});
 		} else {
 			char character{};

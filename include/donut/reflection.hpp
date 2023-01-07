@@ -224,7 +224,7 @@ constexpr void forEach(auto&& tuple, auto fn) {
  * \param fn the function to execute. Must accept a reference to each of the
  *        types in the tuple as a parameter and return a non-void value.
  *
- * \throws any exception thrown by fn, or by making a tuple from the results.
+ * \throws any exception thrown by fn or by making a tuple from the results.
  */
 [[nodiscard]] constexpr auto transform(auto&& tuple, auto fn) {
 	return [&]<std::size_t... Indices>(std::index_sequence<Indices...>) {

@@ -188,7 +188,7 @@ Token<It> Lexer<It>::scanString() {
 			throw Error{"Unexpected line terminator in string.", source};
 		}
 		if (peek() != '\\') {
-			const unicode::UTF8FromCodePointResult codePointUTF8 = unicode::getUTF8FromCodePoint(peek());
+			const unicode::EncodeUTF8FromCodePointResult codePointUTF8 = unicode::encodeUTF8FromCodePoint(peek());
 			string.append(std::string_view{reinterpret_cast<const char*>(codePointUTF8.codeUnits.data()), codePointUTF8.size});
 			advance();
 			continue;
@@ -237,7 +237,7 @@ Token<It> Lexer<It>::scanString() {
 				});
 				continue;
 			default: {
-				const unicode::UTF8FromCodePointResult codePointUTF8 = unicode::getUTF8FromCodePoint(peek());
+				const unicode::EncodeUTF8FromCodePointResult codePointUTF8 = unicode::encodeUTF8FromCodePoint(peek());
 				string.append(std::string_view{reinterpret_cast<const char*>(codePointUTF8.codeUnits.data()), codePointUTF8.size});
 				break;
 			}
@@ -365,7 +365,7 @@ Token<It> Lexer<It>::scanIdentifier() {
 		if (!unicode::isValidCodePoint(peek())) {
 			throw Error{"Invalid UTF-8.", source};
 		}
-		const unicode::UTF8FromCodePointResult codePointUTF8 = unicode::getUTF8FromCodePoint(peek());
+		const unicode::EncodeUTF8FromCodePointResult codePointUTF8 = unicode::encodeUTF8FromCodePoint(peek());
 		string.append(std::string_view{reinterpret_cast<const char*>(codePointUTF8.codeUnits.data()), codePointUTF8.size});
 		advance();
 	} while (!hasReachedEnd() && !isWhitespaceCharacter(peek()) && !isPunctuationCharacter(peek()) && peek() != '\"' && peek() != '\'' && peek() != '/');
@@ -408,7 +408,7 @@ void Lexer<It>::scanNumericEscapeSequence(String& output, std::size_t minDigitCo
 		parseResult.ec != std::errc{} || parseResult.ptr != digitsEnd || !unicode::isValidCodePoint(static_cast<char32_t>(codePointValue))) {
 		throw Error{"Invalid code point value.", escapeSequenceSource};
 	}
-	const unicode::UTF8FromCodePointResult codePointUTF8 = unicode::getUTF8FromCodePoint(static_cast<char32_t>(codePointValue));
+	const unicode::EncodeUTF8FromCodePointResult codePointUTF8 = unicode::encodeUTF8FromCodePoint(static_cast<char32_t>(codePointValue));
 	output.append(std::string_view{reinterpret_cast<const char*>(codePointUTF8.codeUnits.data()), codePointUTF8.size});
 }
 

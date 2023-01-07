@@ -99,17 +99,17 @@ namespace mtl {
  * Illumination model to use when rendering a specific Material.
  */
 enum class IlluminationModel : std::uint8_t {
-	FLAT = 0,                                 ///< \hideinitializer
-	LAMBERT = 1,                              ///< \hideinitializer
-	BLINN_PHONG = 2,                          ///< \hideinitializer
-	BLINN_PHONG_RAYTRACE = 3,                 ///< \hideinitializer
-	BLINN_PHONG_RAYTRACE_GLASS = 4,           ///< \hideinitializer
-	BLINN_PHONG_RAYTRACE_FRESNEL = 5,         ///< \hideinitializer
-	BLINN_PHONG_RAYTRACE_REFRACT = 6,         ///< \hideinitializer
-	BLINN_PHONG_RAYTRACE_REFRACT_FRESNEL = 7, ///< \hideinitializer
-	BLINN_PHONG_REFLECT = 8,                  ///< \hideinitializer
-	BLINN_PHONG_REFLECT_GLASS = 9,            ///< \hideinitializer
-	SHADOW = 10,                              ///< \hideinitializer
+	FLAT = 0,                                 ///< Implementation-defined. \hideinitializer
+	LAMBERT = 1,                              ///< Implementation-defined. \hideinitializer
+	BLINN_PHONG = 2,                          ///< Implementation-defined. \hideinitializer
+	BLINN_PHONG_RAYTRACE = 3,                 ///< Implementation-defined. \hideinitializer
+	BLINN_PHONG_RAYTRACE_GLASS = 4,           ///< Implementation-defined. \hideinitializer
+	BLINN_PHONG_RAYTRACE_FRESNEL = 5,         ///< Implementation-defined. \hideinitializer
+	BLINN_PHONG_RAYTRACE_REFRACT = 6,         ///< Implementation-defined. \hideinitializer
+	BLINN_PHONG_RAYTRACE_REFRACT_FRESNEL = 7, ///< Implementation-defined. \hideinitializer
+	BLINN_PHONG_REFLECT = 8,                  ///< Implementation-defined. \hideinitializer
+	BLINN_PHONG_REFLECT_GLASS = 9,            ///< Implementation-defined. \hideinitializer
+	SHADOW = 10,                              ///< Implementation-defined. \hideinitializer
 };
 
 /**

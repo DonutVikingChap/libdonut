@@ -12,14 +12,45 @@
 namespace donut {
 namespace unicode {
 
+/**
+ * Check if a 32-bit unsigned integer value falls within the valid ranges for a
+ * Unicode code point.
+ *
+ * \param codePoint 32-bit code point value to check.
+ *
+ * \return true if the code unit is a valid code point, false otherwise.
+ */
 [[nodiscard]] constexpr bool isValidCodePoint(char32_t codePoint) noexcept {
 	return codePoint <= 0x10FFFF && (codePoint < 0xD800 || codePoint > 0xDFFF);
 }
 
+/**
+ * Invalid code point value, used as a return value in Unicode decoding
+ * algorithms for conveying encoding errors.
+ */
 inline constexpr char32_t CODE_POINT_ERROR{0xFFFFFFFF};
 
+/**
+ * Decode a single Unicode code point from an iterator of UTF-8 code units in a
+ * UTF-8-encoded string.
+ *
+ * \param it input iterator to a sequence of UTF-8 code units. The expression
+ *        `*it++` must be convertible to char8_t.
+ * \param end end iterator or sentinel that marks the end of the UTF-8 code unit
+ *        sequence.
+ *
+ * \return a pair where:
+ *         - the first element contains the decoded Unicode code point, or
+ *           #CODE_POINT_ERROR on failure to decode a code point due to an
+ *           encoding error in the UTF-8 string, and
+ *         - the second element contains the input iterator, positioned at the
+ *           start of the next UTF-8 code unit after the parsed code point
+ *           sequence.
+ *
+ * \throws any exception thrown by the iterator implementation.
+ */
 template <typename InputIt, typename Sentinel>
-[[nodiscard]] constexpr std::pair<char32_t, InputIt> readCodePointFromUTF8(InputIt it, Sentinel end) {
+[[nodiscard]] constexpr std::pair<char32_t, InputIt> decodeCodePointFromUTF8(InputIt it, Sentinel end) {
 	if (it == end) {
 		[[unlikely]] return {CODE_POINT_ERROR, it}; // Reached end.
 	}
@@ -87,12 +118,28 @@ template <typename InputIt, typename Sentinel>
 	return {codePoint, it};
 }
 
-struct UTF8FromCodePointResult {
-	std::array<char8_t, 4> codeUnits;
-	std::size_t size;
+/**
+ * Result of the encodeUTF8FromCodePoint() function.
+ */
+struct EncodeUTF8FromCodePointResult {
+	std::array<char8_t, 4> codeUnits; ///< Array of UTF-8 code units that encode the given code point.
+	std::size_t size;                 ///< The length of the encoded code unit sequence stored in the codeUnits array.
 };
 
-[[nodiscard]] constexpr UTF8FromCodePointResult getUTF8FromCodePoint(char32_t codePoint) noexcept {
+/**
+ * Encode a Unicode code point into a sequence of UTF-8 code units.
+ *
+ * \param codePoint code point to encode.
+ *
+ * \return a struct containing an array of up to 4 UTF-8 code units along with a
+ *         size that defines the length of the sequence in the array, starting
+ *         at index 0.
+ *
+ * \note The returned array of code units is NOT guaranteed to be
+ *       null-terminated. The size value must be used to determine the actual
+ *       length of the code point sequence.
+ */
+[[nodiscard]] constexpr EncodeUTF8FromCodePointResult encodeUTF8FromCodePoint(char32_t codePoint) noexcept {
 	if (codePoint <= 0x7F) {
 		[[likely]] return {
 			.codeUnits{
@@ -131,8 +178,18 @@ struct UTF8FromCodePointResult {
 	};
 }
 
+/**
+ * Sentinel type for UTF8Iterator.
+ */
 struct UTF8Sentinel {};
 
+/**
+ * Iterator type for decoding Unicode code points from a UTF-8 string, wrapping
+ * an existing iterator for UTF-8 code units.
+ *
+ * \tparam It underlying UTF-8 code unit iterator type to wrap.
+ * \tparam Sentinel sentinel type for It.
+ */
 template <typename It, typename Sentinel = It>
 class UTF8Iterator {
 public:
@@ -170,7 +227,7 @@ public:
 
 	constexpr UTF8Iterator& operator++() {
 		it = next;
-		const auto [newCodePoint, newNext] = readCodePointFromUTF8(next, end);
+		const auto [newCodePoint, newNext] = decodeCodePointFromUTF8(next, end);
 		codePoint = newCodePoint;
 		next = newNext;
 		return *this;
@@ -193,6 +250,12 @@ private:
 	char32_t codePoint{};
 };
 
+/**
+ * Specialization of UTF8Iterator that works even for input iterators.
+ *
+ * \tparam It underlying UTF-8 code unit input iterator type to wrap.
+ * \tparam Sentinel sentinel type for It.
+ */
 template <typename It, typename Sentinel>
 requires std::is_same_v<typename std::iterator_traits<It>::iterator_category, std::input_iterator_tag>
 class UTF8Iterator<It, Sentinel> {
@@ -234,7 +297,7 @@ public:
 
 	constexpr UTF8Iterator& operator++() {
 		if (!codePoint) {
-			const auto [newCodePoint, newIt] = readCodePointFromUTF8(it, end);
+			const auto [newCodePoint, newIt] = decodeCodePointFromUTF8(it, end);
 			it = newIt;
 		}
 		codePoint.reset();
@@ -251,7 +314,7 @@ public:
 private:
 	void ensureCodePoint() const {
 		if (!codePoint) {
-			const auto [newCodePoint, newIt] = readCodePointFromUTF8(it, end);
+			const auto [newCodePoint, newIt] = decodeCodePointFromUTF8(it, end);
 			codePoint = newCodePoint;
 			it = newIt;
 		}
@@ -262,6 +325,10 @@ private:
 	mutable std::optional<char32_t> codePoint{};
 };
 
+/**
+ * Non-owning view type for decoding Unicode code points from a contiguous UTF-8
+ * string.
+ */
 class UTF8View {
 public:
 	using iterator = UTF8Iterator<const char8_t*>;
