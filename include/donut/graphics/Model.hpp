@@ -13,8 +13,8 @@ namespace donut {
 namespace graphics {
 
 /**
- * In-memory representation of a set of 3D triangle meshes stored on the GPU,
- * combined with associated materials.
+ * Container of a set of 3D triangle meshes stored on the GPU, combined with
+ * associated materials.
  */
 struct Model {
 	/**

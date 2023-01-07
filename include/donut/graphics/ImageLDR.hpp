@@ -152,8 +152,8 @@ struct ImageLDROptions {
 };
 
 /**
- * In-memory representation of a 2D image with 8-bit unsigned integer pixel
- * components for low dynamic range.
+ * Container of a 2D image with 8-bit unsigned integer pixel components for low
+ * dynamic range.
  */
 class ImageLDR : public Image {
 public:

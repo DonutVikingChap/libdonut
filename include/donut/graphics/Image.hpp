@@ -151,7 +151,7 @@ struct ImageOptions {
 };
 
 /**
- * In-memory representation of a 2D image with any pixel format.
+ * Container of a 2D image with any pixel format.
  *
  * \sa ImageLDR
  * \sa ImageHDR
