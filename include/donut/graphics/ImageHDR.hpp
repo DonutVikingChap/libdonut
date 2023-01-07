@@ -98,7 +98,7 @@ struct ImageHDROptions {
 };
 
 /**
- * Container of a 2D image with 32-bit floating-point pixel components for high
+ * Container for a 2D image with 32-bit floating-point pixel components for high
  * dynamic range.
  */
 class ImageHDR : public Image {

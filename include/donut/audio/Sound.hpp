@@ -199,7 +199,7 @@ struct SoundOptions {
 };
 
 /**
- * Container of a particular sound wave that can be played in a SoundStage.
+ * Container for a particular sound wave that can be played in a SoundStage.
  *
  * A single loaded sound can be used to spawn multiple sound instances that play
  * the same sound at different times or in parallel, and with potentially

@@ -151,7 +151,7 @@ struct ImageOptions {
 };
 
 /**
- * Container of a 2D image with any pixel format.
+ * Container for a 2D image with any pixel format.
  *
  * \sa ImageLDR
  * \sa ImageHDR
