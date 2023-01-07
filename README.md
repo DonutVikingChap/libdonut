@@ -116,7 +116,11 @@ When running the compiled executable, make sure that the current working directo
 
 ## Documentation
 
-If you have [Doxygen](https://www.doxygen.nl/) installed, you can build the API reference for libdonut as follows.
+The API reference for the latest version of libdonut is available here: https://donutvikingchap.github.io/libdonut/index.html
+
+### Generating manually
+
+If you have [Doxygen](https://www.doxygen.nl/) installed, you can also build the API reference for libdonut as follows.
 
 After configuring your new project, run the following command from inside the `build/` directory to generate the documentation for libdonut's API:
 
