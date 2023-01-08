@@ -42,6 +42,7 @@
 #include <concepts>                      // std::integral
 #include <cstddef>                       // std::size_t
 #include <cstdio>                        // stderr, std::sscanf
+#include <cstdlib>                       // EXIT_SUCCESS, EXIT_FAILURE
 #include <exception>                     // std::exception
 #include <fmt/format.h>                  // fmt::format, fmt::print
 #include <glm/ext/matrix_clip_space.hpp> // glm::ortho, glm::perspective
@@ -82,6 +83,7 @@ struct GameOptions {
 	};
 	const char* mainMenuMusicFilepath = "sounds/music/donauwalzer.ogg";
 	float fieldOfView = 90.0f;
+	std::string messageToShowAndExit{};
 };
 
 class Game final : public app::Application {
@@ -656,7 +658,7 @@ void parseOptionValue(int, char*[], int&, std::string_view, bool& output) {
 	for (int i = 1; i < argc; ++i) {
 		const std::string_view argument{argv[i]};
 		if (argument == "-help" || argument == "--help" || argument == "-?" || argument == "/?") {
-			throw std::runtime_error{
+			result.messageToShowAndExit =
 				"Options:\n"
 				"  -help                        Show this information.\n"
 				"  -title <string>              Title of the main window.\n"
@@ -669,7 +671,8 @@ void parseOptionValue(int, char*[], int&, std::string_view, bool& output) {
 				"  -max-fps <Hz>                Frame rate limit. 0 = unlimited.\n"
 				"  -msaa <level>                Level of multisample anti-aliasing.\n"
 				"  -main-menu-music <filepath>  Music file to use for the main menu.\n"
-				"  -fov <degrees>               Field of view for world rendering."};
+				"  -fov <degrees>               Field of view for world rendering.";
+			break;
 		}
 
 		if (argument == "-title") {
@@ -706,13 +709,16 @@ void parseOptionValue(int, char*[], int&, std::string_view, bool& output) {
 int main(int argc, char* argv[]) {
 	try {
 		try {
-			Game game{argv[0], parseGameOptions(argc, argv)};
+			const GameOptions options = parseGameOptions(argc, argv);
+			if (!options.messageToShowAndExit.empty()) {
+				fmt::print(stderr, "{}\n", options.messageToShowAndExit);
+				return EXIT_SUCCESS;
+			}
+			Game game{argv[0], options};
 			game.run();
 		} catch (const std::exception& e) {
 			fmt::print(stderr, "{}\n", e.what());
-			return EXIT_FAILURE;
-		} catch (...) {
-			fmt::print(stderr, "Fatal error!\n");
+			Game::showSimpleMessageBox(Game::MessageBoxType::ERROR_MESSAGE, "Error", e.what());
 			return EXIT_FAILURE;
 		}
 	} catch (...) {

@@ -4,6 +4,7 @@
 
 //
 #include <SDL.h> // SDL...
+#include <SDL_messagebox.h>
 #ifdef __EMSCRIPTEN__
 #include <SDL_opengles.h> // SDL_GL_...
 #else
@@ -28,6 +29,18 @@
 
 namespace donut {
 namespace application {
+
+void Application::showSimpleMessageBox(MessageBoxType type, const char* title, const char* message) {
+	std::uint32_t flags = 0;
+	switch (type) {
+		case MessageBoxType::ERROR_MESSAGE: flags = SDL_MESSAGEBOX_ERROR; break;
+		case MessageBoxType::WARNING_MESSAGE: flags = SDL_MESSAGEBOX_WARNING; break;
+		case MessageBoxType::INFO_MESSAGE: flags = SDL_MESSAGEBOX_INFORMATION; break;
+	}
+	if (SDL_ShowSimpleMessageBox(flags, title, message, nullptr) != 0) {
+		throw std::runtime_error{fmt::format("Failed to show simple message box: {}", SDL_GetError())};
+	}
+}
 
 Application::Application(const char* programFilepath, const ApplicationOptions& options)
 	: physFSManager(programFilepath, options.organizationName, options.applicationName, options.dataDirectoryFilepath, options.archiveFilenameExtension)
