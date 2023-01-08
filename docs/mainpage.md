@@ -64,3 +64,19 @@ Libdonut also includes the following utility APIs which encompass all of the mai
     - [donut::random](@ref donut::random) - Fast pseudo-random number generation
     - [donut::reflection](@ref donut::reflection) - Compile-time reflection of aggregate types
     - [donut::Timer](@ref donut::Timer) - Time counting utility
+
+## Conventions
+
+Except where the documentation specifies otherwise, the API uses the following conventions by default:
+
+- The "detail" namespace is used for private implementation details which should not be used directly.
+- Functions provide the basic exception guarantee, meaning that objects are left in a valid but unspecified state with all invariants preserved and no resources leaked.
+- Any function that is not marked noexcept may be extended to throw any exception type in a future version of the library.
+- Pointers, views and references returned from a member function are tied to the lifetime of the object on which the function was called.
+- Non-nullptr pointers, views and references passed to a function, either directly or as part of an object, must remain valid until the function returns.
+- When multiple pointers, views or references are passed to a function, they may not alias each other, nor reference overlapping memory regions.
+- Operations which mutate the state of an object are not thread-safe unless otherwise noted, and require exclusive access to the object until the operation has finished.
+- Functions defined in the [donut::graphics](@ref donut::graphics) module may only be called inside the main thread of the program.
+- Types defined in the [donut::graphics](@ref donut::graphics) module may only be instantiated, referenced and destroyed inside the main thread of the program.
+- World coordinates and physical quantities are expressed in SI units.
+- Graphics and linear algebra operations follow OpenGL conventions, such as normalized texture and clip space coordinates and a right-handed coordinate system with Y up.
