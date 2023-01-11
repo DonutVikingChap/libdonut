@@ -16,7 +16,7 @@ SoundStage::SoundStage(const SoundStageOptions& options)
 		throw Error{"Failed to initialize sound manager", errorCode};
 	}
 	setVolume(options.volume);
-	setSoundSpeed(options.soundSpeed);
+	setSpeedOfSound(options.speedOfSound);
 	setMaxSimultaneousSounds(options.maxSimultaneousSounds);
 }
 
@@ -115,14 +115,39 @@ void SoundStage::setSoundPositionAndVelocity(SoundInstanceId id, glm::vec3 newPo
 	soloud.set3dSourceParameters(id, newPosition.x, newPosition.y, newPosition.z, newVelocity.x, newVelocity.y, newVelocity.z);
 }
 
+void SoundStage::setSoundVolume(SoundInstanceId id, float volume) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.setVolume(id, volume);
+}
+
+void SoundStage::fadeSoundVolume(SoundInstanceId id, float targetVolume, float fadeDuration) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.fadeVolume(id, targetVolume, fadeDuration);
+}
+
+void SoundStage::setSoundPlaybackSpeed(SoundInstanceId id, float playbackSpeed) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.setRelativePlaySpeed(id, playbackSpeed);
+}
+
+void SoundStage::fadeSoundPlaybackSpeed(SoundInstanceId id, float targetPlaybackSpeed, float fadeDuration) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.fadeRelativePlaySpeed(id, targetPlaybackSpeed, fadeDuration);
+}
+
 void SoundStage::setVolume(float volume) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	soloud.setGlobalVolume(volume);
 }
 
-void SoundStage::setSoundSpeed(float soundSpeed) {
+void SoundStage::fadeVolume(float targetVolume, float fadeDuration) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	soloud.set3dSoundSpeed(soundSpeed);
+	soloud.fadeGlobalVolume(targetVolume, fadeDuration);
+}
+
+void SoundStage::setSpeedOfSound(float speedOfSound) {
+	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	soloud.set3dSoundSpeed(speedOfSound);
 }
 
 void SoundStage::setMaxSimultaneousSounds(unsigned maxSimultaneousSounds) {

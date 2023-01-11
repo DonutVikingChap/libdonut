@@ -70,7 +70,7 @@ struct SoundStageOptions {
 	 *       stage are expressed in meters, and that the sound stage environment
 	 *       is dry air at around 20 degrees Celsius.
 	 */
-	float soundSpeed = 343.3f;
+	float speedOfSound = 343.3f;
 
 	/**
 	 * The maximum total number of sound instances that can play simultaneously.
@@ -87,8 +87,8 @@ struct SoundStageOptions {
  * The sound stage uses a right-handed coordinate system for 3D calculations,
  * and any coordinates are assumed to be in meters by default. Applications that
  * use a different unit of length should adjust the
- * SoundStageOptions::soundSpeed in the sound stage configuration as well as the
- * SoundOptions::rolloffFactor of each Sound accordingly.
+ * SoundStageOptions::speedOfSound in the sound stage configuration as well as
+ * the SoundOptions::rolloffFactor of each Sound accordingly.
  */
 class SoundStage {
 public:
@@ -184,7 +184,8 @@ public:
 	/**
 	 * Check if a specific sound instance is currently paused.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 *
 	 * \return true if the sound instance still exists and is currently paused,
 	 *         false otherwise.
@@ -198,7 +199,8 @@ public:
 	/**
 	 * Check if a specific sound instance has finished playing.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 *
 	 * \return true if the sound instance has been stopped or finished playing
 	 *         and no longer exists, false otherwise.
@@ -211,9 +213,10 @@ public:
 	/**
 	 * Stop a specific sound instance and remove it.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 *
-	 * \note if the given sound instance doesn't exist, this function has no
+	 * \note If the given sound instance doesn't exist, this function has no
 	 *       effect.
 	 *
 	 * \sa isSoundStopped()
@@ -224,9 +227,10 @@ public:
 	/**
 	 * Pause a specific sound instance.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 *
-	 * \note if the given sound instance doesn't exist, or if it is already
+	 * \note If the given sound instance doesn't exist, or if it is already
 	 *       paused, this function has no effect.
 	 *
 	 * \sa isSoundPaused()
@@ -238,9 +242,10 @@ public:
 	/**
 	 * Unpause and resume a specific sound instance.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 *
-	 * \note if the given sound instance doesn't exist, or if it is not paused,
+	 * \note If the given sound instance doesn't exist, or if it is not paused,
 	 *       this function has no effect.
 	 *
 	 * \sa isSoundPaused()
@@ -252,11 +257,12 @@ public:
 	 * Schedule for a specific sound instance to stop playing and remove itself
 	 * when the playback reaches a specific time point.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 * \param timePointInSound the time point, measured in seconds from the
 	 *        beginning of the sound, where the sound instance will stop itself.
 	 *
-	 * \note if the given sound instance doesn't exist, this function has no
+	 * \note If the given sound instance doesn't exist, this function has no
 	 *       effect.
 	 *
 	 * \sa isSoundStopped()
@@ -268,12 +274,13 @@ public:
 	 * Schedule for a specific sound instance to pause itself when the playback
 	 * reaches a specific time point.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 * \param timePointInSound the time point, measured in seconds from the
 	 *        beginning of the sound, where the sound instance will pause
 	 *        itself.
 	 *
-	 * \note if the given sound instance doesn't exist, this function has no
+	 * \note If the given sound instance doesn't exist, this function has no
 	 *       effect.
 	 *
 	 * \sa isSoundPaused()
@@ -284,13 +291,14 @@ public:
 	/**
 	 * Set the current playback time point for a specific sound instance.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 * \param timePointInSound the time point, measured in seconds from the
 	 *        beginning of the sound, to seek to.
 	 *
-	 * \note if the given sound instance exists, it will continue playing after
+	 * \note If the given sound instance exists, it will continue playing after
 	 *       seeking unless it was paused.
-	 * \note if the given sound instance doesn't exist, this function has no
+	 * \note If the given sound instance doesn't exist, this function has no
 	 *       effect.
 	 */
 	void seekToSoundTime(SoundInstanceId id, float timePointInSound);
@@ -298,13 +306,14 @@ public:
 	/**
 	 * Set the current 3D position of a specific sound instance.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 * \param newPosition new position of the sound instance, in sound stage
 	 *        coordinates.
 	 *
-	 * \note the effect of this function will only apply after the next call to
+	 * \note The effect of this function will only apply after the next call to
 	 *       update().
-	 * \note if the given sound instance doesn't exist, this function has no
+	 * \note If the given sound instance doesn't exist, this function has no
 	 *       effect.
 	 *
 	 * \sa setSoundVelocity()
@@ -315,12 +324,13 @@ public:
 	/**
 	 * Set the current 3D velocity of a specific sound instance.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 * \param newVelocity new linear velocity of the sound instance.
 	 *
-	 * \note the effect of this function will only apply after the next call to
+	 * \note The effect of this function will only apply after the next call to
 	 *       update().
-	 * \note if the given sound instance doesn't exist, this function has no
+	 * \note If the given sound instance doesn't exist, this function has no
 	 *       effect.
 	 *
 	 * \sa setSoundPosition()
@@ -332,14 +342,15 @@ public:
 	 * Set both the 3D position and 3D velocity of a specific sound instance at
 	 * the same time.
 	 *
-	 * \param id handle to the sound instance, acquired when it was created.
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
 	 * \param newPosition new position of the sound instance, in sound stage
 	 *        coordinates.
 	 * \param newVelocity new linear velocity of the sound instance.
 	 *
-	 * \note the effect of this function will only apply after the next call to
+	 * \note The effect of this function will only apply after the next call to
 	 *       update().
-	 * \note if the given sound instance doesn't exist, this function has no
+	 * \note If the given sound instance doesn't exist, this function has no
 	 *       effect.
 	 *
 	 * \sa setSoundPosition()
@@ -348,18 +359,100 @@ public:
 	void setSoundPositionAndVelocity(SoundInstanceId id, glm::vec3 newPosition, glm::vec3 newVelocity);
 
 	/**
+	 * Set the volume of a specific sound instance.
+	 *
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
+	 * \param volume new volume, see SoundOptions::volume.
+	 *
+	 * \note If the given sound instance doesn't exist, this function has no
+	 *       effect.
+	 *
+	 * \sa setVolume()
+	 * \sa fadeSoundVolume()
+	 */
+	void setSoundVolume(SoundInstanceId id, float volume);
+
+	/**
+	 * Fade the volume of a specific sound instance towards a target volume over
+	 * a given duration.
+	 *
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
+	 * \param targetVolume new volume to fade towards, see SoundOptions::volume.
+	 * \param fadeDuration duration of time, in seconds, to fade over.
+	 *
+	 * \note If the given sound instance doesn't exist, this function has no
+	 *       effect.
+	 *
+	 * \sa setSoundVolume()
+	 */
+	void fadeSoundVolume(SoundInstanceId id, float targetVolume, float fadeDuration);
+
+	/**
+	 * Set the relative playback speed of a specific sound instance.
+	 *
+	 * The effective sample rate of the playing sound is adjusted by this
+	 * factor, meaning that a value of 1 represents no change, i.e. 100% of the
+	 * original playback speed of the loaded sound file.
+	 *
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
+	 * \param playbackSpeed new relative playback speed. Must be greater than 0.
+	 *
+	 * \note If the given sound instance doesn't exist, this function has no
+	 *       effect.
+	 *
+	 * \sa fadeSoundPlaybackSpeed()
+	 */
+	void setSoundPlaybackSpeed(SoundInstanceId id, float playbackSpeed);
+
+	/**
+	 * Fade the relative playback speed of a specific sound instance towards a
+	 * target relative playback speed over a given duration.
+	 *
+	 * \param id handle to the sound instance, acquired from when the sound
+	 *        instance was created.
+	 * \param targetPlaybackSpeed new relative playback speed to fade towards.
+	 *        Must be greater than 0.
+	 * \param fadeDuration duration of time, in seconds, to fade over.
+	 *
+	 * \note If the given sound instance doesn't exist, this function has no
+	 *       effect.
+	 *
+	 * \sa setSoundPlaybackSpeed()
+	 */
+	void fadeSoundPlaybackSpeed(SoundInstanceId id, float targetPlaybackSpeed, float fadeDuration);
+
+	/**
 	 * Set the global master volume of the sound stage.
 	 *
 	 * \param volume new volume, see SoundStageOptions::volume.
+	 *
+	 * \sa setSoundVolume()
+	 * \sa fadeVolume()
 	 */
 	void setVolume(float volume);
 
 	/**
+	 * Fade the global master volume of the sound stage towards a target volume
+	 * over a given duration.
+	 *
+	 * \param targetVolume new volume to fade towards, see
+	 *        SoundStageOptions::volume.
+	 * \param fadeDuration duration of time, in seconds, to fade over.
+	 *
+	 * \sa setVolume()
+	 */
+	void fadeVolume(float targetVolume, float fadeDuration);
+
+	/**
 	 * Set the speed of sound in the sound stage.
 	 *
-	 * \param soundSpeed new speed of sound, see SoundStageOptions::soundSpeed.
+	 * \param speedOfSound new speed of sound, see
+	 *        SoundStageOptions::speedOfSound.
 	 */
-	void setSoundSpeed(float soundSpeed);
+	void setSpeedOfSound(float speedOfSound);
 
 	/**
 	 * Set the maximum total number of sound instances that can play

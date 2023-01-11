@@ -19,7 +19,6 @@ Note: This library is currently a **work in progress** and makes no guarantees r
         - Support for OGG, WAV, FLAC and MP3 formats.
     - [SoundStage](include/donut/audio/SoundStage.hpp):
         - Plays 3D positional audio, background sounds and music.
-        - Supports stopping, pausing, resuming, seeking and looping of playing sounds.
 - Graphics rendering through [OpenGL](https://www.khronos.org/opengl/):
     - [RenderPass](include/donut/graphics/RenderPass.hpp) interface for simple batch rendering:
         - 3D Model rendering with built-in Blinn-Phong lighting or custom shaders through [Shader3D](include/donut/graphics/Shader3D.hpp).

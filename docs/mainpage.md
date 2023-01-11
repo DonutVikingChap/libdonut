@@ -69,6 +69,7 @@ Libdonut also includes the following utility APIs which encompass all of the mai
 
 Except where the documentation specifies otherwise, the API uses the following conventions by default:
 
+- The documentation uses the word "must" to specify that failure to meet a condition results in undefined behavior.
 - The "detail" namespace is used for private implementation details which should not be used directly.
 - Functions provide the basic exception guarantee, meaning that objects are left in a valid but unspecified state with all invariants preserved and no resources leaked.
 - Any function that is not marked noexcept may be extended to throw any exception type in a future version of the library.
