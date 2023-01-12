@@ -19,6 +19,7 @@
 #include <donut/File.hpp>
 #include <donut/InputFileStream.hpp>
 #include <donut/Timer.hpp>
+#include <donut/Variant.hpp>
 #include <donut/application/Application.hpp>
 #include <donut/application/Event.hpp>
 #include <donut/application/Input.hpp>
@@ -65,6 +66,8 @@ using Color = donut::Color;
 using File = donut::File;
 using InputFileStream = donut::InputFileStream;
 using Timer = donut::Timer<float>;
+template <typename... Ts>
+using Variant = donut::Variant<Ts...>;
 
 namespace {
 
@@ -91,7 +94,7 @@ public:
 	Game(const char* programFilepath, const GameOptions& options)
 		: app::Application(programFilepath, options.applicationOptions)
 		, verticalFieldOfView(2.0f * glm::atan((3.0f / 4.0f) * glm::tan(glm::radians(options.fieldOfView) * 0.5f))) {
-		loadBindingsConfiguration();
+		loadBindingsConfiguration("configuration/bindings.json");
 		initializeSoundStage();
 		playMainMenuMusic(options.mainMenuMusicFilepath);
 	}
@@ -377,7 +380,7 @@ private:
 		gfx::ShaderUniform viewPosition{program, "viewPosition"};
 	};
 
-	void loadBindingsConfiguration() {
+	void loadBindingsConfiguration(const char* filepath) {
 		const std::unordered_map<std::string_view, Action> actionsByIdentifier{
 			{"confirm", Action::CONFIRM},
 			{"cancel", Action::CANCEL},
@@ -395,8 +398,7 @@ private:
 			{"scroll_down", Action::SCROLL_DOWN},
 		};
 
-		constexpr const char* BINDINGS_CONFIGURATION_FILEPATH = "configuration/bindings.json";
-		const std::string bindingsFileContents = InputFileStream::open(BINDINGS_CONFIGURATION_FILEPATH).readAllIntoString();
+		const std::string bindingsFileContents = InputFileStream::open(filepath).readAllIntoString();
 		try {
 			const json::Value bindingsValue = json::Value::parse(bindingsFileContents);
 			if (!bindingsValue.is<json::Object>()) {
@@ -420,9 +422,9 @@ private:
 				}
 			}
 		} catch (const json::Error& e) {
-			throw std::runtime_error{fmt::format("{}:{}:{}: {}", BINDINGS_CONFIGURATION_FILEPATH, e.source.lineNumber, e.source.columnNumber, e.what())};
+			throw std::runtime_error{fmt::format("{}:{}:{}: {}", filepath, e.source.lineNumber, e.source.columnNumber, e.what())};
 		} catch (const std::exception& e) {
-			throw std::runtime_error{fmt::format("{}: {}", BINDINGS_CONFIGURATION_FILEPATH, e.what())};
+			throw std::runtime_error{fmt::format("{}: {}", filepath, e.what())};
 		}
 	}
 
@@ -623,99 +625,111 @@ private:
 	unsigned counterB = 0u;
 };
 
-void parseOptionValue(int argc, char* argv[], int& i, std::string_view optionName, const char*& output) {
-	if (++i >= argc) {
-		throw std::runtime_error{fmt::format("Missing {} value.", optionName)};
+class OptionsParser {
+public:
+	OptionsParser(int argc, char* argv[]) noexcept
+		: argumentCount(argc)
+		, arguments(argv) {
+		assert(argc > 0);
 	}
-	output = argv[i];
-}
 
-void parseOptionValue(int argc, char* argv[], int& i, std::string_view optionName, std::integral auto& output) {
-	if (++i >= argc) {
-		throw std::runtime_error{fmt::format("Missing {} value.", optionName)};
-	}
-	const std::string_view string{argv[i]};
-	if (const std::from_chars_result result = std::from_chars(string.data(), string.data() + string.size(), output); result.ec != std::errc{}) {
-		throw std::runtime_error{fmt::format("Invalid {} value \"{}\": {}", optionName, string, std::make_error_code(result.ec).message())};
-	}
-}
+	[[nodiscard]] Variant<GameOptions, std::string> parseGameOptions() {
+		GameOptions options{};
+		while (argumentIndex < argumentCount) {
+			const std::string_view argument{arguments[argumentIndex]};
+			if (argument == "-help" || argument == "--help" || argument == "-?" || argument == "/?") {
+				return "Options:\n"
+					   "  -help                        Show this information.\n"
+					   "  -title <string>              Title of the main window.\n"
+					   "  -width <pixels>              Width of the main window.\n"
+					   "  -height <pixels>             Height of the main window.\n"
+					   "  -resizable                   Enable window resizing.\n"
+					   "  -fullscreen                  Enable fullscreen.\n"
+					   "  -vsync                       Enable vertical synchronization.\n"
+					   "  -min-fps <Hz>                Minimum frame rate before slowdown.\n"
+					   "  -max-fps <Hz>                Frame rate limit. 0 = unlimited.\n"
+					   "  -msaa <level>                Level of multisample anti-aliasing.\n"
+					   "  -main-menu-music <filepath>  Music file to use for the main menu.\n"
+					   "  -fov <degrees>               Field of view for world rendering.";
+			}
 
-void parseOptionValue(int argc, char* argv[], int& i, std::string_view optionName, float& output) {
-	if (++i >= argc) {
-		throw std::runtime_error{fmt::format("Missing {} value.", optionName)};
-	}
-	if (std::sscanf(argv[i], "%f", &output) != 1) {
-		throw std::runtime_error{fmt::format("Invalid {} value \"{}\".", optionName, argv[i])};
-	}
-}
-
-void parseOptionValue(int, char*[], int&, std::string_view, bool& output) {
-	output = true;
-}
-
-[[nodiscard]] GameOptions parseGameOptions(int argc, char* argv[]) {
-	GameOptions result{};
-	for (int i = 1; i < argc; ++i) {
-		const std::string_view argument{argv[i]};
-		if (argument == "-help" || argument == "--help" || argument == "-?" || argument == "/?") {
-			result.messageToShowAndExit =
-				"Options:\n"
-				"  -help                        Show this information.\n"
-				"  -title <string>              Title of the main window.\n"
-				"  -width <pixels>              Width of the main window.\n"
-				"  -height <pixels>             Height of the main window.\n"
-				"  -resizable                   Enable window resizing.\n"
-				"  -fullscreen                  Enable fullscreen.\n"
-				"  -vsync                       Enable vertical synchronization.\n"
-				"  -min-fps <Hz>                Minimum frame rate before slowdown.\n"
-				"  -max-fps <Hz>                Frame rate limit. 0 = unlimited.\n"
-				"  -msaa <level>                Level of multisample anti-aliasing.\n"
-				"  -main-menu-music <filepath>  Music file to use for the main menu.\n"
-				"  -fov <degrees>               Field of view for world rendering.";
-			break;
+			if (argument == "-title") {
+				parseOptionValue("title", options.applicationOptions.windowTitle);
+			} else if (argument == "-width") {
+				parseOptionValue("width", options.applicationOptions.windowWidth);
+			} else if (argument == "-height") {
+				parseOptionValue("height", options.applicationOptions.windowHeight);
+			} else if (argument == "-resizable") {
+				parseOptionValue("resizable", options.applicationOptions.windowResizable);
+			} else if (argument == "-fullscreen") {
+				parseOptionValue("fullscreen", options.applicationOptions.windowFullscreen);
+			} else if (argument == "-vsync") {
+				parseOptionValue("vsync", options.applicationOptions.windowVSync);
+			} else if (argument == "-min-fps") {
+				parseOptionValue("min fps", options.applicationOptions.minFps);
+			} else if (argument == "-max-fps") {
+				parseOptionValue("max fps", options.applicationOptions.maxFps);
+			} else if (argument == "-msaa") {
+				parseOptionValue("msaa", options.applicationOptions.msaaLevel);
+			} else if (argument == "-main-menu-music") {
+				parseOptionValue("main menu music file", options.mainMenuMusicFilepath);
+			} else if (argument == "-fov") {
+				parseOptionValue("fov", options.fieldOfView);
+			} else {
+				throw std::runtime_error{fmt::format("Unknown option {}. Try -help.", argument)};
+			}
+			++argumentIndex;
 		}
+		return options;
+	}
 
-		if (argument == "-title") {
-			parseOptionValue(argc, argv, i, "title", result.applicationOptions.windowTitle);
-		} else if (argument == "-width") {
-			parseOptionValue(argc, argv, i, "width", result.applicationOptions.windowWidth);
-		} else if (argument == "-height") {
-			parseOptionValue(argc, argv, i, "height", result.applicationOptions.windowHeight);
-		} else if (argument == "-resizable") {
-			parseOptionValue(argc, argv, i, "resizable", result.applicationOptions.windowResizable);
-		} else if (argument == "-fullscreen") {
-			parseOptionValue(argc, argv, i, "fullscreen", result.applicationOptions.windowFullscreen);
-		} else if (argument == "-vsync") {
-			parseOptionValue(argc, argv, i, "vsync", result.applicationOptions.windowVSync);
-		} else if (argument == "-min-fps") {
-			parseOptionValue(argc, argv, i, "min fps", result.applicationOptions.minFps);
-		} else if (argument == "-max-fps") {
-			parseOptionValue(argc, argv, i, "max fps", result.applicationOptions.maxFps);
-		} else if (argument == "-msaa") {
-			parseOptionValue(argc, argv, i, "msaa", result.applicationOptions.msaaLevel);
-		} else if (argument == "-main-menu-music") {
-			parseOptionValue(argc, argv, i, "main menu music file", result.mainMenuMusicFilepath);
-		} else if (argument == "-fov") {
-			parseOptionValue(argc, argv, i, "fov", result.fieldOfView);
-		} else {
-			throw std::runtime_error{fmt::format("Unknown option {}. Try -help.", argument)};
+private:
+	void parseOptionValue(std::string_view optionName, const char*& output) {
+		if (++argumentIndex >= argumentCount) {
+			throw std::runtime_error{fmt::format("Missing {} value.", optionName)};
+		}
+		output = arguments[argumentIndex];
+	}
+
+	void parseOptionValue(std::string_view optionName, std::integral auto& output) {
+		if (++argumentIndex >= argumentCount) {
+			throw std::runtime_error{fmt::format("Missing {} value.", optionName)};
+		}
+		const std::string_view string{arguments[argumentIndex]};
+		if (const std::from_chars_result result = std::from_chars(string.data(), string.data() + string.size(), output); result.ec != std::errc{}) {
+			throw std::runtime_error{fmt::format("Invalid {} value \"{}\": {}", optionName, string, std::make_error_code(result.ec).message())};
 		}
 	}
-	return result;
-}
+
+	void parseOptionValue(std::string_view optionName, float& output) {
+		if (++argumentIndex >= argumentCount) {
+			throw std::runtime_error{fmt::format("Missing {} value.", optionName)};
+		}
+		if (std::sscanf(arguments[argumentIndex], "%f", &output) != 1) {
+			throw std::runtime_error{fmt::format("Invalid {} value \"{}\".", optionName, arguments[argumentIndex])};
+		}
+	}
+
+	void parseOptionValue(std::string_view /*optionName*/, bool& output) {
+		output = true;
+	}
+
+	const int argumentCount;
+	char** const arguments;
+	int argumentIndex = 1;
+};
 
 } // namespace
 
 int main(int argc, char* argv[]) {
 	try {
 		try {
-			const GameOptions options = parseGameOptions(argc, argv);
-			if (!options.messageToShowAndExit.empty()) {
-				fmt::print(stderr, "{}\n", options.messageToShowAndExit);
-				return EXIT_SUCCESS;
-			}
-			Game game{argv[0], options};
-			game.run();
+			match(OptionsParser{argc, argv}.parseGameOptions())(
+				[&](const GameOptions& options) -> void {
+					Game game{argv[0], options};
+					game.run();
+				},
+				[&](const std::string& string) -> void { fmt::print(stderr, "{}\n", string); });
 		} catch (const std::exception& e) {
 			fmt::print(stderr, "{}\n", e.what());
 			Game::showSimpleMessageBox(Game::MessageBoxType::ERROR_MESSAGE, "Error", e.what());
