@@ -5,7 +5,6 @@
 #include <glm/ext/matrix_transform.hpp> // glm::identity, glm::translate, glm::rotate, glm::scale
 #include <glm/glm.hpp>                  // glm::...
 #include <glm/gtc/matrix_inverse.hpp>   // glm::inverseTranspose
-#include <memory_resource>              // std::pmr::...
 #include <vector>                       // std::vector
 
 namespace donut {
@@ -18,17 +17,17 @@ RenderPass& RenderPass::draw(const ModelInstance& model) {
 
 	const std::size_t objectCount = model.model->objects.size();
 
-	std::pmr::vector<std::pmr::vector<Model::Object::Instance>>* objectInstances = nullptr;
+	decltype(ModelObjectInstancesFromModel::objectInstances)* objectInstances = nullptr;
 	const auto it = std::lower_bound(objectsSortedByShaderAndModel.begin(), objectsSortedByShaderAndModel.end(), model);
 	if (it == objectsSortedByShaderAndModel.end()) {
-		objectInstances = &objectsSortedByShaderAndModel.emplace_back(model.shader, model.model).objectInstances;
-		objectInstances->resize(objectCount);
+		objectInstances = &objectsSortedByShaderAndModel.emplace_back(model.shader, model.model, &memoryResource).objectInstances;
+		objectInstances->resize(objectCount, std::vector<Model::Object::Instance, LinearAllocator<Model::Object::Instance>>{&memoryResource});
 	} else if (it->shader == model.shader && it->model == model.model) {
 		objectInstances = &it->objectInstances;
 		assert(objectInstances->size() == objectCount);
 	} else {
-		objectInstances = &objectsSortedByShaderAndModel.emplace(it, model.shader, model.model)->objectInstances;
-		objectInstances->resize(objectCount);
+		objectInstances = &objectsSortedByShaderAndModel.emplace(it, model.shader, model.model, &memoryResource)->objectInstances;
+		objectInstances->resize(objectCount, std::vector<Model::Object::Instance, LinearAllocator<Model::Object::Instance>>{&memoryResource});
 	}
 	for (std::size_t i = 0; i < objectCount; ++i) {
 		(*objectInstances)[i].push_back({
@@ -82,11 +81,11 @@ RenderPass& RenderPass::draw(const QuadInstance& quad) {
 
 	const auto it = std::lower_bound(quadsSortedByShaderAndTexture.begin(), quadsSortedByShaderAndTexture.end(), quad);
 	if (it == quadsSortedByShaderAndTexture.end()) {
-		quadsSortedByShaderAndTexture.emplace_back(quad.shader, quad.texture).instances.push_back(instance);
+		quadsSortedByShaderAndTexture.emplace_back(quad.shader, quad.texture, &memoryResource).instances.push_back(instance);
 	} else if (it->shader == quad.shader && it->texture == quad.texture) {
 		it->instances.push_back(instance);
 	} else {
-		quadsSortedByShaderAndTexture.emplace(it, quad.shader, quad.texture)->instances.push_back(instance);
+		quadsSortedByShaderAndTexture.emplace(it, quad.shader, quad.texture, &memoryResource)->instances.push_back(instance);
 	}
 	return *this;
 }
@@ -112,14 +111,14 @@ RenderPass& RenderPass::draw(const SpriteInstance& sprite) {
 RenderPass& RenderPass::draw(const TextInstance& text) {
 	assert(text.font);
 
-	std::pmr::vector<TexturedQuad::Instance>* instances = nullptr;
+	decltype(TexturedQuadInstancesFromText::instances)* instances = nullptr;
 	const auto it = std::lower_bound(glyphsSortedByFont.begin(), glyphsSortedByFont.end(), text);
 	if (it == glyphsSortedByFont.end()) {
-		instances = &glyphsSortedByFont.emplace_back(text.font).instances;
+		instances = &glyphsSortedByFont.emplace_back(text.font, &memoryResource).instances;
 	} else if (it->font == text.font) {
 		instances = &it->instances;
 	} else {
-		instances = &glyphsSortedByFont.emplace(it, text.font)->instances;
+		instances = &glyphsSortedByFont.emplace(it, text.font, &memoryResource)->instances;
 	}
 	for (const Font::ShapedText::ShapedGlyph& shapedGlyph : text.text.shapedGlyphs) {
 		instances->push_back({

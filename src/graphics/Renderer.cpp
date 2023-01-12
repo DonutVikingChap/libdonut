@@ -112,7 +112,7 @@ void renderModelObjectInstances(
 
 		glUniform1f(shader.specularExponent.getLocation(), object.material.specularExponent);
 
-		const std::pmr::vector<Model::Object::Instance>& instances = objectInstances[i];
+		const auto& instances = objectInstances[i];
 		glBufferData(
 			GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(instances.size() * sizeof(Model::Object::Instance)), instances.data(), static_cast<GLenum>(Model::Object::INSTANCES_USAGE));
 		glDrawElementsInstanced(static_cast<GLenum>(Model::Object::PRIMITIVE_TYPE),

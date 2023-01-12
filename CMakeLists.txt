@@ -52,6 +52,7 @@ if(DONUT_ENABLE_LIBRARY)
 		"include/donut/File.hpp"
 		"include/donut/InputFileStream.hpp"
 		"include/donut/json.hpp"
+		"include/donut/LinearAllocator.hpp"
 		"include/donut/obj.hpp"
 		"include/donut/OutputFileStream.hpp"
 		"include/donut/random.hpp"

@@ -2,6 +2,7 @@
 #define DONUT_GRAPHICS_RENDER_PASS_HPP
 
 #include <donut/Color.hpp>
+#include <donut/LinearAllocator.hpp>
 #include <donut/graphics/Font.hpp>
 #include <donut/graphics/Model.hpp>
 #include <donut/graphics/Shader2D.hpp>
@@ -10,11 +11,11 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
 
-#include <cassert>                      // assert
+#include <array>                        // std::array
 #include <compare>                      // std::strong_ordering
+#include <cstddef>                      // std::byte, std::max_align_t
 #include <glm/ext/matrix_transform.hpp> // glm::identity
 #include <glm/glm.hpp>                  // glm::...
-#include <memory_resource>              // std::pmr::...
 #include <vector>                       // std::vector
 
 namespace donut {
@@ -528,11 +529,11 @@ private:
 	}
 
 	struct ModelObjectInstancesFromModel {
+		using allocator_type = LinearAllocator<std::vector<Model::Object::Instance, LinearAllocator<Model::Object::Instance>>>;
+
 		Shader3D* shader;
 		const Model* model;
-		std::pmr::vector<std::pmr::vector<Model::Object::Instance>> objectInstances;
-
-		using allocator_type = std::pmr::polymorphic_allocator<std::pmr::vector<Model::Object::Instance>>;
+		std::vector<std::vector<Model::Object::Instance, LinearAllocator<Model::Object::Instance>>, allocator_type> objectInstances;
 
 		ModelObjectInstancesFromModel(ModelObjectInstancesFromModel&& other, const allocator_type& alloc) noexcept
 			: shader(other.shader)
@@ -556,11 +557,11 @@ private:
 	};
 
 	struct TexturedQuadInstancesFromQuad {
+		using allocator_type = LinearAllocator<TexturedQuad::Instance>;
+
 		Shader2D* shader;
 		const Texture* texture;
-		std::pmr::vector<TexturedQuad::Instance> instances;
-
-		using allocator_type = std::pmr::polymorphic_allocator<TexturedQuad::Instance>;
+		std::vector<TexturedQuad::Instance, allocator_type> instances;
 
 		TexturedQuadInstancesFromQuad(TexturedQuadInstancesFromQuad&& other, const allocator_type& alloc) noexcept
 			: shader(other.shader)
@@ -584,10 +585,10 @@ private:
 	};
 
 	struct TexturedQuadInstancesFromText {
-		const Font* font;
-		std::pmr::vector<TexturedQuad::Instance> instances;
+		using allocator_type = LinearAllocator<TexturedQuad::Instance>;
 
-		using allocator_type = std::pmr::polymorphic_allocator<TexturedQuad::Instance>;
+		const Font* font;
+		std::vector<TexturedQuad::Instance, allocator_type> instances;
 
 		TexturedQuadInstancesFromText(TexturedQuadInstancesFromText&& other, const allocator_type& alloc) noexcept
 			: font(other.font)
@@ -606,10 +607,11 @@ private:
 		}
 	};
 
-	std::pmr::monotonic_buffer_resource memoryResource{};
-	std::pmr::vector<ModelObjectInstancesFromModel> objectsSortedByShaderAndModel{&memoryResource};
-	std::pmr::vector<TexturedQuadInstancesFromQuad> quadsSortedByShaderAndTexture{&memoryResource};
-	std::pmr::vector<TexturedQuadInstancesFromText> glyphsSortedByFont{&memoryResource};
+	alignas(std::max_align_t) std::array<std::byte, 1024> initialMemory;
+	LinearMemoryResource memoryResource{initialMemory};
+	std::vector<ModelObjectInstancesFromModel, LinearAllocator<ModelObjectInstancesFromModel>> objectsSortedByShaderAndModel{&memoryResource};
+	std::vector<TexturedQuadInstancesFromQuad, LinearAllocator<TexturedQuadInstancesFromQuad>> quadsSortedByShaderAndTexture{&memoryResource};
+	std::vector<TexturedQuadInstancesFromText, LinearAllocator<TexturedQuadInstancesFromText>> glyphsSortedByFont{&memoryResource};
 };
 
 } // namespace graphics
