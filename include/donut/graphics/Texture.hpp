@@ -54,9 +54,9 @@ enum class TextureInternalFormat : std::int32_t {
  * as an input to a Texture.
  */
 enum class TextureComponentType : std::uint32_t {
-	U8 = 0x1401,  ///< \hideinitializer
-	F16 = 0x140B, ///< \hideinitializer
-	F32 = 0x1406, ///< \hideinitializer
+	U8 = 0x1401,  ///< Each pixel component is an 8-bit unsigned integer. \hideinitializer
+	F16 = 0x140B, ///< Each pixel component is a 16-bit floating-point number. \hideinitializer
+	F32 = 0x1406, ///< Each pixel component is a 32-bit floating-point number. \hideinitializer
 };
 
 /**
