@@ -7,7 +7,7 @@
 
 #include <algorithm>        // std::sort, std::equal_range, std::lower_bound, std::upper_bound
 #include <array>            // std::array
-#include <compare>          // std::partial_ordering
+#include <compare>          // std::partial_ordering, std::compare_partial_order_fallback
 #include <cstddef>          // std::size_t, std::nullptr_t
 #include <cstdint>          // std::uint8_t
 #include <cstring>          // std::memcpy
@@ -531,7 +531,7 @@ public:
 	 * \return a partial ordering between the two values.
 	 */
 	[[nodiscard]] std::partial_ordering operator<=>(const Value& other) const {
-		return static_cast<const Variant&>(*this) <=> static_cast<const Variant&>(other);
+		return std::compare_partial_order_fallback(static_cast<const Variant&>(*this), static_cast<const Variant&>(other));
 	}
 };
 
@@ -861,7 +861,7 @@ public:
 
 	template <typename CharT, typename Traits>
 	void writeString(std::basic_string_view<CharT, Traits> value) requires(!std::is_same_v<CharT, char> || !std::is_same_v<Traits, std::char_traits<char>>) {
-		const std::span<const std::byte> bytes = std::as_bytes(std::span{value});
+		const std::span<const std::byte> bytes = std::as_bytes(std::span{value.data(), value.size()});
 		writeString(std::string_view{reinterpret_cast<const char*>(bytes.data()), bytes.size()});
 	}
 
@@ -1869,7 +1869,7 @@ inline bool Object::operator==(const Object& other) const noexcept {
 }
 
 inline std::partial_ordering Object::operator<=>(const Object& other) const noexcept {
-	return membersSortedByName <=> other.membersSortedByName;
+	return std::compare_partial_order_fallback(membersSortedByName, other.membersSortedByName);
 }
 
 template <typename Predicate>
@@ -2037,7 +2037,7 @@ inline bool Array::operator==(const Array& other) const {
 }
 
 inline std::partial_ordering Array::operator<=>(const Array& other) const noexcept {
-	return values <=> other.values;
+	return std::compare_partial_order_fallback(values, other.values);
 }
 
 template <typename U>

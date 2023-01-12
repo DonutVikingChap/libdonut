@@ -1519,6 +1519,122 @@ template <typename... Ts>
 }
 
 /**
+ * Check if a variant is less than another variant.
+ *
+ * \param a first variant.
+ * \param b second variant.
+ *
+ * \return true if the first variant is less than the second variant, based on
+ *         their active alternatives and values.
+ *
+ * \throw any exception thrown by the underlying comparison operator of the
+ *        relevant alternative type.
+ */
+template <typename... Ts>
+[[nodiscard]] constexpr bool operator<(const Variant<Ts...>& a, const Variant<Ts...>& b) {
+	if (a.valueless_by_exception() && b.valueless_by_exception()) {
+		return false;
+	}
+	if (a.valueless_by_exception()) {
+		return true;
+	}
+	if (b.valueless_by_exception()) {
+		return false;
+	}
+	if (a.index() != b.index()) {
+		return a.index() < b.index();
+	}
+	return visit([&]<typename T>(const T& value) -> bool { return value < b.template as<T>(); }, a);
+}
+
+/**
+ * Check if a variant is less than or equal to another variant.
+ *
+ * \param a first variant.
+ * \param b second variant.
+ *
+ * \return true if the first variant is less than or equal to the second
+ *         variant, based on their active alternatives and values.
+ *
+ * \throw any exception thrown by the underlying comparison operator of the
+ *        relevant alternative type.
+ */
+template <typename... Ts>
+[[nodiscard]] constexpr bool operator<=(const Variant<Ts...>& a, const Variant<Ts...>& b) {
+	if (a.valueless_by_exception() && b.valueless_by_exception()) {
+		return true;
+	}
+	if (a.valueless_by_exception()) {
+		return true;
+	}
+	if (b.valueless_by_exception()) {
+		return false;
+	}
+	if (a.index() != b.index()) {
+		return a.index() <= b.index();
+	}
+	return visit([&]<typename T>(const T& value) -> bool { return value <= b.template as<T>(); }, a);
+}
+
+/**
+ * Check if a variant is greater than another variant.
+ *
+ * \param a first variant.
+ * \param b second variant.
+ *
+ * \return true if the first variant is greater than the second variant, based
+ *         on their active alternatives and values.
+ *
+ * \throw any exception thrown by the underlying comparison operator of the
+ *        relevant alternative type.
+ */
+template <typename... Ts>
+[[nodiscard]] constexpr bool operator>(const Variant<Ts...>& a, const Variant<Ts...>& b) {
+	if (a.valueless_by_exception() && b.valueless_by_exception()) {
+		return false;
+	}
+	if (a.valueless_by_exception()) {
+		return false;
+	}
+	if (b.valueless_by_exception()) {
+		return true;
+	}
+	if (a.index() != b.index()) {
+		return a.index() > b.index();
+	}
+	return visit([&]<typename T>(const T& value) -> bool { return value > b.template as<T>(); }, a);
+}
+
+/**
+ * Check if a variant is greater than or equal to another variant.
+ *
+ * \param a first variant.
+ * \param b second variant.
+ *
+ * \return true if the first variant is greater than or equal to the second
+ *         variant, based on their active alternatives and values.
+ *
+ * \throw any exception thrown by the underlying comparison operator of the
+ *        relevant alternative type.
+ */
+template <typename... Ts>
+[[nodiscard]] constexpr bool operator>=(const Variant<Ts...>& a, const Variant<Ts...>& b) {
+	if (a.valueless_by_exception() && b.valueless_by_exception()) {
+		return true;
+	}
+	if (a.valueless_by_exception()) {
+		return false;
+	}
+	if (b.valueless_by_exception()) {
+		return true;
+	}
+	if (a.index() != b.index()) {
+		return a.index() >= b.index();
+	}
+	return visit([&]<typename T>(const T& value) -> bool { return value >= b.template as<T>(); }, a);
+}
+
+/**
  * Compare two variants.
  *
  * \param a first variant.
