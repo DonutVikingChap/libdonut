@@ -2,7 +2,7 @@ This file contains copyright notices from third-party libraries that are used in
 
 # libdonut
 
-Copyright (c) 2022 Ivar Härnqvist
+Copyright (c) 2022-2023 Ivar Härnqvist
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -212,7 +212,7 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-# SDL2
+# SDL
 
 Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
   
