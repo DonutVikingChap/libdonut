@@ -4,8 +4,10 @@
 #include <donut/Resource.hpp>
 
 #include <cstddef>   // std::size_t
+#include <cstdint>   // std::int64_t, std::uint8_t
 #include <stdexcept> // std::runtime_error
 #include <string>    // std::string
+#include <vector>    // std::vector
 
 namespace donut {
 
@@ -46,6 +48,28 @@ public:
 
 		explicit Error(const char* message)
 			: std::runtime_error(message) {}
+	};
+
+	/**
+	 * Virtual file entry type.
+	 */
+	enum class Kind : std::uint8_t {
+		REGULAR,   ///< Regular file.
+		DIRECTORY, ///< Directory/folder.
+		SYMLINK,   ///< Symbolic link.
+		OTHER,     ///< Something else, such as a network socket or a device.
+	};
+
+	/**
+	 * Record of metadata for a specific virtual file.
+	 */
+	struct Metadata {
+		std::size_t size;                  ///< File size, in bytes, or NPOS if unavailable.
+		std::int64_t creationTime;         ///< Time when the file was created, in seconds since the Unix epoch (1970-01-01 00:00), or -1 if unavailable.
+		std::int64_t lastAccessTime;       ///< Last time when the file was accessed, in seconds since the Unix epoch (1970-01-01 00:00), or -1 if unavailable.
+		std::int64_t lastModificationTime; ///< Last time when the file was modified, in seconds since the Unix epoch (1970-01-01 00:00), or -1 if unavailable.
+		Kind kind;                         ///< Kind of file, such as regular file or directory.
+		bool readOnly;                     ///< True if the file may only be opened for reading, false if it may also be opened for writing.
 	};
 
 	/**
@@ -94,8 +118,51 @@ public:
 	 * \param filepath virtual filepath to check for a mounted file.
 	 *
 	 * \return true if a file is mounted at the given filepath, false otherwise.
+	 *
+	 * \sa getFileMetadata()
+	 * \sa getFilenamesInDirectory()
 	 */
 	[[nodiscard]] static bool exists(const char* filepath);
+
+	/**
+	 * Get the metadata of a file that is mounted at a given virtual filepath.
+	 *
+	 * \param filepath virtual filepath of the file to get the metadata of.
+	 *
+	 * \return the file metadata, see Metadata.
+	 *
+	 * \throws Error on failure to get the metadata, such as if no file is
+	 *         mounted at the given filepath.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	[[nodiscard]] static Metadata getFileMetadata(const char* filepath);
+
+	/**
+	 * Get a list of the filenames of all readable virtual filepaths that are
+	 * direct children of a given directory.
+	 *
+	 * \param filepath virtual filepath of the directory to enumerate.
+	 *
+	 * \return an input-iterable sequence containing the filenames, in no
+	 *         specific order.
+	 *
+	 * \throws Error on failure to enumerate the directory.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \note This function is not recursive, and only returns the filename
+	 *       component of the direct descendants of the given directory, without
+	 *       the leading directory path. The full virtual filepath of each
+	 *       result can be formatted as `"{filepath}/{filename}"`, where
+	 *       `{filepath}` is the directory filepath that was passed to the
+	 *       function, and `{filename}` is one of the results in the returned
+	 *       sequence. Note that this path may refer to any kind of file,
+	 *       including a subdirectory. Use getFileMetadata() to find out which
+	 *       kind of file it refers to.
+	 *
+	 * \sa exists()
+	 * \sa getFileMetadata()
+	 */
+	[[nodiscard]] static std::vector<std::string> getFilenamesInDirectory(const char* filepath);
 
 	/**
 	 * Construct a closed virtual file handle without an associated file.
