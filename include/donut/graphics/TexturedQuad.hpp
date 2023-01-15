@@ -20,7 +20,7 @@ struct TexturedQuad {
 	/**
 	 * Data layout for the attributes of a single vertex of the mesh.
 	 *
-	 * \note Meets the requirements of the donut::graphics::vertex concept.
+	 * \note Meets the requirements of the donut::graphics::mesh_vertex concept.
 	 */
 	struct Vertex {
 		glm::vec2 coordinates; ///< Shared vertex position and texture coordinates.
@@ -29,7 +29,8 @@ struct TexturedQuad {
 	/**
 	 * Data layout for the attributes of a single instance of the mesh.
 	 *
-	 * \note Meets the requirements of the donut::graphics::instance concept.
+	 * \note Meets the requirements of the donut::graphics::mesh_instance
+	 *       concept.
 	 */
 	struct Instance {
 		glm::mat4 transformation; ///< Transformation matrix.

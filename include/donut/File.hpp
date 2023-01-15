@@ -64,7 +64,7 @@ public:
 	 * Record of metadata for a specific virtual file.
 	 */
 	struct Metadata {
-		std::size_t size;                  ///< File size, in bytes, or NPOS if unavailable.
+		std::size_t size;                  ///< File size, in bytes, or #NPOS if unavailable.
 		std::int64_t creationTime;         ///< Time when the file was created, in seconds since the Unix epoch (1970-01-01 00:00), or -1 if unavailable.
 		std::int64_t lastAccessTime;       ///< Last time when the file was accessed, in seconds since the Unix epoch (1970-01-01 00:00), or -1 if unavailable.
 		std::int64_t lastModificationTime; ///< Last time when the file was modified, in seconds since the Unix epoch (1970-01-01 00:00), or -1 if unavailable.

@@ -27,7 +27,8 @@ struct Model {
 		/**
 		 * Data layout for the attributes of a single vertex of the mesh.
 		 *
-		 * \note Meets the requirements of the donut::graphics::vertex concept.
+		 * \note Meets the requirements of the donut::graphics::mesh_vertex
+		 *       concept.
 		 */
 		struct Vertex {
 			glm::vec3 position;           ///< Position relative to the model origin.
@@ -40,14 +41,15 @@ struct Model {
 		/**
 		 * Data type used in the index buffer of the mesh.
 		 *
-		 * \note Meets the requirements of the donut::graphics::index concept.
+		 * \note Meets the requirements of the donut::graphics::mesh_index
+		 *       concept.
 		 */
 		using Index = std::uint32_t;
 
 		/**
 		 * Data layout for the attributes of a single instance of the mesh.
 		 *
-		 * \note Meets the requirements of the donut::graphics::instance
+		 * \note Meets the requirements of the donut::graphics::mesh_instance
 		 *       concept.
 		 */
 		struct Instance {

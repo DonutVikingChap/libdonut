@@ -149,11 +149,11 @@ constexpr std::array<Input, SDL_CONTROLLER_BUTTON_MAX> CONTROLLER_BUTTON_MAP = [
 
 constexpr float DIAGONAL_RATIO = 0.41421356237f; // sqrt(2) - 1
 
-[[nodiscard]] constexpr glm::i32 getIntegerValue(float value) noexcept {
+[[nodiscard]] glm::i32 getIntegerValue(float value) noexcept {
 	return static_cast<glm::i32>(glm::floor(value * 32767.5f));
 }
 
-[[nodiscard]] constexpr float getFloatValue(glm::i32 value) noexcept {
+[[nodiscard]] float getFloatValue(glm::i32 value) noexcept {
 	return (static_cast<float>(value) + 0.5f) / 32767.5f;
 }
 
@@ -179,7 +179,7 @@ InputManager::~InputManager() {
 void InputManager::prepareForEvents() {
 	previousPersistentOutputs = currentPersistentOutputs;
 	transientOutputs = {};
-	outputRelativeValues.fill(0.0f);
+	outputRelativeValues.fill(0);
 	previousPersistentInputs = currentPersistentInputs;
 	transientInputs = {};
 	mouseTransientMotion = false;
@@ -373,8 +373,8 @@ void InputManager::resetAllInputs() noexcept {
 	controllerRightStickPosition = {};
 	currentPersistentOutputs = {};
 	transientOutputs = {};
-	outputAbsoluteValues.fill(0.0f);
-	outputRelativeValues.fill(0.0f);
+	outputAbsoluteValues.fill(0);
+	outputRelativeValues.fill(0);
 	outputPersistentPresses.fill(0);
 	currentPersistentInputs = {};
 	transientInputs = {};

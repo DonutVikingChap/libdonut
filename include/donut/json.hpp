@@ -1732,12 +1732,12 @@ inline void Object::clear() noexcept {
 }
 
 template <typename P>
-inline std::pair<Object::iterator, bool> Object::insert(P&& value) requires(std::is_constructible_v<value_type, P&&>) {
+inline std::pair<Object::iterator, bool> Object::insert(P&& value) requires(std::is_constructible_v<Object::value_type, P&&>) {
 	return emplace(std::forward<P>(value));
 }
 
 template <typename P>
-inline Object::iterator Object::insert(const_iterator pos, P&& value) requires(std::is_constructible_v<value_type, P&&>) {
+inline Object::iterator Object::insert(const_iterator pos, P&& value) requires(std::is_constructible_v<Object::value_type, P&&>) {
 	return emplace_hint(pos, std::move(value));
 }
 
@@ -1748,12 +1748,12 @@ inline void Object::insert(InputIt first, InputIt last) {
 	}
 }
 
-inline void Object::insert(std::initializer_list<value_type> ilist) {
+inline void Object::insert(std::initializer_list<Object::value_type> ilist) {
 	insert(ilist.begin(), ilist.end());
 }
 
 template <typename... Args>
-inline std::pair<Object::iterator, bool> Object::emplace(Args&&... args) requires(std::is_constructible_v<value_type, Args...>) {
+inline std::pair<Object::iterator, bool> Object::emplace(Args&&... args) requires(std::is_constructible_v<Object::value_type, Args...>) {
 	value_type value{std::forward<Args>(args)...};
 	const auto [first, last] = equal_range(value.first);
 	if (first != last) {
@@ -1764,7 +1764,7 @@ inline std::pair<Object::iterator, bool> Object::emplace(Args&&... args) require
 }
 
 template <typename... Args>
-inline Object::iterator Object::emplace_hint(const_iterator, Args&&... args) requires(std::is_constructible_v<value_type, Args...>) {
+inline Object::iterator Object::emplace_hint(const_iterator, Args&&... args) requires(std::is_constructible_v<Object::value_type, Args...>) {
 	return emplace(std::forward<Args>(args)...);
 }
 

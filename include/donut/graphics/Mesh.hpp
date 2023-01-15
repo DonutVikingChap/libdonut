@@ -173,7 +173,7 @@ inline constexpr bool is_vertex_attributes_v = is_vertex_attributes<Tuple>::valu
  * \tparam T the type to check.
  */
 template <typename T>
-concept vertex =                    //
+concept mesh_vertex =               //
 	std::is_aggregate_v<T> &&       // Vertex must be an aggregate type, such as a plain struct.
 	std::is_standard_layout_v<T> && // Vertex must have standard layout in order to be compatible with the layout expected by the shader.
 	detail::is_vertex_attributes_v<decltype(reflection::fields(std::declval<T>()))>; // All vertex fields must be valid vertex attributes.
@@ -189,7 +189,7 @@ struct NoIndex {};
  * \tparam T the type to check.
  */
 template <typename T>
-concept index =                         //
+concept mesh_index =                    //
 	std::is_same_v<T, NoIndex> ||       //
 	std::is_same_v<T, std::uint8_t> ||  //
 	std::is_same_v<T, std::uint16_t> || //
@@ -206,7 +206,7 @@ struct NoInstance {};
  * \tparam T the type to check.
  */
 template <typename T>
-concept instance =                  //
+concept mesh_instance =             //
 	std::is_aggregate_v<T> &&       // Instance must be an aggregate type, such as a plain struct.
 	std::is_standard_layout_v<T> && // Instance must have standard layout in order to be compatible with the layout expected by the shader.
 	detail::is_vertex_attributes_v<decltype(reflection::fields(std::declval<T>()))>; // All instance fields must be valid vertex attributes.
@@ -215,15 +215,15 @@ concept instance =                  //
  * Generic abstraction of a GPU vertex array object and its associated buffers.
  *
  * \tparam Vertex type of vertices stored in the vertex buffer. Must meet the
- *         requirements of the donut::graphics::vertex concept.
+ *         requirements of the donut::graphics::mesh_vertex concept.
  * \tparam Index type of indices stored in the index buffer, or NoIndex for no
  *         index buffer. Must meet the requirements of the
- *         donut::graphics::index concept.
+ *         donut::graphics::mesh_index concept.
  * \tparam Instance type of instances stored in the instance buffer, or
  *         NoInstance for no instance buffer. Must meet the requirements of the
- *         donut::graphics::instance concept.
+ *         donut::graphics::mesh_instance concept.
  */
-template <vertex Vertex, index Index = NoIndex, instance Instance = NoInstance>
+template <mesh_vertex Vertex, mesh_index Index = NoIndex, mesh_instance Instance = NoInstance>
 class Mesh {
 public:
 	/** Tells if the mesh has an index buffer or not. */
