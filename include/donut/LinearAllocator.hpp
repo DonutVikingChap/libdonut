@@ -110,6 +110,9 @@ public:
 	}
 
 private:
+	template <typename U>
+	friend class LinearAllocator;
+
 	LinearMemoryResource* memoryResource;
 };
 
