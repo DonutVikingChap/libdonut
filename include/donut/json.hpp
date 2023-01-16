@@ -155,20 +155,20 @@ public:
 	void clear() noexcept;
 
 	template <typename P>
-	std::pair<iterator, bool> insert(P&& value) requires(std::is_constructible_v<value_type, P&&>);
+	std::pair<iterator, bool> insert(P&& value);
 
 	template <typename P>
-	iterator insert(const_iterator pos, P&& value) requires(std::is_constructible_v<value_type, P&&>);
+	iterator insert(const_iterator pos, P&& value);
 
 	template <typename InputIt>
 	void insert(InputIt first, InputIt last);
 	void insert(std::initializer_list<value_type> ilist);
 
 	template <typename... Args>
-	std::pair<iterator, bool> emplace(Args&&... args) requires(std::is_constructible_v<value_type, Args...>);
+	std::pair<iterator, bool> emplace(Args&&... args);
 
 	template <typename... Args>
-	iterator emplace_hint(const_iterator hint, Args&&... args) requires(std::is_constructible_v<value_type, Args...>);
+	iterator emplace_hint(const_iterator hint, Args&&... args);
 
 	template <typename... Args>
 	std::pair<iterator, bool> try_emplace(const String& k, Args&&... args);
@@ -1732,12 +1732,12 @@ inline void Object::clear() noexcept {
 }
 
 template <typename P>
-inline std::pair<Object::iterator, bool> Object::insert(P&& value) requires(std::is_constructible_v<Object::value_type, P&&>) {
+inline std::pair<Object::iterator, bool> Object::insert(P&& value) {
 	return emplace(std::forward<P>(value));
 }
 
 template <typename P>
-inline Object::iterator Object::insert(const_iterator pos, P&& value) requires(std::is_constructible_v<Object::value_type, P&&>) {
+inline Object::iterator Object::insert(const_iterator pos, P&& value) {
 	return emplace_hint(pos, std::move(value));
 }
 
@@ -1753,7 +1753,7 @@ inline void Object::insert(std::initializer_list<Object::value_type> ilist) {
 }
 
 template <typename... Args>
-inline std::pair<Object::iterator, bool> Object::emplace(Args&&... args) requires(std::is_constructible_v<Object::value_type, Args...>) {
+inline std::pair<Object::iterator, bool> Object::emplace(Args&&... args) {
 	value_type value{std::forward<Args>(args)...};
 	const auto [first, last] = equal_range(value.first);
 	if (first != last) {
@@ -1764,7 +1764,7 @@ inline std::pair<Object::iterator, bool> Object::emplace(Args&&... args) require
 }
 
 template <typename... Args>
-inline Object::iterator Object::emplace_hint(const_iterator, Args&&... args) requires(std::is_constructible_v<Object::value_type, Args...>) {
+inline Object::iterator Object::emplace_hint(const_iterator, Args&&... args) {
 	return emplace(std::forward<Args>(args)...);
 }
 
