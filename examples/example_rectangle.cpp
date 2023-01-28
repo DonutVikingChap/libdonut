@@ -5,20 +5,11 @@
  *          rectangle at a fixed size in the middle of the main window.
  */
 
-#include <donut/Color.hpp>
-#include <donut/application/Application.hpp>
-#include <donut/application/Event.hpp>
-#include <donut/graphics/Framebuffer.hpp>
-#include <donut/graphics/RenderPass.hpp>
-#include <donut/graphics/Renderer.hpp>
-#include <donut/graphics/Viewport.hpp>
+#include <donut/aliases.hpp>
+#include <donut/donut.hpp>
 
 #include <glm/ext/matrix_clip_space.hpp> // glm::ortho
 #include <glm/glm.hpp>                   // glm::...
-
-namespace app = donut::application;
-namespace gfx = donut::graphics;
-using Color = donut::Color;
 
 namespace {
 

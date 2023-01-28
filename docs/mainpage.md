@@ -65,6 +65,47 @@ Libdonut also includes the following utility APIs which encompass all of the mai
     - [donut::reflection](@ref donut::reflection) - Compile-time reflection of aggregate types
     - [donut::Timer](@ref donut::Timer) - Time counting utility
 
+## Includes
+
+For ease of use, libdonut provides the following header files which include collections of headers from each respective module:
+
+```cpp
+#include <donut/modules/application.hpp>
+#include <donut/modules/audio.hpp>
+#include <donut/modules/graphics.hpp>
+#include <donut/modules/utilities.hpp>
+```
+
+Alternatively, all modules can be included as follows:
+
+```cpp
+#include <donut/donut.hpp>
+```
+
+### Aliases
+
+In addition, for applications where the potential naming conflicts are not a problem, the following include can be used to provide short, global aliases for the libdonut API:
+
+```cpp
+#include <donut/aliases.hpp>
+```
+
+These aliases include global declarations for all types that are defined directly in the `donut` namespace, such as `Color` for `donut::Color`, as well as the following namespace aliases:
+
+```cpp
+namespace app = donut::application;
+namespace audio = donut::audio;
+namespace gfx = donut::graphics;
+
+namespace base64 = donut::base64;
+namespace json = donut::json;
+namespace obj = donut::obj;
+namespace rng = donut::random;
+namespace reflection = donut::reflection;
+namespace unicode = donut::unicode;
+namespace xml = donut::xml;
+```
+
 ## Conventions
 
 Except where the documentation specifies otherwise, the API uses the following conventions by default:

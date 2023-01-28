@@ -15,28 +15,8 @@
  *          resource directory for all asset files that are loaded at runtime.
  */
 
-#include <donut/Color.hpp>
-#include <donut/File.hpp>
-#include <donut/InputFileStream.hpp>
-#include <donut/Timer.hpp>
-#include <donut/Variant.hpp>
-#include <donut/application/Application.hpp>
-#include <donut/application/Event.hpp>
-#include <donut/application/Input.hpp>
-#include <donut/application/InputManager.hpp>
-#include <donut/audio/Error.hpp>
-#include <donut/audio/Sound.hpp>
-#include <donut/audio/SoundStage.hpp>
-#include <donut/graphics/Font.hpp>
-#include <donut/graphics/Framebuffer.hpp>
-#include <donut/graphics/ImageLDR.hpp>
-#include <donut/graphics/RenderPass.hpp>
-#include <donut/graphics/Renderer.hpp>
-#include <donut/graphics/Shader.hpp>
-#include <donut/graphics/Shader3D.hpp>
-#include <donut/graphics/Texture.hpp>
-#include <donut/graphics/Viewport.hpp>
-#include <donut/json.hpp>
+#include <donut/aliases.hpp>
+#include <donut/donut.hpp>
 
 #include <array>                         // std::array
 #include <charconv>                      // std::from_chars_result, std::from_chars
@@ -57,17 +37,6 @@
 #include <string_view>                   // std::string_view
 #include <system_error>                  // std::errc
 #include <unordered_map>                 // std::unordered_map
-
-namespace app = donut::application;
-namespace audio = donut::audio;
-namespace gfx = donut::graphics;
-namespace json = donut::json;
-using Color = donut::Color;
-using File = donut::File;
-using InputFileStream = donut::InputFileStream;
-using Timer = donut::Timer<float>;
-template <typename... Ts>
-using Variant = donut::Variant<Ts...>;
 
 namespace {
 
@@ -620,8 +589,8 @@ private:
 	glm::vec3 carrotCakeDisplayPosition{0.0f, 0.0f, 0.0f};
 	glm::vec2 carrotCakeScale{1.0f, 1.0f};
 	glm::vec3 carrotCakeVelocity{0.0f, 0.0f, 0.0f};
-	Timer timerA{};
-	Timer timerB{};
+	Timer<float> timerA{};
+	Timer<float> timerB{};
 	unsigned counterA = 0u;
 	unsigned counterB = 0u;
 };

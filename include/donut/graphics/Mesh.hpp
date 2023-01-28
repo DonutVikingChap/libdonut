@@ -223,9 +223,13 @@ concept mesh_instance =             //
  *         NoInstance for no instance buffer. Must meet the requirements of the
  *         donut::graphics::mesh_instance concept.
  */
-template <mesh_vertex Vertex, mesh_index Index = NoIndex, mesh_instance Instance = NoInstance>
+template <typename Vertex, typename Index = NoIndex, typename Instance = NoInstance>
 class Mesh {
 public:
+	static_assert(mesh_vertex<Vertex>, "Mesh template parameter \"Vertex\" must be a valid vertex type.");
+	static_assert(mesh_index<Index>, "Mesh template parameter \"Index\" must be a valid index type.");
+	static_assert(mesh_instance<Instance>, "Mesh template parameter \"Instance\" must be a valid instance type.");
+
 	/** Tells if the mesh has an index buffer or not. */
 	static constexpr bool IS_INDEXED = !std::is_same_v<Index, NoIndex>;
 
@@ -239,7 +243,9 @@ public:
 	 *        MeshBufferUsage.
 	 * \param vertices initial data to copy into the vertex buffer.
 	 */
-	Mesh(MeshBufferUsage verticesUsage, std::span<const Vertex> vertices) requires(!IS_INDEXED && !IS_INSTANCED) {
+	Mesh(MeshBufferUsage verticesUsage, std::span<const Vertex> vertices)
+		requires(!IS_INDEXED && !IS_INSTANCED)
+	{
 		const detail::MeshStatePreserver preserver{};
 		detail::bindVertexArray(vao.get());
 		bufferVertexData(verticesUsage, vertices, 0);
@@ -255,7 +261,9 @@ public:
 	 * \param vertices initial data to copy into the vertex buffer.
 	 * \param indices initial data to copy into the index buffer.
 	 */
-	Mesh(MeshBufferUsage verticesUsage, MeshBufferUsage indicesUsage, std::span<const Vertex> vertices, std::span<const Index> indices) requires(IS_INDEXED && !IS_INSTANCED) {
+	Mesh(MeshBufferUsage verticesUsage, MeshBufferUsage indicesUsage, std::span<const Vertex> vertices, std::span<const Index> indices)
+		requires(IS_INDEXED && !IS_INSTANCED)
+	{
 		const detail::MeshStatePreserver preserver{};
 		detail::bindVertexArray(vao.get());
 		bufferVertexData(verticesUsage, vertices, 0);
@@ -272,8 +280,9 @@ public:
 	 * \param vertices initial data to copy into the vertex buffer.
 	 * \param instances initial data to copy into the instance buffer.
 	 */
-	Mesh(MeshBufferUsage verticesUsage, MeshBufferUsage instancesUsage, std::span<const Vertex> vertices, std::span<const Instance> instances) requires(
-		!IS_INDEXED && IS_INSTANCED) {
+	Mesh(MeshBufferUsage verticesUsage, MeshBufferUsage instancesUsage, std::span<const Vertex> vertices, std::span<const Instance> instances)
+		requires(!IS_INDEXED && IS_INSTANCED)
+	{
 		const detail::MeshStatePreserver preserver{};
 		detail::bindVertexArray(vao.get());
 		bufferVertexData(verticesUsage, vertices, 0);
@@ -294,7 +303,9 @@ public:
 	 * \param instances initial data to copy into the instance buffer.
 	 */
 	Mesh(MeshBufferUsage verticesUsage, MeshBufferUsage indicesUsage, MeshBufferUsage instancesUsage, std::span<const Vertex> vertices, std::span<const Index> indices,
-		std::span<const Instance> instances) requires(IS_INDEXED&& IS_INSTANCED) {
+		std::span<const Instance> instances)
+		requires(IS_INDEXED && IS_INSTANCED)
+	{
 		const detail::MeshStatePreserver preserver{};
 		detail::bindVertexArray(vao.get());
 		bufferVertexData(verticesUsage, vertices, 0);
@@ -311,7 +322,9 @@ public:
 	 *
 	 * \note The old contents of the buffer are discarded.
 	 */
-	void setVertices(MeshBufferUsage verticesUsage, std::span<const Vertex> vertices) noexcept requires(!IS_INDEXED) {
+	void setVertices(MeshBufferUsage verticesUsage, std::span<const Vertex> vertices) noexcept
+		requires(!IS_INDEXED)
+	{
 		const detail::MeshStatePreserver preserver{};
 		detail::bindVertexArray(vao.get());
 		detail::bindArrayBuffer(vbo.get());
@@ -330,7 +343,9 @@ public:
 	 *
 	 * \note The old contents of the buffers are discarded.
 	 */
-	void setVertices(MeshBufferUsage verticesUsage, MeshBufferUsage indicesUsage, std::span<const Vertex> vertices, std::span<const Index> indices) noexcept requires(IS_INDEXED) {
+	void setVertices(MeshBufferUsage verticesUsage, MeshBufferUsage indicesUsage, std::span<const Vertex> vertices, std::span<const Index> indices) noexcept
+		requires(IS_INDEXED)
+	{
 		const detail::MeshStatePreserver preserver{};
 		detail::bindVertexArray(vao.get());
 		detail::bindArrayBuffer(vbo.get());
@@ -363,7 +378,9 @@ public:
 	 *       abstractions and is not intended to be used outside of the graphics
 	 *       module. The returned handle has no meaning to application code.
 	 */
-	[[nodiscard]] Handle getIndexBuffer() const noexcept requires(IS_INDEXED) {
+	[[nodiscard]] Handle getIndexBuffer() const noexcept
+		requires(IS_INDEXED)
+	{
 		return ebo.get();
 	}
 
@@ -377,7 +394,9 @@ public:
 	 *       abstractions and is not intended to be used outside of the graphics
 	 *       module. The returned handle has no meaning to application code.
 	 */
-	[[nodiscard]] Handle getInstanceBuffer() const noexcept requires(IS_INSTANCED) {
+	[[nodiscard]] Handle getInstanceBuffer() const noexcept
+		requires(IS_INSTANCED)
+	{
 		return ibo.get();
 	}
 
@@ -410,12 +429,16 @@ private:
 		});
 	}
 
-	void bufferIndexData(MeshBufferUsage usage, std::span<const Index> indices) requires(IS_INDEXED) {
+	void bufferIndexData(MeshBufferUsage usage, std::span<const Index> indices)
+		requires(IS_INDEXED)
+	{
 		detail::bindElementArrayBuffer(ebo.get());
 		detail::bufferElementArrayBufferData(sizeof(Index) * indices.size(), indices.data(), usage);
 	}
 
-	void bufferInstanceData(MeshBufferUsage usage, std::span<const Instance> instances, std::uint32_t attributeOffset) requires(IS_INSTANCED) {
+	void bufferInstanceData(MeshBufferUsage usage, std::span<const Instance> instances, std::uint32_t attributeOffset)
+		requires(IS_INSTANCED)
+	{
 		static_assert(std::is_aggregate_v<Instance>, "Instance type must be an aggregate type!");
 		static_assert(std::is_standard_layout_v<Instance>, "Instance type must have standard layout!");
 		detail::bindArrayBuffer(ibo.get());

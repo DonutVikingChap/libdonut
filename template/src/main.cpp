@@ -1,9 +1,7 @@
-#include <donut/application/Application.hpp>
-#include <donut/application/Event.hpp>
+#include <donut/aliases.hpp>
+#include <donut/donut.hpp>
 
 #include <glm/glm.hpp>
-
-namespace app = donut::application;
 
 class Application : public app::Application {
 public:

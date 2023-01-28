@@ -8,7 +8,7 @@
 namespace donut {
 namespace audio {
 
-class Sound;
+class Sound; // Forward declaration, to avoid including Sound.hpp.
 
 /**
  * Current state of the sound listener, i.e. the user perceiving the audio,
