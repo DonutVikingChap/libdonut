@@ -409,14 +409,15 @@ private:
 				if (!input) {
 					throw std::runtime_error{fmt::format("Invalid input identifier \"{}\".", inputIdentifier)};
 				}
-				std::span<const json::Value> actionValues = (actions.is<json::Array>()) ? actions.as<json::Array>() : std::span{&actions, 1};
+				const std::span<const json::Value> actionValues = (actions.is<json::Array>()) ? actions.as<json::Array>() : std::span{&actions, 1};
 				for (const json::Value& actionValue : actionValues) {
 					if (!actionValue.is<json::String>()) {
 						throw std::runtime_error{"Invalid actions type."};
 					}
-					const auto it = actionsByIdentifier.find(actionValue.as<json::String>());
+					const json::String& actionIdentifier = actionValue.as<json::String>();
+					const auto it = actionsByIdentifier.find(actionIdentifier);
 					if (it == actionsByIdentifier.end()) {
-						throw std::runtime_error{fmt::format("Invalid input identifier \"{}\".", inputIdentifier)};
+						throw std::runtime_error{fmt::format("Invalid action identifier \"{}\".", actionIdentifier)};
 					}
 					inputManager.addBinding(*input, it->second);
 				}

@@ -22,7 +22,7 @@
 #include <cstdio>       // stderr
 #include <exception>    // std::exception
 #include <fmt/format.h> // fmt::format, fmt::print
-#include <glm/glm.hpp>  // glm::
+#include <glm/glm.hpp>  // glm::...
 #include <physfs.h>     // PHYSFS_...
 #include <string>       // std::string
 #include <string_view>  // std::string_view
