@@ -4,32 +4,32 @@ namespace donut {
 namespace graphics {
 
 const char* const Shader3D::vertexShaderSourceCodeInstancedModel = R"GLSL(
-    layout(location = 0) in vec3 inPosition;
-    layout(location = 1) in vec3 inNormal;
-    layout(location = 2) in vec3 inTangent;
-    layout(location = 3) in vec3 inBitangent;
-    layout(location = 4) in vec2 inTextureCoordinates;
+    layout(location = 0) in vec3 vertexPosition;
+    layout(location = 1) in vec3 vertexNormal;
+    layout(location = 2) in vec3 vertexTangent;
+    layout(location = 3) in vec3 vertexBitangent;
+    layout(location = 4) in vec2 vertexTextureCoordinates;
     layout(location = 5) in mat4 instanceTransformation;
     layout(location = 9) in mat3 instanceNormalMatrix;
     layout(location = 12) in vec4 instanceTintColor;
 
-    out vec3 ioFragmentPosition;
-    out vec3 ioNormal;
-    out vec3 ioTangent;
-    out vec3 ioBitangent;
-    out vec2 ioTextureCoordinates;
-    out vec4 ioTintColor;
+    out vec3 fragmentPosition;
+    out vec3 fragmentNormal;
+    out vec3 fragmentTangent;
+    out vec3 fragmentBitangent;
+    out vec2 fragmentTextureCoordinates;
+    out vec4 fragmentTintColor;
 
     uniform mat4 projectionViewMatrix;
 
     void main() {
-        ioFragmentPosition = vec3(instanceTransformation * vec4(inPosition, 1.0));
-        ioNormal = instanceNormalMatrix * inNormal;
-        ioTangent = instanceNormalMatrix * inTangent;
-        ioBitangent = instanceNormalMatrix * inBitangent;
-        ioTextureCoordinates = inTextureCoordinates;
-        ioTintColor = instanceTintColor;
-        gl_Position = projectionViewMatrix * vec4(ioFragmentPosition, 1.0);
+        fragmentPosition = vec3(instanceTransformation * vec4(vertexPosition, 1.0));
+        fragmentNormal = instanceNormalMatrix * vertexNormal;
+        fragmentTangent = instanceNormalMatrix * vertexTangent;
+        fragmentBitangent = instanceNormalMatrix * vertexBitangent;
+        fragmentTextureCoordinates = vertexTextureCoordinates;
+        fragmentTintColor = instanceTintColor;
+        gl_Position = projectionViewMatrix * vec4(fragmentPosition, 1.0);
     }
 )GLSL";
 
@@ -59,14 +59,14 @@ const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
 
     const vec3 VIEW_POSITION = vec3(0.0, 0.0, 0.0);
 
-    in vec3 ioFragmentPosition;
-    in vec3 ioNormal;
-    in vec3 ioTangent;
-    in vec3 ioBitangent;
-    in vec2 ioTextureCoordinates;
-    in vec4 ioTintColor;
+    in vec3 fragmentPosition;
+    in vec3 fragmentNormal;
+    in vec3 fragmentTangent;
+    in vec3 fragmentBitangent;
+    in vec2 fragmentTextureCoordinates;
+    in vec4 fragmentTintColor;
 
-    out vec4 outFragmentColor;
+    out vec4 outputColor;
 
     uniform sampler2D diffuseMap;
     uniform sampler2D specularMap;
@@ -84,7 +84,7 @@ const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
     }
 
     vec3 calculatePointLight(PointLight light, vec3 normal, vec3 viewDirection, vec3 ambientColor, vec3 diffuseColor, vec3 specularColor) {
-        vec3 lightDifference = light.position - ioFragmentPosition;
+        vec3 lightDifference = light.position - fragmentPosition;
         float lightDistanceSquared = dot(lightDifference, lightDifference);
         float lightDistance = sqrt(lightDistanceSquared);
         vec3 lightDirection = lightDifference * (1.0 / lightDistance);
@@ -100,20 +100,20 @@ const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
     }
 
     void main() {
-        vec4 diffuseColor = ioTintColor * texture(diffuseMap, ioTextureCoordinates);
-        vec3 specularColor = texture(specularMap, ioTextureCoordinates).rgb;
+        vec4 diffuseColor = fragmentTintColor * texture(diffuseMap, fragmentTextureCoordinates);
+        vec3 specularColor = texture(specularMap, fragmentTextureCoordinates).rgb;
         
-        mat3 TBN = mat3(normalize(ioTangent), normalize(ioBitangent), normalize(ioNormal));
-        vec3 surfaceNormal = texture(normalMap, ioTextureCoordinates).xyz * 2.0 - vec3(1.0);
+        mat3 TBN = mat3(normalize(fragmentTangent), normalize(fragmentBitangent), normalize(fragmentNormal));
+        vec3 surfaceNormal = texture(normalMap, fragmentTextureCoordinates).xyz * 2.0 - vec3(1.0);
         vec3 normal = normalize(TBN * surfaceNormal);
 
-        vec3 viewDirection = normalize(VIEW_POSITION - ioFragmentPosition);
+        vec3 viewDirection = normalize(VIEW_POSITION - fragmentPosition);
 
-        vec3 result = vec3(0.0, 0.0, 0.0);
+        vec3 color = vec3(0.0, 0.0, 0.0);
         for (uint i = uint(0); i < POINT_LIGHT_COUNT; ++i) {
-            result += calculatePointLight(POINT_LIGHTS[i], normal, viewDirection, diffuseColor.rgb, diffuseColor.rgb, specularColor);
+            color += calculatePointLight(POINT_LIGHTS[i], normal, viewDirection, diffuseColor.rgb, diffuseColor.rgb, specularColor);
         }
-        outFragmentColor = vec4(result, diffuseColor.a);
+        outputColor = vec4(color, diffuseColor.a);
     }
 )GLSL";
 
