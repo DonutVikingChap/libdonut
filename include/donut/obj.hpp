@@ -57,8 +57,9 @@ struct Face {
  * Group containing polygonal Face elements within an Object.
  */
 struct Group {
-	std::string name{};        ///< Name of the group, or empty if no name was specified.
-	std::vector<Face> faces{}; ///< List of faces belonging to this group.
+	std::string name{};         ///< Name of the group, or empty if no name was specified.
+	std::vector<Face> faces{};  ///< List of faces belonging to this group.
+	std::string materialName{}; ///< Name of the material of this group, which should be found in one of the associated material libraries.
 };
 
 /**
@@ -66,7 +67,6 @@ struct Group {
  */
 struct Object {
 	std::string name{};          ///< Name of the object, or empty if no name was specified.
-	std::string materialName{};  ///< Name of the material of this object, which should be found in one of the associated material libraries.
 	std::vector<Group> groups{}; ///< List of groups belonging to this object.
 };
 

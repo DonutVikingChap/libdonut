@@ -37,7 +37,11 @@ public:
 			} else if (readCommand("mtllib")) {
 				output.materialLibraryFilenames.push_back(parseString());
 			} else if (readCommand("usemtl")) {
-				output.objects.back().materialName = parseString();
+				if (!output.objects.back().groups.back().materialName.empty()) {
+					output.objects.back().groups.push_back(Group{.materialName = parseString()});
+				} else {
+					output.objects.back().groups.back().materialName = parseString();
+				}
 			} else if (readCommand("o")) {
 				if (!output.objects.back().name.empty()) {
 					output.objects.push_back(Object{.name = parseString(), .groups{Group{}}});

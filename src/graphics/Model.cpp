@@ -11,11 +11,13 @@
 #include <cstddef>          // std::size_t
 #include <exception>        // std::exception
 #include <fmt/format.h>     // fmt::format
+#include <functional>       // std::hash
 #include <glm/glm.hpp>      // glm::...
 #include <glm/gtx/norm.hpp> // glm::length2
 #include <numbers>          // std::numbers_pi_v
 #include <span>             // std::span
 #include <string>           // std::string
+#include <unordered_map>    // std::unordered_map
 #include <utility>          // std::move
 #include <vector>           // std::vector
 
@@ -23,40 +25,6 @@ namespace donut {
 namespace graphics {
 
 namespace {
-
-class IndexMap {
-public:
-	static constexpr std::size_t MAX_DUPLICATE_VERTICES = 32;
-
-	explicit IndexMap(std::size_t totalVertexCount)
-		: vertices(totalVertexCount * MAX_DUPLICATE_VERTICES) {}
-
-	void clear() noexcept {
-		for (obj::FaceVertex& vertex : vertices) {
-			vertex.vertexIndex = static_cast<decltype(vertex.vertexIndex)>(-1);
-			vertex.textureCoordinateIndex = static_cast<decltype(vertex.textureCoordinateIndex)>(-1);
-			vertex.normalIndex = static_cast<decltype(vertex.normalIndex)>(-1);
-		}
-	}
-
-	[[nodiscard]] Model::Object::Index insert(Model::Object::Index vertexIndex, const obj::FaceVertex& newVertex) {
-		for (obj::FaceVertex& vertex : std::span{vertices}.subspan(newVertex.vertexIndex * MAX_DUPLICATE_VERTICES, MAX_DUPLICATE_VERTICES)) {
-			if (vertex.vertexIndex == static_cast<decltype(vertex.vertexIndex)>(-1)) {
-				vertex.vertexIndex = vertexIndex;
-				vertex.textureCoordinateIndex = newVertex.textureCoordinateIndex;
-				vertex.normalIndex = newVertex.normalIndex;
-				return vertexIndex;
-			}
-			if (vertex.vertexIndex == newVertex.vertexIndex && vertex.textureCoordinateIndex == newVertex.textureCoordinateIndex && vertex.normalIndex == newVertex.normalIndex) {
-				return vertex.vertexIndex;
-			}
-		}
-		throw Error{"Too many duplicate vertices in model."};
-	}
-
-private:
-	std::vector<obj::FaceVertex> vertices;
-};
 
 void generateNormals(std::span<Model::Object::Vertex> vertices, std::span<const Model::Object::Index> indices) {
 	for (Model::Object::Vertex& vertex : vertices) {
@@ -147,23 +115,36 @@ void loadObjScene(Model& output, const obj::Scene& scene) {
 		materialLibraries.push_back(obj::mtl::Library::parse(InputFileStream::open(materialLibraryFilename.c_str()).readAllIntoString()));
 	}
 
-	IndexMap indexMap{scene.vertices.size()};
+	struct FaceVertexHash {
+		[[nodiscard]] std::size_t operator()(const obj::FaceVertex& faceVertex) const {
+			return (std::hash<std::uint32_t>{}(faceVertex.vertexIndex) ^ (std::hash<std::uint32_t>{}(faceVertex.textureCoordinateIndex) << 1) >> 1) ^
+				(std::hash<std::uint32_t>{}(faceVertex.normalIndex) << 1);
+		}
+	};
+
+	struct FaceVertexEqual {
+		[[nodiscard]] bool operator()(const obj::FaceVertex& a, const obj::FaceVertex& b) const {
+			return a.vertexIndex == b.vertexIndex && a.textureCoordinateIndex == b.textureCoordinateIndex && a.normalIndex == b.normalIndex;
+		}
+	};
+
+	std::unordered_map<obj::FaceVertex, std::size_t, FaceVertexHash, FaceVertexEqual> vertexMap{};
 
 	output.objects.reserve(scene.objects.size());
 	for (const obj::Object& object : scene.objects) {
-		std::vector<Model::Object::Vertex> vertices{};
-		std::vector<Model::Object::Index> indices{};
-
-		indexMap.clear();
-
 		for (const obj::Group& group : object.groups) {
+			std::vector<Model::Object::Vertex> vertices{};
+			std::vector<Model::Object::Index> indices{};
+
+			vertexMap.clear();
+
 			for (const obj::Face& face : group.faces) {
 				if (face.vertices.size() >= 3) {
 					for (std::size_t faceVertexIndex = 1; faceVertexIndex + 1 < face.vertices.size(); ++faceVertexIndex) {
 						for (const std::size_t faceVertexIndex : {std::size_t{0}, faceVertexIndex, faceVertexIndex + 1}) {
 							const obj::FaceVertex& faceVertex = face.vertices[faceVertexIndex];
-							const Model::Object::Index newVertexIndex = indexMap.insert(static_cast<Model::Object::Index>(vertices.size()), faceVertex);
-							if (newVertexIndex == vertices.size()) {
+							std::size_t vertexIndex = vertices.size();
+							if (const auto [it, inserted] = vertexMap.emplace(faceVertex, vertexIndex); inserted) {
 								vertices.push_back({
 									.position = (faceVertex.vertexIndex < scene.vertices.size()) ? scene.vertices[faceVertex.vertexIndex] : glm::vec3{0.0f, 0.0f, 0.0f},
 									.normal = (faceVertex.normalIndex < scene.normals.size()) ? scene.normals[faceVertex.normalIndex] : glm::vec3{0.0f, 0.0f, 0.0f},
@@ -173,47 +154,49 @@ void loadObjScene(Model& output, const obj::Scene& scene) {
 										scene.textureCoordinates[faceVertex.textureCoordinateIndex] :
 										glm::vec2{0.0f, 0.0f},
 								});
+							} else {
+								vertexIndex = it->second;
 							}
-							indices.push_back(newVertexIndex);
+							indices.push_back(static_cast<Model::Object::Index>(vertexIndex));
 						}
 					}
 				}
 			}
-		}
 
-		if (scene.normals.size() != scene.vertices.size()) {
-			generateNormals(vertices, indices);
-		}
-		generateTangentSpace(vertices, indices);
+			if (scene.normals.size() != scene.vertices.size()) {
+				generateNormals(vertices, indices);
+			}
+			generateTangentSpace(vertices, indices);
 
-		Model::Object::Material objectMaterial{.diffuseMap{}, .specularMap{}, .normalMap{}, .specularExponent = 0.0f};
-		if (!object.materialName.empty()) {
-			for (const obj::mtl::Library& materialLibrary : materialLibraries) {
-				if (const auto it = std::find_if(materialLibrary.materials.begin(),
-						materialLibrary.materials.end(),
-						[&](const obj::mtl::Material& material) -> bool { return material.name == object.materialName; });
-					it != materialLibrary.materials.end()) {
-					const obj::mtl::Material& material = *it;
-					if (!material.diffuseMapName.empty()) {
-						objectMaterial.diffuseMap = loadTexture(material.diffuseMapName);
+			Model::Object::Material groupMaterial{.diffuseMap{}, .specularMap{}, .normalMap{}, .specularExponent = 0.0f};
+			if (!group.materialName.empty()) {
+				for (const obj::mtl::Library& materialLibrary : materialLibraries) {
+					if (const auto it = std::find_if(materialLibrary.materials.begin(),
+							materialLibrary.materials.end(),
+							[&](const obj::mtl::Material& material) -> bool { return material.name == group.materialName; });
+						it != materialLibrary.materials.end()) {
+						const obj::mtl::Material& material = *it;
+						if (!material.diffuseMapName.empty()) {
+							groupMaterial.diffuseMap = loadTexture(material.diffuseMapName);
+						}
+						if (!material.specularMapName.empty()) {
+							groupMaterial.specularMap = loadTexture(material.specularMapName);
+						}
+						if (!material.bumpMapName.empty()) {
+							groupMaterial.normalMap = loadTexture(material.bumpMapName);
+						}
+						groupMaterial.specularExponent = material.specularExponent;
+						break;
 					}
-					if (!material.specularMapName.empty()) {
-						objectMaterial.specularMap = loadTexture(material.specularMapName);
-					}
-					if (!material.bumpMapName.empty()) {
-						objectMaterial.normalMap = loadTexture(material.bumpMapName);
-					}
-					objectMaterial.specularExponent = material.specularExponent;
-					break;
 				}
 			}
-		}
 
-		output.objects.push_back({
-			.mesh{Model::Object::VERTICES_USAGE, Model::Object::INDICES_USAGE, Model::Object::INSTANCES_USAGE, vertices, indices, {}},
-			.material = std::move(objectMaterial),
-			.indexCount = indices.size(),
-		});
+			output.objects.push_back({
+				.mesh{Model::Object::VERTICES_USAGE, Model::Object::INDICES_USAGE, Model::Object::INSTANCES_USAGE, vertices, indices, {}},
+				.material = std::move(groupMaterial),
+				.indexCount = indices.size(),
+			});
+		}
 	}
 }
 
