@@ -47,7 +47,7 @@ public:
 				vertex.normalIndex = newVertex.normalIndex;
 				return vertexIndex;
 			}
-			if (vertex.textureCoordinateIndex == newVertex.textureCoordinateIndex && vertex.normalIndex == newVertex.normalIndex) {
+			if (vertex.vertexIndex == newVertex.vertexIndex && vertex.textureCoordinateIndex == newVertex.textureCoordinateIndex && vertex.normalIndex == newVertex.normalIndex) {
 				return vertex.vertexIndex;
 			}
 		}
