@@ -178,6 +178,44 @@ public:
 		: rgba(r, g, b, a) {}
 
 	/**
+	 * Construct a color with given values for each component.
+	 *
+	 * \param r value of the red color component.
+	 * \param g value of the green color component.
+	 * \param b value of the blue color component.
+	 * \param a value of the alpha component. Defaults to fully opaque, i.e. a
+	 *        value of 1.
+	 */
+	constexpr Color(double r, double g, double b, double a = 1.0) noexcept
+		: rgba(static_cast<float>(r), static_cast<float>(g), static_cast<float>(b), static_cast<float>(a)) {}
+
+	/**
+	 * Construct a color with given integer values for each component in the
+	 * range 0-255, which will be normalized to the range 0-1.
+	 *
+	 * \param r value of the red color component, before normalization.
+	 * \param g value of the green color component.
+	 * \param b value of the blue color component.
+	 * \param a value of the alpha component. Defaults to fully opaque, i.e. a
+	 *        value of 1.
+	 */
+	constexpr Color(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a = 255) noexcept
+		: Color(static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, static_cast<float>(a) / 255.0f) {}
+
+	/**
+	 * Construct a color with given integer values for each component in the
+	 * range 0-255, which will be normalized to the range 0-1.
+	 *
+	 * \param r value of the red color component, before normalization.
+	 * \param g value of the green color component.
+	 * \param b value of the blue color component.
+	 * \param a value of the alpha component. Defaults to fully opaque, i.e. a
+	 *        value of 1.
+	 */
+	constexpr Color(int r, int g, int b, int a = 255) noexcept
+		: Color(static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, static_cast<float>(a) / 255.0f) {}
+
+	/**
 	 * Construct a color from a vector with 3 components, XYZ, that map to the
 	 * color components RGB, respectively.
 	 *
@@ -187,7 +225,7 @@ public:
 	 *        components.
 	 */
 	constexpr Color(glm::vec3 rgb) noexcept
-		: rgba(rgb, 1.0f) {}
+		: rgba(rgb.x, rgb.y, rgb.z, 1.0f) {}
 
 	/**
 	 * Construct a color from a vector with 4 components, XYZW, that map to the
@@ -197,7 +235,31 @@ public:
 	 *        alpha components.
 	 */
 	constexpr Color(glm::vec4 rgba) noexcept
-		: rgba(rgba) {}
+		: rgba(rgba.x, rgba.y, rgba.z, rgba.w) {}
+
+	/**
+	 * Construct a color from a vector with 3 integer components in the range
+	 * 0-255, XYZ, that map to the normalized 0-1 color components RGB,
+	 * respectively.
+	 *
+	 * The alpha component is set to fully opaque, i.e. a value of 1.
+	 *
+	 * \param rgb input vector containing values for the red, green, and blue
+	 *        components.
+	 */
+	constexpr Color(glm::u8vec3 rgb) noexcept
+		: rgba(rgb.x, rgb.y, rgb.z, 255) {}
+
+	/**
+	 * Construct a color from a vector with 4 integer components in the range
+	 * 0-255, XYZW, that map to the normalized 0-1 color components RGBA,
+	 * respectively.
+	 *
+	 * \param rgba input vector containing values for the red, green, blue and
+	 *        alpha components.
+	 */
+	constexpr Color(glm::u8vec4 rgba) noexcept
+		: rgba(rgba.x, rgba.y, rgba.z, rgba.w) {}
 
 	/**
 	 * Convert the color to a vector with 3 components, XYZ, that are mapped
@@ -217,6 +279,66 @@ public:
 	 */
 	constexpr operator glm::vec4() const noexcept {
 		return rgba;
+	}
+
+	/**
+	 * Convert the color to a vector with 3 components, XYZ, that are mapped
+	 * from the color components RGB, respectively.
+	 *
+	 * \return the RGB components of the color as a vector.
+	 */
+	constexpr operator glm::dvec3() const noexcept {
+		return glm::dvec3{
+			static_cast<double>(rgba.x),
+			static_cast<double>(rgba.y),
+			static_cast<double>(rgba.z),
+		};
+	}
+
+	/**
+	 * Convert the color to a vector with 4 components, XYZW, that are mapped
+	 * from the color components RGBA, respectively.
+	 *
+	 * \return the RGBA components of the color as a vector.
+	 */
+	constexpr operator glm::dvec4() const noexcept {
+		return glm::dvec4{
+			static_cast<double>(rgba.x),
+			static_cast<double>(rgba.y),
+			static_cast<double>(rgba.z),
+			static_cast<double>(rgba.w),
+		};
+	}
+
+	/**
+	 * Convert the color to a vector with 3 components, XYZ, that are mapped
+	 * from the color components RGB, respectively, which are clamped to the
+	 * range 0-1 before being converted to 0-255.
+	 *
+	 * \return the RGB components of the color as a vector.
+	 */
+	constexpr operator glm::u8vec3() const noexcept {
+		return glm::u8vec3{
+			static_cast<std::uint8_t>(glm::clamp(rgba.x, 0.0f, 1.0f) * 255.0f),
+			static_cast<std::uint8_t>(glm::clamp(rgba.y, 0.0f, 1.0f) * 255.0f),
+			static_cast<std::uint8_t>(glm::clamp(rgba.z, 0.0f, 1.0f) * 255.0f),
+		};
+	}
+
+	/**
+	 * Convert the color to a vector with 4 components, XYZW, that are mapped
+	 * from the normalized color components RGBA, respectively, which are
+	 * clamped to the range 0-1 before being converted to 0-255.
+	 *
+	 * \return the RGBA components of the color as a vector.
+	 */
+	constexpr operator glm::u8vec4() const noexcept {
+		return glm::u8vec4{
+			static_cast<std::uint8_t>(glm::clamp(rgba.x, 0.0f, 1.0f) * 255.0f),
+			static_cast<std::uint8_t>(glm::clamp(rgba.y, 0.0f, 1.0f) * 255.0f),
+			static_cast<std::uint8_t>(glm::clamp(rgba.z, 0.0f, 1.0f) * 255.0f),
+			static_cast<std::uint8_t>(glm::clamp(rgba.w, 0.0f, 1.0f) * 255.0f),
+		};
 	}
 
 	/**
@@ -458,155 +580,155 @@ private:
 };
 
 // clang-format off
-inline constexpr Color Color::INVISIBLE                 {0.0f,      0.0f,      0.0f,      0.0f};
-inline constexpr Color Color::ALICE_BLUE                {0.941176f, 0.972549f, 1.0f,      1.0f}; // #F0F8FF (240, 248, 255)
-inline constexpr Color Color::ANTIQUE_WHITE             {0.980392f, 0.921569f, 0.843137f, 1.0f}; // #FAEBD7 (250, 235, 215)
-inline constexpr Color Color::AQUA                      {0.0f,      1.0f,      1.0f,      1.0f}; // #00FFFF (  0, 255, 255)
-inline constexpr Color Color::AQUAMARINE                {0.498039f, 1.0f,      0.831373f, 1.0f}; // #7FFFD4 (127, 255, 212)
-inline constexpr Color Color::AZURE                     {0.941176f, 1.0f,      1.0f,      1.0f}; // #F0FFFF (240, 255, 255)
-inline constexpr Color Color::BEIGE                     {0.960784f, 0.960784f, 0.862745f, 1.0f}; // #F5F5DC (245, 245, 220)
-inline constexpr Color Color::BISQUE                    {1.0f,      0.894118f, 0.768627f, 1.0f}; // #FFE4C4 (255, 228, 196)
-inline constexpr Color Color::BLACK                     {0.0f,      0.0f,      0.0f,      1.0f}; // #000000 (  0,   0,   0)
-inline constexpr Color Color::BLANCHED_ALMOND           {1.0f,      0.921569f, 0.803922f, 1.0f}; // #FFEBCD (255, 235, 205)
-inline constexpr Color Color::BLUE                      {0.0f,      0.0f,      1.0f,      1.0f}; // #0000FF (  0,   0, 255)
-inline constexpr Color Color::BLUE_VIOLET               {0.541176f, 0.168627f, 0.886275f, 1.0f}; // #8A2BE2 (138,  43, 226)
-inline constexpr Color Color::BROWN                     {0.647059f, 0.164706f, 0.164706f, 1.0f}; // #A52A2A (165,  42,  42)
-inline constexpr Color Color::BURLY_WOOD                {0.870588f, 0.721569f, 0.529412f, 1.0f}; // #DEB887 (222, 184, 135)
-inline constexpr Color Color::CADET_BLUE                {0.372549f, 0.619608f, 0.627451f, 1.0f}; // #5F9EA0 ( 95, 158, 160)
-inline constexpr Color Color::CHARTREUSE                {0.498039f, 1.0f,      0.0f,      1.0f}; // #7FFF00 (127, 255,   0)
-inline constexpr Color Color::CHOCOLATE                 {0.823529f, 0.411765f, 0.117647f, 1.0f}; // #D2691E (210, 105,  30)
-inline constexpr Color Color::CORAL                     {1.0f,      0.498039f, 0.313725f, 1.0f}; // #FF7F50 (255, 127,  80)
-inline constexpr Color Color::CORNFLOWER_BLUE           {0.392157f, 0.584314f, 0.929412f, 1.0f}; // #6495ED (100, 149, 237)
-inline constexpr Color Color::CORNSILK                  {1.0f,      0.972549f, 0.862745f, 1.0f}; // #FFF8DC (255, 248, 220)
-inline constexpr Color Color::CRIMSON                   {0.862745f, 0.078431f, 0.235294f, 1.0f}; // #DC143C (220,  20,  60)
-inline constexpr Color Color::CYAN                      {0.0f,      1.0f,      1.0f,      1.0f}; // #00FFFF (  0, 255, 255)
-inline constexpr Color Color::DARK_BLUE                 {0.0f,      0.0f,      0.545098f, 1.0f}; // #00008B (  0,   0, 139)
-inline constexpr Color Color::DARK_CYAN                 {0.0f,      0.545098f, 0.545098f, 1.0f}; // #008B8B (  0, 139, 139)
-inline constexpr Color Color::DARK_GOLDEN_ROD           {0.721569f, 0.52549f,  0.043137f, 1.0f}; // #B8860B (184, 134,  11)
-inline constexpr Color Color::DARK_GRAY                 {0.662745f, 0.662745f, 0.662745f, 1.0f}; // #A9A9A9 (169, 169, 169)
-inline constexpr Color Color::DARK_GREY                 {0.662745f, 0.662745f, 0.662745f, 1.0f}; // #A9A9A9 (169, 169, 169)
-inline constexpr Color Color::DARK_GREEN                {0.0f,      0.392157f, 0.0f,      1.0f}; // #006400 (  0, 100,   0)
-inline constexpr Color Color::DARK_KHAKI                {0.741176f, 0.717647f, 0.419608f, 1.0f}; // #BDB76B (189, 183, 107)
-inline constexpr Color Color::DARK_MAGENTA              {0.545098f, 0.0f,      0.545098f, 1.0f}; // #8B008B (139,   0, 139)
-inline constexpr Color Color::DARK_OLIVE_GREEN          {0.333333f, 0.419608f, 0.184314f, 1.0f}; // #556B2F ( 85, 107,  47)
-inline constexpr Color Color::DARK_ORANGE               {1.0f,      0.54902f,  0.0f,      1.0f}; // #FF8C00 (255, 140,   0)
-inline constexpr Color Color::DARK_ORCHID               {0.6f,      0.196078f, 0.8f,      1.0f}; // #9932CC (153,  50, 204)
-inline constexpr Color Color::DARK_RED                  {0.545098f, 0.0f,      0.0f,      1.0f}; // #8B0000 (139,   0,   0)
-inline constexpr Color Color::DARK_SALMON               {0.913725f, 0.588235f, 0.478431f, 1.0f}; // #E9967A (233, 150, 122)
-inline constexpr Color Color::DARK_SEA_GREEN            {0.560784f, 0.737255f, 0.560784f, 1.0f}; // #8FBC8F (143, 188, 143)
-inline constexpr Color Color::DARK_SLATE_BLUE           {0.282353f, 0.239216f, 0.545098f, 1.0f}; // #483D8B ( 72,  61, 139)
-inline constexpr Color Color::DARK_SLATE_GRAY           {0.184314f, 0.309804f, 0.309804f, 1.0f}; // #2F4F4F ( 47,  79,  79)
-inline constexpr Color Color::DARK_SLATE_GREY           {0.184314f, 0.309804f, 0.309804f, 1.0f}; // #2F4F4F ( 47,  79,  79)
-inline constexpr Color Color::DARK_TURQUOISE            {0.0f,      0.807843f, 0.819608f, 1.0f}; // #00CED1 (  0, 206, 209)
-inline constexpr Color Color::DARK_VIOLET               {0.580392f, 0.0f,      0.827451f, 1.0f}; // #9400D3 (148,   0, 211)
-inline constexpr Color Color::DEEP_PINK                 {1.0f,      0.078431f, 0.576471f, 1.0f}; // #FF1493 (255,  20, 147)
-inline constexpr Color Color::DEEP_SKY_BLUE             {0.0f,      0.74902f,  1.0f,      1.0f}; // #00BFFF (  0, 191, 255)
-inline constexpr Color Color::DIM_GRAY                  {0.411765f, 0.411765f, 0.411765f, 1.0f}; // #696969 (105, 105, 105)
-inline constexpr Color Color::DIM_GREY                  {0.411765f, 0.411765f, 0.411765f, 1.0f}; // #696969 (105, 105, 105)
-inline constexpr Color Color::DODGER_BLUE               {0.117647f, 0.564706f, 1.0f,      1.0f}; // #1E90FF ( 30, 144, 255)
-inline constexpr Color Color::FIRE_BRICK                {0.698039f, 0.133333f, 0.133333f, 1.0f}; // #B22222 (178,  34,  34)
-inline constexpr Color Color::FLORAL_WHITE              {1.0f,      0.980392f, 0.941176f, 1.0f}; // #FFFAF0 (255, 250, 240)
-inline constexpr Color Color::FOREST_GREEN              {0.133333f, 0.545098f, 0.133333f, 1.0f}; // #228B22 ( 34, 139,  34)
-inline constexpr Color Color::FUCHSIA                   {1.0f,      0.0f,      1.0f,      1.0f}; // #FF00FF (255,   0, 255)
-inline constexpr Color Color::GAINSBORO                 {0.862745f, 0.862745f, 0.862745f, 1.0f}; // #DCDCDC (220, 220, 220)
-inline constexpr Color Color::GHOST_WHITE               {0.972549f, 0.972549f, 1.0f,      1.0f}; // #F8F8FF (248, 248, 255)
-inline constexpr Color Color::GOLD                      {1.0f,      0.843137f, 0.0f,      1.0f}; // #FFD700 (255, 215,   0)
-inline constexpr Color Color::GOLDEN_ROD                {0.854902f, 0.647059f, 0.12549f,  1.0f}; // #DAA520 (218, 165,  32)
-inline constexpr Color Color::GRAY                      {0.501961f, 0.501961f, 0.501961f, 1.0f}; // #808080 (128, 128, 128)
-inline constexpr Color Color::GREY                      {0.501961f, 0.501961f, 0.501961f, 1.0f}; // #808080 (128, 128, 128)
-inline constexpr Color Color::GREEN                     {0.0f,      0.501961f, 0.0f,      1.0f}; // #008000 (  0, 128,   0)
-inline constexpr Color Color::GREEN_YELLOW              {0.678431f, 1.0f,      0.184314f, 1.0f}; // #ADFF2F (173, 255,  47)
-inline constexpr Color Color::HONEY_DEW                 {0.941176f, 1.0f,      0.941176f, 1.0f}; // #F0FFF0 (240, 255, 240)
-inline constexpr Color Color::HOT_PINK                  {1.0f,      0.411765f, 0.705882f, 1.0f}; // #FF69B4 (255, 105, 180)
-inline constexpr Color Color::INDIAN_RED                {0.803922f, 0.360784f, 0.360784f, 1.0f}; // #CD5C5C (205,  92,  92)
-inline constexpr Color Color::INDIGO                    {0.294118f, 0.0f,      0.509804f, 1.0f}; // #4B0082 ( 75,   0, 130)
-inline constexpr Color Color::IVORY                     {1.0f,      1.0f,      0.941176f, 1.0f}; // #FFFFF0 (255, 255, 240)
-inline constexpr Color Color::KHAKI                     {0.941176f, 0.901961f, 0.54902f,  1.0f}; // #F0E68C (240, 230, 140)
-inline constexpr Color Color::LAVENDER                  {0.901961f, 0.901961f, 0.980392f, 1.0f}; // #E6E6FA (230, 230, 250)
-inline constexpr Color Color::LAVENDER_BLUSH            {1.0f,      0.941176f, 0.960784f, 1.0f}; // #FFF0F5 (255, 240, 245)
-inline constexpr Color Color::LAWN_GREEN                {0.486275f, 0.988235f, 0.0f,      1.0f}; // #7CFC00 (124, 252,   0)
-inline constexpr Color Color::LEMON_CHIFFON             {1.0f,      0.980392f, 0.803922f, 1.0f}; // #FFFACD (255, 250, 205)
-inline constexpr Color Color::LIGHT_BLUE                {0.678431f, 0.847059f, 0.901961f, 1.0f}; // #ADD8E6 (173, 216, 230)
-inline constexpr Color Color::LIGHT_CORAL               {0.941176f, 0.501961f, 0.501961f, 1.0f}; // #F08080 (240, 128, 128)
-inline constexpr Color Color::LIGHT_CYAN                {0.878431f, 1.0f,      1.0f,      1.0f}; // #E0FFFF (224, 255, 255)
-inline constexpr Color Color::LIGHT_GOLDEN_ROD_YELLOW   {0.980392f, 0.980392f, 0.823529f, 1.0f}; // #FAFAD2 (250, 250, 210)
-inline constexpr Color Color::LIGHT_GRAY                {0.827451f, 0.827451f, 0.827451f, 1.0f}; // #D3D3D3 (211, 211, 211)
-inline constexpr Color Color::LIGHT_GREY                {0.827451f, 0.827451f, 0.827451f, 1.0f}; // #D3D3D3 (211, 211, 211)
-inline constexpr Color Color::LIGHT_GREEN               {0.564706f, 0.933333f, 0.564706f, 1.0f}; // #90EE90 (144, 238, 144)
-inline constexpr Color Color::LIGHT_PINK                {1.0f,      0.713725f, 0.756863f, 1.0f}; // #FFB6C1 (255, 182, 193)
-inline constexpr Color Color::LIGHT_SALMON              {1.0f,      0.627451f, 0.478431f, 1.0f}; // #FFA07A (255, 160, 122)
-inline constexpr Color Color::LIGHT_SEA_GREEN           {0.12549f,  0.698039f, 0.666667f, 1.0f}; // #20B2AA ( 32, 178, 170)
-inline constexpr Color Color::LIGHT_SKY_BLUE            {0.529412f, 0.807843f, 0.980392f, 1.0f}; // #87CEFA (135, 206, 250)
-inline constexpr Color Color::LIGHT_SLATE_GRAY          {0.466667f, 0.533333f, 0.6f,      1.0f}; // #778899 (119, 136, 153)
-inline constexpr Color Color::LIGHT_SLATE_GREY          {0.466667f, 0.533333f, 0.6f,      1.0f}; // #778899 (119, 136, 153)
-inline constexpr Color Color::LIGHT_STEEL_BLUE          {0.690196f, 0.768627f, 0.870588f, 1.0f}; // #B0C4DE (176, 196, 222)
-inline constexpr Color Color::LIGHT_YELLOW              {1.0f,      1.0f,      0.878431f, 1.0f}; // #FFFFE0 (255, 255, 224)
-inline constexpr Color Color::LIME                      {0.0f,      1.0f,      0.0f,      1.0f}; // #00FF00 (  0, 255,   0)
-inline constexpr Color Color::LIME_GREEN                {0.196078f, 0.803922f, 0.196078f, 1.0f}; // #32CD32 ( 50, 205,  50)
-inline constexpr Color Color::LINEN                     {0.980392f, 0.941176f, 0.901961f, 1.0f}; // #FAF0E6 (250, 240, 230)
-inline constexpr Color Color::MAGENTA                   {1.0f,      0.0f,      1.0f,      1.0f}; // #FF00FF (255,   0, 255)
-inline constexpr Color Color::MAROON                    {0.501961f, 0.0f,      0.0f,      1.0f}; // #800000 (128,   0,   0)
-inline constexpr Color Color::MEDIUM_AQUA_MARINE        {0.4f,      0.803922f, 0.666667f, 1.0f}; // #66CDAA (102, 205, 170)
-inline constexpr Color Color::MEDIUM_BLUE               {0.0f,      0.0f,      0.803922f, 1.0f}; // #0000CD (  0,   0, 205)
-inline constexpr Color Color::MEDIUM_ORCHID             {0.729412f, 0.333333f, 0.827451f, 1.0f}; // #BA55D3 (186,  85, 211)
-inline constexpr Color Color::MEDIUM_PURPLE             {0.576471f, 0.439216f, 0.858824f, 1.0f}; // #9370DB (147, 112, 219)
-inline constexpr Color Color::MEDIUM_SEA_GREEN          {0.235294f, 0.701961f, 0.443137f, 1.0f}; // #3CB371 ( 60, 179, 113)
-inline constexpr Color Color::MEDIUM_SLATE_BLUE         {0.482353f, 0.407843f, 0.933333f, 1.0f}; // #7B68EE (123, 104, 238)
-inline constexpr Color Color::MEDIUM_SPRING_GREEN       {0.0f,      0.980392f, 0.603922f, 1.0f}; // #00FA9A (  0, 250, 154)
-inline constexpr Color Color::MEDIUM_TURQUOISE          {0.282353f, 0.819608f, 0.8f,      1.0f}; // #48D1CC ( 72, 209, 204)
-inline constexpr Color Color::MEDIUM_VIOLET_RED         {0.780392f, 0.082353f, 0.521569f, 1.0f}; // #C71585 (199,  21, 133)
-inline constexpr Color Color::MIDNIGHT_BLUE             {0.098039f, 0.098039f, 0.439216f, 1.0f}; // #191970 ( 25,  25, 112)
-inline constexpr Color Color::MINT_CREAM                {0.960784f, 1.0f,      0.980392f, 1.0f}; // #F5FFFA (245, 255, 250)
-inline constexpr Color Color::MISTY_ROSE                {1.0f,      0.894118f, 0.882353f, 1.0f}; // #FFE4E1 (255, 228, 225)
-inline constexpr Color Color::MOCCASIN                  {1.0f,      0.894118f, 0.709804f, 1.0f}; // #FFE4B5 (255, 228, 181)
-inline constexpr Color Color::NAVAJO_WHITE              {1.0f,      0.870588f, 0.678431f, 1.0f}; // #FFDEAD (255, 222, 173)
-inline constexpr Color Color::NAVY                      {0.0f,      0.0f,      0.501961f, 1.0f}; // #000080 (  0,   0, 128)
-inline constexpr Color Color::OLD_LACE                  {0.992157f, 0.960784f, 0.901961f, 1.0f}; // #FDF5E6 (253, 245, 230)
-inline constexpr Color Color::OLIVE                     {0.501961f, 0.501961f, 0.0f,      1.0f}; // #808000 (128, 128,   0)
-inline constexpr Color Color::OLIVE_DRAB                {0.419608f, 0.556863f, 0.137255f, 1.0f}; // #6B8E23 (107, 142,  35)
-inline constexpr Color Color::ORANGE                    {1.0f,      0.647059f, 0.0f,      1.0f}; // #FFA500 (255, 165,   0)
-inline constexpr Color Color::ORANGE_RED                {1.0f,      0.270588f, 0.0f,      1.0f}; // #FF4500 (255,  69,   0)
-inline constexpr Color Color::ORCHID                    {0.854902f, 0.439216f, 0.839216f, 1.0f}; // #DA70D6 (218, 112, 214)
-inline constexpr Color Color::PALE_GOLDEN_ROD           {0.933333f, 0.909804f, 0.666667f, 1.0f}; // #EEE8AA (238, 232, 170)
-inline constexpr Color Color::PALE_GREEN                {0.596078f, 0.984314f, 0.596078f, 1.0f}; // #98FB98 (152, 251, 152)
-inline constexpr Color Color::PALE_TURQUOISE            {0.686275f, 0.933333f, 0.933333f, 1.0f}; // #AFEEEE (175, 238, 238)
-inline constexpr Color Color::PALE_VIOLET_RED           {0.858824f, 0.439216f, 0.576471f, 1.0f}; // #DB7093 (219, 112, 147)
-inline constexpr Color Color::PAPAYA_WHIP               {1.0f,      0.937255f, 0.835294f, 1.0f}; // #FFEFD5 (255, 239, 213)
-inline constexpr Color Color::PEACH_PUFF                {1.0f,      0.854902f, 0.72549f,  1.0f}; // #FFDAB9 (255, 218, 185)
-inline constexpr Color Color::PERU                      {0.803922f, 0.521569f, 0.247059f, 1.0f}; // #CD853F (205, 133,  63)
-inline constexpr Color Color::PINK                      {1.0f,      0.752941f, 0.796078f, 1.0f}; // #FFC0CB (255, 192, 203)
-inline constexpr Color Color::PLUM                      {0.866667f, 0.627451f, 0.866667f, 1.0f}; // #DDA0DD (221, 160, 221)
-inline constexpr Color Color::POWDER_BLUE               {0.690196f, 0.878431f, 0.901961f, 1.0f}; // #B0E0E6 (176, 224, 230)
-inline constexpr Color Color::PURPLE                    {0.501961f, 0.0f,      0.501961f, 1.0f}; // #800080 (128,   0, 128)
-inline constexpr Color Color::REBECCA_PURPLE            {0.4f,      0.2f,      0.6f,      1.0f}; // #663399 (102,  51, 153)
-inline constexpr Color Color::RED                       {1.0f,      0.0f,      0.0f,      1.0f}; // #FF0000 (255,   0,   0)
-inline constexpr Color Color::ROSY_BROWN                {0.737255f, 0.560784f, 0.560784f, 1.0f}; // #BC8F8F (188, 143, 143)
-inline constexpr Color Color::ROYAL_BLUE                {0.254902f, 0.411765f, 0.882353f, 1.0f}; // #4169E1 ( 65, 105, 225)
-inline constexpr Color Color::SADDLE_BROWN              {0.545098f, 0.270588f, 0.07451f,  1.0f}; // #8B4513 (139,  69,  19)
-inline constexpr Color Color::SALMON                    {0.980392f, 0.501961f, 0.447059f, 1.0f}; // #FA8072 (250, 128, 114)
-inline constexpr Color Color::SANDY_BROWN               {0.956863f, 0.643137f, 0.376471f, 1.0f}; // #F4A460 (244, 164,  96)
-inline constexpr Color Color::SEA_GREEN                 {0.180392f, 0.545098f, 0.341176f, 1.0f}; // #2E8B57 ( 46, 139,  87)
-inline constexpr Color Color::SEA_SHELL                 {1.0f,      0.960784f, 0.933333f, 1.0f}; // #FFF5EE (255, 245, 238)
-inline constexpr Color Color::SIENNA                    {0.627451f, 0.321569f, 0.176471f, 1.0f}; // #A0522D (160,  82,  45)
-inline constexpr Color Color::SILVER                    {0.752941f, 0.752941f, 0.752941f, 1.0f}; // #C0C0C0 (192, 192, 192)
-inline constexpr Color Color::SKY_BLUE                  {0.529412f, 0.807843f, 0.921569f, 1.0f}; // #87CEEB (135, 206, 235)
-inline constexpr Color Color::SLATE_BLUE                {0.415686f, 0.352941f, 0.803922f, 1.0f}; // #6A5ACD (106,  90, 205)
-inline constexpr Color Color::SLATE_GRAY                {0.439216f, 0.501961f, 0.564706f, 1.0f}; // #708090 (112, 128, 144)
-inline constexpr Color Color::SLATE_GREY                {0.439216f, 0.501961f, 0.564706f, 1.0f}; // #708090 (112, 128, 144)
-inline constexpr Color Color::SNOW                      {1.0f,      0.980392f, 0.980392f, 1.0f}; // #FFFAFA (255, 250, 250)
-inline constexpr Color Color::SPRING_GREEN              {0.0f,      1.0f,      0.498039f, 1.0f}; // #00FF7F (  0, 255, 127)
-inline constexpr Color Color::STEEL_BLUE                {0.27451f,  0.509804f, 0.705882f, 1.0f}; // #4682B4 ( 70, 130, 180)
-inline constexpr Color Color::TAN                       {0.823529f, 0.705882f, 0.54902f,  1.0f}; // #D2B48C (210, 180, 140)
-inline constexpr Color Color::TEAL                      {0.0f,      0.501961f, 0.501961f, 1.0f}; // #008080 (  0, 128, 128)
-inline constexpr Color Color::THISTLE                   {0.847059f, 0.74902f,  0.847059f, 1.0f}; // #D8BFD8 (216, 191, 216)
-inline constexpr Color Color::TOMATO                    {1.0f,      0.388235f, 0.278431f, 1.0f}; // #FF6347 (255,  99,  71)
-inline constexpr Color Color::TURQUOISE                 {0.25098f,  0.878431f, 0.815686f, 1.0f}; // #40E0D0 ( 64, 224, 208)
-inline constexpr Color Color::VIOLET                    {0.933333f, 0.509804f, 0.933333f, 1.0f}; // #EE82EE (238, 130, 238)
-inline constexpr Color Color::WHEAT                     {0.960784f, 0.870588f, 0.701961f, 1.0f}; // #F5DEB3 (245, 222, 179)
-inline constexpr Color Color::WHITE                     {1.0f,      1.0f,      1.0f,      1.0f}; // #FFFFFF (255, 255, 255)
-inline constexpr Color Color::WHITE_SMOKE               {0.960784f, 0.960784f, 0.960784f, 1.0f}; // #F5F5F5 (245, 245, 245)
-inline constexpr Color Color::YELLOW                    {1.0f,      1.0f,      0.0f,      1.0f}; // #FFFF00 (255, 255,   0)
-inline constexpr Color Color::YELLOW_GREEN              {0.603922f, 0.803922f, 0.196078f, 1.0f}; // #9ACD32 (154, 205,  50)
+inline constexpr Color Color::INVISIBLE                 {  0,   0,   0,   0};
+inline constexpr Color Color::ALICE_BLUE                {240, 248, 255, 255}; // #F0F8FF
+inline constexpr Color Color::ANTIQUE_WHITE             {250, 235, 215, 255}; // #FAEBD7
+inline constexpr Color Color::AQUA                      {  0, 255, 255, 255}; // #00FFFF
+inline constexpr Color Color::AQUAMARINE                {127, 255, 212, 255}; // #7FFFD4
+inline constexpr Color Color::AZURE                     {240, 255, 255, 255}; // #F0FFFF
+inline constexpr Color Color::BEIGE                     {245, 245, 220, 255}; // #F5F5DC
+inline constexpr Color Color::BISQUE                    {255, 228, 196, 255}; // #FFE4C4
+inline constexpr Color Color::BLACK                     {  0,   0,   0, 255}; // #000000
+inline constexpr Color Color::BLANCHED_ALMOND           {255, 235, 205, 255}; // #FFEBCD
+inline constexpr Color Color::BLUE                      {  0,   0, 255, 255}; // #0000FF
+inline constexpr Color Color::BLUE_VIOLET               {138,  43, 226, 255}; // #8A2BE2
+inline constexpr Color Color::BROWN                     {165,  42,  42, 255}; // #A52A2A
+inline constexpr Color Color::BURLY_WOOD                {222, 184, 135, 255}; // #DEB887
+inline constexpr Color Color::CADET_BLUE                { 95, 158, 160, 255}; // #5F9EA0
+inline constexpr Color Color::CHARTREUSE                {127, 255,   0, 255}; // #7FFF00
+inline constexpr Color Color::CHOCOLATE                 {210, 105,  30, 255}; // #D2691E
+inline constexpr Color Color::CORAL                     {255, 127,  80, 255}; // #FF7F50
+inline constexpr Color Color::CORNFLOWER_BLUE           {100, 149, 237, 255}; // #6495ED
+inline constexpr Color Color::CORNSILK                  {255, 248, 220, 255}; // #FFF8DC
+inline constexpr Color Color::CRIMSON                   {220,  20,  60, 255}; // #DC143C
+inline constexpr Color Color::CYAN                      {  0, 255, 255, 255}; // #00FFFF
+inline constexpr Color Color::DARK_BLUE                 {  0,   0, 139, 255}; // #00008B
+inline constexpr Color Color::DARK_CYAN                 {  0, 139, 139, 255}; // #008B8B
+inline constexpr Color Color::DARK_GOLDEN_ROD           {184, 134,  11, 255}; // #B8860B
+inline constexpr Color Color::DARK_GRAY                 {169, 169, 169, 255}; // #A9A9A9
+inline constexpr Color Color::DARK_GREY                 {169, 169, 169, 255}; // #A9A9A9
+inline constexpr Color Color::DARK_GREEN                {  0, 100,   0, 255}; // #006400
+inline constexpr Color Color::DARK_KHAKI                {189, 183, 107, 255}; // #BDB76B
+inline constexpr Color Color::DARK_MAGENTA              {139,   0, 139, 255}; // #8B008B
+inline constexpr Color Color::DARK_OLIVE_GREEN          { 85, 107,  47, 255}; // #556B2F
+inline constexpr Color Color::DARK_ORANGE               {255, 140,   0, 255}; // #FF8C00
+inline constexpr Color Color::DARK_ORCHID               {153,  50, 204, 255}; // #9932CC
+inline constexpr Color Color::DARK_RED                  {139,   0,   0, 255}; // #8B0000
+inline constexpr Color Color::DARK_SALMON               {233, 150, 122, 255}; // #E9967A
+inline constexpr Color Color::DARK_SEA_GREEN            {143, 188, 143, 255}; // #8FBC8F
+inline constexpr Color Color::DARK_SLATE_BLUE           { 72,  61, 139, 255}; // #483D8B
+inline constexpr Color Color::DARK_SLATE_GRAY           { 47,  79,  79, 255}; // #2F4F4F
+inline constexpr Color Color::DARK_SLATE_GREY           { 47,  79,  79, 255}; // #2F4F4F
+inline constexpr Color Color::DARK_TURQUOISE            {  0, 206, 209, 255}; // #00CED1
+inline constexpr Color Color::DARK_VIOLET               {148,   0, 211, 255}; // #9400D3
+inline constexpr Color Color::DEEP_PINK                 {255,  20, 147, 255}; // #FF1493
+inline constexpr Color Color::DEEP_SKY_BLUE             {  0, 191, 255, 255}; // #00BFFF
+inline constexpr Color Color::DIM_GRAY                  {105, 105, 105, 255}; // #696969
+inline constexpr Color Color::DIM_GREY                  {105, 105, 105, 255}; // #696969
+inline constexpr Color Color::DODGER_BLUE               { 30, 144, 255, 255}; // #1E90FF
+inline constexpr Color Color::FIRE_BRICK                {178,  34,  34, 255}; // #B22222
+inline constexpr Color Color::FLORAL_WHITE              {255, 250, 240, 255}; // #FFFAF0
+inline constexpr Color Color::FOREST_GREEN              { 34, 139,  34, 255}; // #228B22
+inline constexpr Color Color::FUCHSIA                   {255,   0, 255, 255}; // #FF00FF
+inline constexpr Color Color::GAINSBORO                 {220, 220, 220, 255}; // #DCDCDC
+inline constexpr Color Color::GHOST_WHITE               {248, 248, 255, 255}; // #F8F8FF
+inline constexpr Color Color::GOLD                      {255, 215,   0, 255}; // #FFD700
+inline constexpr Color Color::GOLDEN_ROD                {218, 165,  32, 255}; // #DAA520
+inline constexpr Color Color::GRAY                      {128, 128, 128, 255}; // #808080
+inline constexpr Color Color::GREY                      {128, 128, 128, 255}; // #808080
+inline constexpr Color Color::GREEN                     {  0, 128,   0, 255}; // #008000
+inline constexpr Color Color::GREEN_YELLOW              {173, 255,  47, 255}; // #ADFF2F
+inline constexpr Color Color::HONEY_DEW                 {240, 255, 240, 255}; // #F0FFF0
+inline constexpr Color Color::HOT_PINK                  {255, 105, 180, 255}; // #FF69B4
+inline constexpr Color Color::INDIAN_RED                {205,  92,  92, 255}; // #CD5C5C
+inline constexpr Color Color::INDIGO                    { 75,   0, 130, 255}; // #4B0082
+inline constexpr Color Color::IVORY                     {255, 255, 240, 255}; // #FFFFF0
+inline constexpr Color Color::KHAKI                     {240, 230, 140, 255}; // #F0E68C
+inline constexpr Color Color::LAVENDER                  {230, 230, 250, 255}; // #E6E6FA
+inline constexpr Color Color::LAVENDER_BLUSH            {255, 240, 245, 255}; // #FFF0F5
+inline constexpr Color Color::LAWN_GREEN                {124, 252,   0, 255}; // #7CFC00
+inline constexpr Color Color::LEMON_CHIFFON             {255, 250, 205, 255}; // #FFFACD
+inline constexpr Color Color::LIGHT_BLUE                {173, 216, 230, 255}; // #ADD8E6
+inline constexpr Color Color::LIGHT_CORAL               {240, 128, 128, 255}; // #F08080
+inline constexpr Color Color::LIGHT_CYAN                {224, 255, 255, 255}; // #E0FFFF
+inline constexpr Color Color::LIGHT_GOLDEN_ROD_YELLOW   {250, 250, 210, 255}; // #FAFAD2
+inline constexpr Color Color::LIGHT_GRAY                {211, 211, 211, 255}; // #D3D3D3
+inline constexpr Color Color::LIGHT_GREY                {211, 211, 211, 255}; // #D3D3D3
+inline constexpr Color Color::LIGHT_GREEN               {144, 238, 144, 255}; // #90EE90
+inline constexpr Color Color::LIGHT_PINK                {255, 182, 193, 255}; // #FFB6C1
+inline constexpr Color Color::LIGHT_SALMON              {255, 160, 122, 255}; // #FFA07A
+inline constexpr Color Color::LIGHT_SEA_GREEN           { 32, 178, 170, 255}; // #20B2AA
+inline constexpr Color Color::LIGHT_SKY_BLUE            {135, 206, 250, 255}; // #87CEFA
+inline constexpr Color Color::LIGHT_SLATE_GRAY          {119, 136, 153, 255}; // #778899
+inline constexpr Color Color::LIGHT_SLATE_GREY          {119, 136, 153, 255}; // #778899
+inline constexpr Color Color::LIGHT_STEEL_BLUE          {176, 196, 222, 255}; // #B0C4DE
+inline constexpr Color Color::LIGHT_YELLOW              {255, 255, 224, 255}; // #FFFFE0
+inline constexpr Color Color::LIME                      {  0, 255,   0, 255}; // #00FF00
+inline constexpr Color Color::LIME_GREEN                { 50, 205,  50, 255}; // #32CD32
+inline constexpr Color Color::LINEN                     {250, 240, 230, 255}; // #FAF0E6
+inline constexpr Color Color::MAGENTA                   {255,   0, 255, 255}; // #FF00FF
+inline constexpr Color Color::MAROON                    {128,   0,   0, 255}; // #800000
+inline constexpr Color Color::MEDIUM_AQUA_MARINE        {102, 205, 170, 255}; // #66CDAA
+inline constexpr Color Color::MEDIUM_BLUE               {  0,   0, 205, 255}; // #0000CD
+inline constexpr Color Color::MEDIUM_ORCHID             {186,  85, 211, 255}; // #BA55D3
+inline constexpr Color Color::MEDIUM_PURPLE             {147, 112, 219, 255}; // #9370DB
+inline constexpr Color Color::MEDIUM_SEA_GREEN          { 60, 179, 113, 255}; // #3CB371
+inline constexpr Color Color::MEDIUM_SLATE_BLUE         {123, 104, 238, 255}; // #7B68EE
+inline constexpr Color Color::MEDIUM_SPRING_GREEN       {  0, 250, 154, 255}; // #00FA9A
+inline constexpr Color Color::MEDIUM_TURQUOISE          { 72, 209, 204, 255}; // #48D1CC
+inline constexpr Color Color::MEDIUM_VIOLET_RED         {199,  21, 133, 255}; // #C71585
+inline constexpr Color Color::MIDNIGHT_BLUE             { 25,  25, 112, 255}; // #191970
+inline constexpr Color Color::MINT_CREAM                {245, 255, 250, 255}; // #F5FFFA
+inline constexpr Color Color::MISTY_ROSE                {255, 228, 225, 255}; // #FFE4E1
+inline constexpr Color Color::MOCCASIN                  {255, 228, 181, 255}; // #FFE4B5
+inline constexpr Color Color::NAVAJO_WHITE              {255, 222, 173, 255}; // #FFDEAD
+inline constexpr Color Color::NAVY                      {  0,   0, 128, 255}; // #000080
+inline constexpr Color Color::OLD_LACE                  {253, 245, 230, 255}; // #FDF5E6
+inline constexpr Color Color::OLIVE                     {128, 128,   0, 255}; // #808000
+inline constexpr Color Color::OLIVE_DRAB                {107, 142,  35, 255}; // #6B8E23
+inline constexpr Color Color::ORANGE                    {255, 165,   0, 255}; // #FFA500
+inline constexpr Color Color::ORANGE_RED                {255,  69,   0, 255}; // #FF4500
+inline constexpr Color Color::ORCHID                    {218, 112, 214, 255}; // #DA70D6
+inline constexpr Color Color::PALE_GOLDEN_ROD           {238, 232, 170, 255}; // #EEE8AA
+inline constexpr Color Color::PALE_GREEN                {152, 251, 152, 255}; // #98FB98
+inline constexpr Color Color::PALE_TURQUOISE            {175, 238, 238, 255}; // #AFEEEE
+inline constexpr Color Color::PALE_VIOLET_RED           {219, 112, 147, 255}; // #DB7093
+inline constexpr Color Color::PAPAYA_WHIP               {255, 239, 213, 255}; // #FFEFD5
+inline constexpr Color Color::PEACH_PUFF                {255, 218, 185, 255}; // #FFDAB9
+inline constexpr Color Color::PERU                      {205, 133,  63, 255}; // #CD853F
+inline constexpr Color Color::PINK                      {255, 192, 203, 255}; // #FFC0CB
+inline constexpr Color Color::PLUM                      {221, 160, 221, 255}; // #DDA0DD
+inline constexpr Color Color::POWDER_BLUE               {176, 224, 230, 255}; // #B0E0E6
+inline constexpr Color Color::PURPLE                    {128,   0, 128, 255}; // #800080
+inline constexpr Color Color::REBECCA_PURPLE            {102,  51, 153, 255}; // #663399
+inline constexpr Color Color::RED                       {255,   0,   0, 255}; // #FF0000
+inline constexpr Color Color::ROSY_BROWN                {188, 143, 143, 255}; // #BC8F8F
+inline constexpr Color Color::ROYAL_BLUE                { 65, 105, 225, 255}; // #4169E1
+inline constexpr Color Color::SADDLE_BROWN              {139,  69,  19, 255}; // #8B4513
+inline constexpr Color Color::SALMON                    {250, 128, 114, 255}; // #FA8072
+inline constexpr Color Color::SANDY_BROWN               {244, 164,  96, 255}; // #F4A460
+inline constexpr Color Color::SEA_GREEN                 { 46, 139,  87, 255}; // #2E8B57
+inline constexpr Color Color::SEA_SHELL                 {255, 245, 238, 255}; // #FFF5EE
+inline constexpr Color Color::SIENNA                    {160,  82,  45, 255}; // #A0522D
+inline constexpr Color Color::SILVER                    {192, 192, 192, 255}; // #C0C0C0
+inline constexpr Color Color::SKY_BLUE                  {135, 206, 235, 255}; // #87CEEB
+inline constexpr Color Color::SLATE_BLUE                {106,  90, 205, 255}; // #6A5ACD
+inline constexpr Color Color::SLATE_GRAY                {112, 128, 144, 255}; // #708090
+inline constexpr Color Color::SLATE_GREY                {112, 128, 144, 255}; // #708090
+inline constexpr Color Color::SNOW                      {255, 250, 250, 255}; // #FFFAFA
+inline constexpr Color Color::SPRING_GREEN              {  0, 255, 127, 255}; // #00FF7F
+inline constexpr Color Color::STEEL_BLUE                { 70, 130, 180, 255}; // #4682B4
+inline constexpr Color Color::TAN                       {210, 180, 140, 255}; // #D2B48C
+inline constexpr Color Color::TEAL                      {  0, 128, 128, 255}; // #008080
+inline constexpr Color Color::THISTLE                   {216, 191, 216, 255}; // #D8BFD8
+inline constexpr Color Color::TOMATO                    {255,  99,  71, 255}; // #FF6347
+inline constexpr Color Color::TURQUOISE                 { 64, 224, 208, 255}; // #40E0D0
+inline constexpr Color Color::VIOLET                    {238, 130, 238, 255}; // #EE82EE
+inline constexpr Color Color::WHEAT                     {245, 222, 179, 255}; // #F5DEB3
+inline constexpr Color Color::WHITE                     {255, 255, 255, 255}; // #FFFFFF
+inline constexpr Color Color::WHITE_SMOKE               {245, 245, 245, 255}; // #F5F5F5
+inline constexpr Color Color::YELLOW                    {255, 255,   0, 255}; // #FFFF00
+inline constexpr Color Color::YELLOW_GREEN              {154, 205,  50, 255}; // #9ACD32
 // clang-format on
 
 } // namespace donut
