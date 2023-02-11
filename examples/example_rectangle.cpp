@@ -13,7 +13,7 @@
 
 namespace {
 
-class RectangleApplication : public app::Application {
+class RectangleApplication final : public app::Application {
 public:
 	explicit RectangleApplication(const char* programFilepath)
 		: app::Application(programFilepath, {.windowTitle = "Rectangle"}) {}

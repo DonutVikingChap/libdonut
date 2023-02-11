@@ -1,7 +1,19 @@
 #include <donut/graphics/Shader3D.hpp>
 
+#include <array>   // std::array
+#include <cstddef> // std::size_t, std::byte
+#include <memory>  // std::construct_at, std::destroy_at
+#include <new>     // std::launder
+
 namespace donut {
 namespace graphics {
+
+namespace {
+
+std::size_t sharedShaderReferenceCount = 0;
+alignas(Shader3D) std::array<std::byte, sizeof(Shader3D)> sharedBlinnPhongShaderStorage;
+
+} // namespace
 
 const char* const Shader3D::vertexShaderSourceCodeInstancedModel = R"GLSL(
     layout(location = 0) in vec3 vertexPosition;
@@ -116,6 +128,26 @@ const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
         outputColor = vec4(color, diffuseColor.a);
     }
 )GLSL";
+
+Shader3D* const Shader3D::blinnPhongShader = std::launder(reinterpret_cast<Shader3D*>(sharedBlinnPhongShaderStorage.data()));
+
+void Shader3D::createSharedShaders() {
+	if (sharedShaderReferenceCount == 0) {
+		std::construct_at(blinnPhongShader,
+			ShaderProgramOptions{
+				.vertexShaderSourceCode = vertexShaderSourceCodeInstancedModel,
+				.fragmentShaderSourceCode = fragmentShaderSourceCodeModelBlinnPhong,
+			},
+			Shader3DOptions{.orderIndex = 0});
+	}
+	++sharedShaderReferenceCount;
+}
+
+void Shader3D::destroySharedShaders() noexcept {
+	if (sharedShaderReferenceCount-- == 1) {
+		std::destroy_at(blinnPhongShader);
+	}
+}
 
 } // namespace graphics
 } // namespace donut

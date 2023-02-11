@@ -77,8 +77,17 @@ namespace reflection {}
 template <typename Handle, typename Deleter, Handle NullHandle>
 class Resource;
 
+template <glm::length_t L, typename T>
+struct LineSegment;
+
+template <glm::length_t L, typename T>
+struct Sphere;
+
 template <typename T>
 struct Circle;
+
+template <glm::length_t L, typename T>
+struct Capsule;
 
 template <glm::length_t L, typename T>
 struct AxisAlignedBox;

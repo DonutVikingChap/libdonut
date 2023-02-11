@@ -3,7 +3,7 @@
 
 #include <glm/glm.hpp>
 
-class Application : public app::Application {
+class Application final : public app::Application {
 public:
 	explicit Application(const char* programFilepath)
 		: app::Application(programFilepath, {}) {}

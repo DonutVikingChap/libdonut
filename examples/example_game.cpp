@@ -20,6 +20,7 @@
 
 #include <array>                         // std::array
 #include <charconv>                      // std::from_chars_result, std::from_chars
+#include <cmath>                         // std::atan2
 #include <concepts>                      // std::integral
 #include <cstddef>                       // std::size_t
 #include <cstdio>                        // stderr, std::sscanf
@@ -555,6 +556,41 @@ private:
 				renderer, 8, fmt::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", timerA.getTime(), counterA, timerB.getTime(), counterB)),
 			.position{410.0f, 240.0f},
 		});
+
+		const Capsule<2, float> capsule{.centerLine{.start{80.0f, 80.0f}, .end{300.0f, 200.0f}}, .radius = 50.0f};
+		const Circle<float> circle{.center = glm::vec2{200.0f, 50.0f} + glm::vec2{carrotCakeDisplayPosition} * 50.0f, .radius = 32.0f};
+		const Color circleColor = (intersects(circle, capsule)) ? Color::RED : Color::YELLOW;
+
+		const glm::vec2 capsuleVector = capsule.centerLine.end - capsule.centerLine.start;
+		renderPass.draw(gfx::RectangleInstance{
+			.texture = &circleTexture,
+			.position = capsule.centerLine.start,
+			.size{capsule.radius * 2.0f, capsule.radius * 2.0f},
+			.origin{0.5f, 0.5f},
+			.tintColor = Color::GREEN,
+		});
+		renderPass.draw(gfx::RectangleInstance{
+			.texture = &circleTexture,
+			.position = capsule.centerLine.end,
+			.size{capsule.radius * 2.0f, capsule.radius * 2.0f},
+			.origin{0.5f, 0.5f},
+			.tintColor = Color::GREEN,
+		});
+		renderPass.draw(gfx::RectangleInstance{
+			.position = capsule.centerLine.start,
+			.size{glm::length(capsuleVector), capsule.radius * 2.0f},
+			.angle = std::atan2(capsuleVector.y, capsuleVector.x),
+			.origin{0.0f, 0.5f},
+			.tintColor = Color::GREEN,
+		});
+
+		renderPass.draw(gfx::RectangleInstance{
+			.texture = &circleTexture,
+			.position = circle.center,
+			.size{circle.radius * 2.0f, circle.radius * 2.0f},
+			.origin{0.5f, 0.5f},
+			.tintColor = circleColor,
+		});
 	}
 
 	void drawFpsCounter(gfx::RenderPass& renderPass) {
@@ -573,6 +609,7 @@ private:
 	glm::mat4 screenProjectionViewMatrix{};
 	glm::mat4 worldProjectionViewMatrix{};
 	gfx::Texture testTexture{gfx::ImageLDR{"textures/test.png", {.flipVertically = true}}};
+	gfx::Texture circleTexture{gfx::ImageLDR{"textures/circle.png"}, {.useLinearFiltering = false, .useMipmap = false}};
 	gfx::Model carrotCakeModel{"models/carrot_cake.obj"};
 	gfx::SpriteAtlas spriteAtlas{};
 	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas.insert(renderer, gfx::ImageLDR{"textures/test.png", {.flipVertically = true}});

@@ -1,7 +1,20 @@
 #include <donut/graphics/Shader2D.hpp>
 
+#include <array>   // std::array
+#include <cstddef> // std::size_t, std::byte
+#include <memory>  // std::construct_at, std::destroy_at
+#include <new>     // std::launder
+
 namespace donut {
 namespace graphics {
+
+namespace {
+
+std::size_t sharedShaderReferenceCount = 0;
+alignas(Shader2D) std::array<std::byte, sizeof(Shader2D)> sharedPlainShaderStorage;
+alignas(Shader2D) std::array<std::byte, sizeof(Shader2D)> sharedAlphaShaderStorage;
+
+} // namespace
 
 const char* const Shader2D::vertexShaderSourceCodeInstancedTexturedQuad = R"GLSL(
     layout(location = 0) in vec2 vertexCoordinates;
@@ -47,6 +60,39 @@ const char* const Shader2D::fragmentShaderSourceCodeTexturedQuadAlpha = R"GLSL(
         outputColor = vec4(fragmentTintColor.rgb, fragmentTintColor.a * texture(textureUnit, fragmentTextureCoordinates).r);
     }
 )GLSL";
+
+Shader2D* const Shader2D::plainShader = std::launder(reinterpret_cast<Shader2D*>(sharedPlainShaderStorage.data()));
+Shader2D* const Shader2D::alphaShader = std::launder(reinterpret_cast<Shader2D*>(sharedAlphaShaderStorage.data()));
+
+void Shader2D::createSharedShaders() {
+	if (sharedShaderReferenceCount == 0) {
+		std::construct_at(plainShader,
+			ShaderProgramOptions{
+				.vertexShaderSourceCode = vertexShaderSourceCodeInstancedTexturedQuad,
+				.fragmentShaderSourceCode = fragmentShaderSourceCodeTexturedQuadPlain,
+			},
+			Shader2DOptions{});
+		try {
+			std::construct_at(alphaShader,
+				ShaderProgramOptions{
+					.vertexShaderSourceCode = vertexShaderSourceCodeInstancedTexturedQuad,
+					.fragmentShaderSourceCode = fragmentShaderSourceCodeTexturedQuadAlpha,
+				},
+				Shader2DOptions{});
+		} catch (...) {
+			std::destroy_at(plainShader);
+			throw;
+		}
+	}
+	++sharedShaderReferenceCount;
+}
+
+void Shader2D::destroySharedShaders() noexcept {
+	if (sharedShaderReferenceCount-- == 1) {
+		std::destroy_at(alphaShader);
+		std::destroy_at(plainShader);
+	}
+}
 
 } // namespace graphics
 } // namespace donut

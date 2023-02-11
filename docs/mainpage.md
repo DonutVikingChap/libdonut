@@ -52,9 +52,14 @@ Libdonut also includes the following utility APIs which encompass all of the mai
     - [donut::unicode](@ref donut::unicode) - UTF-8 text decoding
     - [donut::xml](@ref donut::xml) - XML document parsing
 - Basic geometric shapes:
-    - [donut::Circle](@ref donut::Circle) - Generic circle shape with a center and radius
+    - [donut::Point](@ref donut::Point) - Generic N-dimensional point
+    - [donut::Length](@ref donut::Length) - Generic N-dimensional length
+    - [donut::LineSegment](@ref donut::LineSegment) - Generic line segment with start/end points
+    - [donut::Sphere](@ref donut::Sphere) - Generic sphere shape with a center and radius
+    - [donut::Circle](@ref donut::Circle) - Flat 2D circle shape with a center and radius
+    - [donut::Capsule](@ref donut::Capsule) - Generic capsule shape with a center line segment and radius
     - [donut::AxisAlignedBox](@ref donut::AxisAlignedBox) - Generic AAB shape with min and max extents
-    - [donut::Rectangle](@ref donut::Rectangle) - Generic rectangle shape with a position and size
+    - [donut::Rectangle](@ref donut::Rectangle) - Flat 2D rectangle shape with a position and size
 - Data types:
     - [donut::Color](@ref donut::Color) - Floating-point RGBA color type
     - [donut::Resource](@ref donut::Resource) - Generic resource handle with exclusive ownership

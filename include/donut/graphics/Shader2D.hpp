@@ -6,19 +6,12 @@
 namespace donut {
 namespace graphics {
 
+class Renderer; // Forward declaration, to avoid a circular include of Renderer.hpp.
+
 /**
  * Configuration options for a Shader2D.
  */
 struct Shader2DOptions {
-	/**
-	 * Order of this shader relative to other shaders in the same RenderPass.
-	 *
-	 * Lower indices are ordered before higher indices. The index of the
-	 * built-in shader is 0. Indices may have any value, including negative, and
-	 * are not required to be consecutive.
-	 */
-	int orderIndex = 1;
-
 	/**
 	 * Write any new depth values to the depth buffer while ignoring the old
 	 * values.
@@ -80,6 +73,26 @@ public:
 	static const char* const fragmentShaderSourceCodeTexturedQuadAlpha;
 
 	/**
+	 * Pointer to the statically allocated storage for the built-in plain
+	 * shader.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying shader will be present at all
+	 *          times.
+	 */
+	static Shader2D* const plainShader;
+
+	/**
+	 * Pointer to the statically allocated storage for the built-in alpha
+	 * shader.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying shader will be present at all
+	 *          times.
+	 */
+	static Shader2D* const alphaShader;
+
+	/**
 	 * Shader configuration that was supplied in the constructor.
 	 */
 	Shader2DOptions options;
@@ -115,6 +128,12 @@ public:
 	Shader2D(const ShaderProgramOptions& programOptions, const Shader2DOptions& options = {})
 		: options(options)
 		, program(programOptions) {}
+
+private:
+	friend Renderer;
+
+	static void createSharedShaders();
+	static void destroySharedShaders() noexcept;
 };
 
 } // namespace graphics

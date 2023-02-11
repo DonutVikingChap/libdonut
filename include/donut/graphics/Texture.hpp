@@ -100,6 +100,48 @@ struct TextureOptions {
 class Texture {
 public:
 	/**
+	 * Pointer to the statically allocated storage for the built-in white 2D
+	 * texture.
+	 *
+	 * The internal texel format is TextureInternalFormat::RGBA8.
+	 * The color space is SRGB.
+	 * The size is 1x1 texels.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying texture will be present at
+	 *          all times.
+	 */
+	static const Texture* const whiteR8G8B8A8Srgb1x1;
+
+	/**
+	 * Pointer to the statically allocated storage for the built-in mid-gray 2D
+	 * texture.
+	 *
+	 * The internal texel format is TextureInternalFormat::RGBA8.
+	 * The color space is linear.
+	 * The size is 1x1 texels.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying texture will be present at
+	 *          all times.
+	 */
+	static const Texture* const grayR8G8B8A8Unorm1x1;
+
+	/**
+	 * Pointer to the statically allocated storage for the built-in normal-map
+	 * 2D texture.
+	 *
+	 * The internal texel format is TextureInternalFormat::RGB8.
+	 * The color space is linear.
+	 * The size is 1x1 texels.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying texture will be present at
+	 *          all times.
+	 */
+	static const Texture* const normalR8G8B8Unorm1x1;
+
+	/**
 	 * Get the number of pixel component channels defined by a texture format.
 	 *
 	 * \param format the format to get the number of channels of.
@@ -656,6 +698,11 @@ public:
 	}
 
 private:
+	friend Renderer;
+
+	static void createSharedTextures();
+	static void destroySharedTextures() noexcept;
+
 	struct TextureDeleter {
 		void operator()(Handle handle) const noexcept;
 	};

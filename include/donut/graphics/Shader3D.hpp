@@ -6,6 +6,8 @@
 namespace donut {
 namespace graphics {
 
+class Renderer; // Forward declaration, to avoid a circular include of Renderer.hpp.
+
 /**
  * Configuration options for a Shader3D.
  */
@@ -76,6 +78,16 @@ public:
 	static const char* const fragmentShaderSourceCodeModelBlinnPhong;
 
 	/**
+	 * Pointer to the statically allocated storage for the built-in blinn-phong
+	 * shader.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying shader will be present at all
+	 *          times.
+	 */
+	static Shader3D* const blinnPhongShader;
+
+	/**
 	 * Shader configuration that was supplied in the constructor.
 	 */
 	Shader3DOptions options;
@@ -130,6 +142,12 @@ public:
 	Shader3D(const ShaderProgramOptions& programOptions, const Shader3DOptions& options = {})
 		: options(options)
 		, program(programOptions) {}
+
+private:
+	friend Renderer;
+
+	static void createSharedShaders();
+	static void destroySharedShaders() noexcept;
 };
 
 } // namespace graphics

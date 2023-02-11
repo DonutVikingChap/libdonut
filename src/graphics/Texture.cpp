@@ -8,8 +8,9 @@
 #include <donut/graphics/Viewport.hpp>
 #include <donut/graphics/opengl.hpp>
 
+#include <array>                         // std::array
 #include <cassert>                       // assert
-#include <cstddef>                       // std::size_t
+#include <cstddef>                       // std::size_t, std::byte
 #include <fmt/format.h>                  // fmt::format
 #include <glm/ext/matrix_clip_space.hpp> // glm::ortho
 #include <optional>                      // std::optional
@@ -17,6 +18,51 @@
 
 namespace donut {
 namespace graphics {
+
+namespace {
+
+std::size_t sharedTextureReferenceCount = 0;
+Texture sharedWhiteTexture{};
+Texture sharedGrayTexture{};
+Texture sharedNormalTexture{};
+
+} // namespace
+
+const Texture* const Texture::whiteR8G8B8A8Srgb1x1 = &sharedWhiteTexture;
+const Texture* const Texture::grayR8G8B8A8Unorm1x1 = &sharedGrayTexture;
+const Texture* const Texture::normalR8G8B8Unorm1x1 = &sharedNormalTexture;
+
+void Texture::createSharedTextures() {
+	if (sharedTextureReferenceCount == 0) {
+		constexpr std::array<std::byte, 4> WHITE_PIXEL_R8G8B8A8_SRGB{std::byte{255}, std::byte{255}, std::byte{255}, std::byte{255}};
+		constexpr std::array<std::byte, 4> GRAY_PIXEL_R8G8B8A8_UNORM{std::byte{128}, std::byte{128}, std::byte{128}, std::byte{255}};
+		constexpr std::array<std::byte, 3> NORMAL_PIXEL_R8G8B8_UNORM{std::byte{128}, std::byte{128}, std::byte{255}};
+		constexpr TextureOptions PIXEL_TEXTURE_OPTIONS{.repeat = true, .useLinearFiltering = false, .useMipmap = false};
+		sharedWhiteTexture = Texture{TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, WHITE_PIXEL_R8G8B8A8_SRGB.data(), PIXEL_TEXTURE_OPTIONS};
+		try {
+			sharedGrayTexture = Texture{TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, GRAY_PIXEL_R8G8B8A8_UNORM.data(), PIXEL_TEXTURE_OPTIONS};
+		} catch (...) {
+			sharedWhiteTexture = Texture{};
+			throw;
+		}
+		try {
+			sharedNormalTexture = Texture{TextureInternalFormat::RGB8, 1, 1, TextureFormat::RGB, TextureComponentType::U8, NORMAL_PIXEL_R8G8B8_UNORM.data(), PIXEL_TEXTURE_OPTIONS};
+		} catch (...) {
+			sharedGrayTexture = Texture{};
+			sharedWhiteTexture = Texture{};
+			throw;
+		}
+	}
+	++sharedTextureReferenceCount;
+}
+
+void Texture::destroySharedTextures() noexcept {
+	if (sharedTextureReferenceCount-- == 1) {
+		sharedNormalTexture = Texture{};
+		sharedGrayTexture = Texture{};
+		sharedWhiteTexture = Texture{};
+	}
+}
 
 std::size_t Texture::getChannelCount(TextureFormat format) noexcept {
 	switch (format) {

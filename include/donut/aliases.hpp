@@ -6,7 +6,7 @@
 #include <donut/modules/fwd/graphics.hpp>
 #include <donut/modules/fwd/utilities.hpp>
 
-#include <glm/fwd.hpp> // glm::length_t
+#include <glm/fwd.hpp> // glm::...
 
 namespace app = donut::application;       // NOLINT(misc-unused-alias-decls)
 namespace audio = donut::audio;           // NOLINT(misc-unused-alias-decls)
@@ -19,37 +19,44 @@ namespace reflection = donut::reflection; // NOLINT(misc-unused-alias-decls)
 namespace unicode = donut::unicode;       // NOLINT(misc-unused-alias-decls)
 namespace xml = donut::xml;               // NOLINT(misc-unused-alias-decls)
 
-template <std::size_t InitialResolution, std::size_t Padding>
-using AtlasPacker = donut::AtlasPacker<InitialResolution, Padding>;
+using donut::AtlasPacker; // NOLINT(misc-unused-using-decls)
 
-using Color = donut::Color;
+using donut::Color; // NOLINT(misc-unused-using-decls)
 
-using File = donut::File;
+using donut::File; // NOLINT(misc-unused-using-decls)
 
-using InputFileStream = donut::InputFileStream;
+using donut::InputFileStream; // NOLINT(misc-unused-using-decls)
 
-using LinearMemoryResource = donut::LinearMemoryResource;
-template <typename T>
-using LinearAllocator = donut::LinearAllocator<T>;
+using donut::LinearMemoryResource; // NOLINT(misc-unused-using-decls)
 
-using OutputFileStream = donut::OutputFileStream;
+using donut::LinearAllocator; // NOLINT(misc-unused-using-decls)
 
-template <typename Handle, typename Deleter, Handle NullHandle>
-using Resource = donut::Resource<Handle, Deleter, NullHandle>;
+using donut::OutputFileStream; // NOLINT(misc-unused-using-decls)
 
-template <typename T>
-using Circle = donut::Circle<T>;
+using donut::Resource; // NOLINT(misc-unused-using-decls)
 
 template <glm::length_t L, typename T>
-using AxisAlignedBox = donut::AxisAlignedBox<L, T>;
+using Point = glm::vec<L, T>;
 
-template <typename T>
-using Rectangle = donut::Rectangle<T>;
+template <glm::length_t L, typename T>
+using Length = glm::vec<L, T>;
 
-template <typename T>
-using Timer = donut::Timer<T>;
+using donut::LineSegment; // NOLINT(misc-unused-using-decls)
 
-template <typename... Ts>
-using Variant = donut::Variant<Ts...>;
+using donut::Sphere; // NOLINT(misc-unused-using-decls)
+
+using donut::Circle; // NOLINT(misc-unused-using-decls)
+
+using donut::Capsule; // NOLINT(misc-unused-using-decls)
+
+using donut::AxisAlignedBox; // NOLINT(misc-unused-using-decls)
+
+using donut::Rectangle; // NOLINT(misc-unused-using-decls)
+
+using donut::Timer; // NOLINT(misc-unused-using-decls)
+
+using donut::Monostate; // NOLINT(misc-unused-using-decls)
+
+using donut::Variant; // NOLINT(misc-unused-using-decls)
 
 #endif

@@ -19,52 +19,7 @@ namespace graphics {
 /**
  * Configuration options for a Renderer.
  */
-struct RendererOptions {
-	/**
-	 * Configuration options for the ShaderProgram of the default shader, which
-	 * is used for rendering plain textured quads.
-	 */
-	ShaderProgramOptions defaultShaderProgramOptions{
-		.vertexShaderSourceCode = Shader2D::vertexShaderSourceCodeInstancedTexturedQuad,
-		.fragmentShaderSourceCode = Shader2D::fragmentShaderSourceCodeTexturedQuadPlain,
-	};
-
-	/**
-	 * Configuration options for the Shader2D of the default shader, which is
-	 * used for rendering plain textured quads.
-	 */
-	Shader2DOptions defaultShaderOptions{.orderIndex = 0};
-
-	/**
-	 * Configuration options for the ShaderProgram of the glyph shader, which is
-	 * used for rendering the individual glyphs of shaped text.
-	 */
-	ShaderProgramOptions glyphShaderProgramOptions{
-		.vertexShaderSourceCode = Shader2D::vertexShaderSourceCodeInstancedTexturedQuad,
-		.fragmentShaderSourceCode = Shader2D::fragmentShaderSourceCodeTexturedQuadAlpha,
-	};
-
-	/**
-	 * Configuration options for the Shader2D of the glyph shader, which is
-	 * used for rendering the individual glyphs of shaped text.
-	 */
-	Shader2DOptions glyphShaderOptions{.orderIndex = 0};
-
-	/**
-	 * Configuration options for the ShaderProgram of the model shader, which is
-	 * used for rendering 3D models.
-	 */
-	ShaderProgramOptions modelShaderProgramOptions{
-		.vertexShaderSourceCode = Shader3D::vertexShaderSourceCodeInstancedModel,
-		.fragmentShaderSourceCode = Shader3D::fragmentShaderSourceCodeModelBlinnPhong,
-	};
-
-	/**
-	 * Configuration options for the Shader3D of the model shader, which is
-	 * used for rendering 3D models.
-	 */
-	Shader3DOptions modelShaderOptions{.orderIndex = 0};
-};
+struct RendererOptions {};
 
 /**
  * Persistent system for rendering the batched draw commands of a RenderPass
@@ -91,10 +46,22 @@ public:
 	 *         resource.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	explicit Renderer(const RendererOptions& options = {})
-		: defaultShader(options.defaultShaderProgramOptions, options.defaultShaderOptions)
-		, glyphShader(options.glyphShaderProgramOptions, options.glyphShaderOptions)
-		, modelShader(options.modelShaderProgramOptions, options.modelShaderOptions) {}
+	explicit Renderer(const RendererOptions& options = {});
+
+	/** Destructor. */
+	~Renderer();
+
+	/** Copying a renderer is not allowed, since it manages global state. */
+	Renderer(const Renderer&) = delete;
+
+	/** Moving a renderer is not allowed, since it manages global state. */
+	Renderer(Renderer&&) = delete;
+
+	/** Copying a renderer is not allowed, since it manages global state. */
+	Renderer& operator=(const Renderer&) = delete;
+
+	/** Moving a renderer is not allowed, since it manages global state. */
+	Renderer operator=(Renderer&&) = delete;
 
 	/**
 	 * Clear the depth buffer contents of a Framebuffer.
@@ -144,17 +111,6 @@ public:
 	void render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const glm::mat4& projectionViewMatrix);
 
 private:
-	static constexpr std::array<std::byte, 4> WHITE_PIXEL_RGBA8{std::byte{255}, std::byte{255}, std::byte{255}, std::byte{255}};
-	static constexpr std::array<std::byte, 4> GRAY_PIXEL_RGBA8{std::byte{128}, std::byte{128}, std::byte{128}, std::byte{255}};
-	static constexpr std::array<std::byte, 3> NORMAL_PIXEL_RGB8{std::byte{128}, std::byte{128}, std::byte{255}};
-	static constexpr TextureOptions PIXEL_TEXTURE_OPTIONS{.repeat = true, .useLinearFiltering = false, .useMipmap = false};
-
-	Shader2D defaultShader;
-	Shader2D glyphShader;
-	Shader3D modelShader;
-	Texture whiteTexture{TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, WHITE_PIXEL_RGBA8.data(), PIXEL_TEXTURE_OPTIONS};
-	Texture grayTexture{TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, GRAY_PIXEL_RGBA8.data(), PIXEL_TEXTURE_OPTIONS};
-	Texture normalTexture{TextureInternalFormat::RGB8, 1, 1, TextureFormat::RGB, TextureComponentType::U8, NORMAL_PIXEL_RGB8.data(), PIXEL_TEXTURE_OPTIONS};
 	TexturedQuad texturedQuad{};
 };
 

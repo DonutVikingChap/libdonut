@@ -11,6 +11,7 @@ namespace donut {
 namespace graphics {
 
 RenderPass& RenderPass::draw(const ModelInstance& model) {
+	assert(model.shader);
 	assert(model.model);
 
 	const glm::mat3 normalMatrix = glm::inverseTranspose(glm::mat3{model.transformation});
@@ -40,6 +41,7 @@ RenderPass& RenderPass::draw(const ModelInstance& model) {
 }
 
 RenderPass& RenderPass::draw(const TextureInstance& texture) {
+	assert(texture.shader);
 	assert(texture.texture);
 
 	return draw(RectangleInstance{
@@ -56,6 +58,8 @@ RenderPass& RenderPass::draw(const TextureInstance& texture) {
 }
 
 RenderPass& RenderPass::draw(const RectangleInstance& rectangle) {
+	assert(rectangle.shader);
+
 	glm::mat4 transformation = glm::identity<glm::mat4>();
 	transformation = glm::translate(transformation, {rectangle.position, 0.0f});
 	transformation = glm::rotate(transformation, rectangle.angle, {0.0f, 0.0f, 1.0f});
@@ -72,25 +76,24 @@ RenderPass& RenderPass::draw(const RectangleInstance& rectangle) {
 }
 
 RenderPass& RenderPass::draw(const QuadInstance& quad) {
+	assert(quad.shader);
+
 	const TexturedQuad::Instance instance{
 		.transformation = quad.transformation,
 		.textureOffset = quad.textureOffset,
 		.textureScale = quad.textureScale,
 		.tintColor = quad.tintColor,
 	};
-
-	const auto it = std::lower_bound(quadsSortedByShaderAndTexture.begin(), quadsSortedByShaderAndTexture.end(), quad);
-	if (it == quadsSortedByShaderAndTexture.end()) {
-		quadsSortedByShaderAndTexture.emplace_back(quad.shader, quad.texture, &memoryResource).instances.push_back(instance);
-	} else if (it->shader == quad.shader && it->texture == quad.texture) {
-		it->instances.push_back(instance);
+	if (!quads.empty() && quads.back().shader == quad.shader && quads.back().texture == quad.texture) {
+		quads.back().instances.push_back(instance);
 	} else {
-		quadsSortedByShaderAndTexture.emplace(it, quad.shader, quad.texture, &memoryResource)->instances.push_back(instance);
+		quads.emplace_back(quad.shader, quad.texture, &memoryResource).instances.push_back(instance);
 	}
 	return *this;
 }
 
 RenderPass& RenderPass::draw(const SpriteInstance& sprite) {
+	assert(sprite.shader);
 	assert(sprite.atlas);
 
 	const SpriteAtlas::Sprite& atlasSprite = sprite.atlas->getSprite(sprite.id);
@@ -109,16 +112,16 @@ RenderPass& RenderPass::draw(const SpriteInstance& sprite) {
 }
 
 RenderPass& RenderPass::draw(const TextInstance& text) {
+	assert(text.shader);
 	assert(text.font);
 
-	decltype(TexturedQuadInstancesFromText::instances)* instances = nullptr;
-	const auto it = std::lower_bound(glyphsSortedByFont.begin(), glyphsSortedByFont.end(), text);
-	if (it == glyphsSortedByFont.end()) {
-		instances = &glyphsSortedByFont.emplace_back(text.font, &memoryResource).instances;
-	} else if (it->font == text.font) {
-		instances = &it->instances;
+	const Texture* texture = &text.font->getAtlasTexture();
+
+	decltype(TexturedQuadInstances::instances)* instances = nullptr;
+	if (!quads.empty() && quads.back().shader == text.shader && quads.back().texture == texture) {
+		instances = &quads.back().instances;
 	} else {
-		instances = &glyphsSortedByFont.emplace(it, text.font, &memoryResource)->instances;
+		instances = &quads.emplace_back(text.shader, texture, &memoryResource).instances;
 	}
 	for (const Font::ShapedText::ShapedGlyph& shapedGlyph : text.text.shapedGlyphs) {
 		instances->push_back({

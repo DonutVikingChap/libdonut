@@ -50,10 +50,7 @@ Note: This library is currently a **work in progress** and makes no guarantees r
     - [Compile-time reflection](include/donut/reflection.hpp) of aggregate types through some dark template magic.
         - Supports iterating references to the fields of an instance of any plain struct, with full type information available.
         - Used in libdonut to automate JSON serialization, OpenGL vertex attribute setup, etc.
-    - Basic [shapes](include/donut/shapes.hpp) with intersection tests:
-        - Circle
-        - AxisAlignedBox
-        - Rectangle
+    - Basic geometric [shapes](include/donut/shapes.hpp) with intersection tests.
     - Utilities for working with [UTF-8](include/donut/unicode.hpp)-encoded text:
         - Supports iterating unicode code points in any arbitrary byte sequence with basic error handling in the case of invalid encoding.
     - [XML](include/donut/xml.hpp) document parsing.

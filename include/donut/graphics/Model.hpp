@@ -23,7 +23,7 @@ struct Model {
 	 * The vertices and indices of the mesh are stored on the GPU, together with
 	 * an associated instance buffer set up for instanced rendering.
 	 */
-	struct Object final {
+	struct Object {
 		/**
 		 * Data layout for the attributes of a single vertex of the mesh.
 		 *
