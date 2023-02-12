@@ -25,15 +25,15 @@ template <glm::length_t L, typename T>
 using Length = glm::vec<L, T>;
 
 /**
- * Generic line segment with a start position and an end position.
+ * Generic line segment between two points.
  *
  * \tparam L number of vector dimensions.
  * \tparam T component type for vector coordinates.
  */
 template <glm::length_t L, typename T>
 struct LineSegment {
-	Point<L, T> start; ///< Position of the first point of the line segment.
-	Point<L, T> end;   ///< Position of the second point of the line segment.
+	Point<L, T> pointA; ///< Position of the first point of the line segment.
+	Point<L, T> pointB; ///< Position of the second point of the line segment.
 };
 
 /**
@@ -146,6 +146,90 @@ struct Rectangle {
 	 */
 	[[nodiscard]] constexpr bool contains(const Point<2, T>& point) const noexcept;
 };
+
+/**
+ * Get the axis-aligned bounding box of a line segment.
+ *
+ * \param line line segment to get the bounding box of.
+ *
+ * \return an axis-aligned box that contains the entire line segment.
+ */
+template <glm::length_t L, typename T>
+[[nodiscard]] constexpr AxisAlignedBox<L, T> getAabbOf(const LineSegment<L, T>& line) noexcept {
+	return {
+		.min = glm::min(line.pointA, line.pointB),
+		.max = glm::max(line.pointA, line.pointB),
+	};
+}
+
+/**
+ * Get the axis-aligned bounding box of a sphere.
+ *
+ * \param sphere sphere to get the bounding box of.
+ *
+ * \return an axis-aligned box that contains the entire sphere.
+ */
+template <glm::length_t L, typename T>
+[[nodiscard]] constexpr AxisAlignedBox<L, T> getAabbOf(const Sphere<L, T>& sphere) noexcept {
+	return {
+		.min = sphere.center - Length<L, T>{sphere.radius},
+		.max = sphere.center + Length<L, T>{sphere.radius},
+	};
+}
+
+/**
+ * Get the axis-aligned bounding box of a circle.
+ *
+ * \param circle circle to get the bounding box of.
+ *
+ * \return an axis-aligned box that contains the entire circle.
+ */
+template <typename T>
+[[nodiscard]] constexpr AxisAlignedBox<2, T> getAabbOf(const Circle<T>& circle) noexcept {
+	return {
+		.min = circle.center - Length<2, T>{circle.radius},
+		.max = circle.center + Length<2, T>{circle.radius},
+	};
+}
+
+/**
+ * Get the axis-aligned bounding box of a capsule.
+ *
+ * \param capsule capsule to get the bounding box of.
+ *
+ * \return an axis-aligned box that contains the entire capsule.
+ */
+template <glm::length_t L, typename T>
+[[nodiscard]] constexpr AxisAlignedBox<L, T> getAabbOf(const Capsule<L, T>& capsule) noexcept {
+	return {
+		.min = glm::min(capsule.centerLine.pointA, capsule.centerLine.pointB) - Length<L, T>{capsule.radius},
+		.max = glm::max(capsule.centerLine.pointA, capsule.centerLine.pointB) + Length<L, T>{capsule.radius},
+	};
+}
+
+/**
+ * Get the axis-aligned bounding box of an axis-aligned box.
+ *
+ * \param box axis-aligned box to get the bounding box of.
+ *
+ * \return an axis-aligned box that contains the entire axis-aligned box.
+ */
+template <glm::length_t L, typename T>
+[[nodiscard]] constexpr AxisAlignedBox<L, T> getAabbOf(const AxisAlignedBox<L, T>& box) noexcept {
+	return box;
+}
+
+/**
+ * Get the axis-aligned bounding box of a rectangle.
+ *
+ * \param rectangle rectangle to get the bounding box of.
+ *
+ * \return an axis-aligned box that contains the entire rectangle.
+ */
+template <typename T>
+[[nodiscard]] constexpr AxisAlignedBox<2, T> getAabbOf(const Rectangle<T>& rectangle) noexcept {
+	return static_cast<AxisAlignedBox<2, T>>(rectangle);
+}
 
 /**
  * Check if two spheres intersect.
@@ -387,19 +471,20 @@ template <typename T>
  */
 template <glm::length_t L, typename T>
 [[nodiscard]] constexpr bool intersects(const Sphere<L, T>& a, const Capsule<L, T>& b) noexcept {
-	const glm::vec2 lineVector = b.centerLine.end - b.centerLine.start;
-	const glm::vec2 lineStartToSphereCenter = a.center - b.centerLine.start;
-	const float lineStartToSphereCenterAlongLine = glm::dot(lineStartToSphereCenter, lineVector);
-	if (lineStartToSphereCenterAlongLine <= 0.0f) {
-		return glm::length2(lineStartToSphereCenter) < glm::length2(a.radius + b.radius);
+	const float combinedRadiusSquared = glm::length2(a.radius + b.radius);
+	const glm::vec2 linePointAToPointB = b.centerLine.pointB - b.centerLine.pointA;
+	const glm::vec2 linePointAToSphereCenter = a.center - b.centerLine.pointA;
+	const float linePointAToSphereCenterAlongLine = glm::dot(linePointAToSphereCenter, linePointAToPointB);
+	if (linePointAToSphereCenterAlongLine <= 0.0f) {
+		return glm::length2(linePointAToSphereCenter) < combinedRadiusSquared;
 	}
-	const glm::vec2 lineEndToSphereCenter = a.center - b.centerLine.end;
-	const float lineEndToSphereCenterAlongLine = glm::dot(lineEndToSphereCenter, lineVector);
-	if (lineEndToSphereCenterAlongLine >= 0.0f) {
-		return glm::length2(lineEndToSphereCenter) < glm::length2(a.radius + b.radius);
+	const glm::vec2 linePointBToSphereCenter = a.center - b.centerLine.pointB;
+	const float linePointBToSphereCenterAlongLine = glm::dot(linePointBToSphereCenter, linePointAToPointB);
+	if (linePointBToSphereCenterAlongLine >= 0.0f) {
+		return glm::length2(linePointBToSphereCenter) < combinedRadiusSquared;
 	}
-	const glm::vec2 lineToSphereCenterOrthogonal = lineStartToSphereCenter - lineVector * (lineStartToSphereCenterAlongLine / glm::length2(lineVector));
-	return glm::length2(lineToSphereCenterOrthogonal) < glm::length2(a.radius + b.radius);
+	const glm::vec2 lineToSphereCenterOrthogonal = linePointAToSphereCenter - linePointAToPointB * (linePointAToSphereCenterAlongLine / glm::length2(linePointAToPointB));
+	return glm::length2(lineToSphereCenterOrthogonal) < combinedRadiusSquared;
 }
 
 /**

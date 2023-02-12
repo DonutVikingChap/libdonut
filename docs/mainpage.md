@@ -54,7 +54,7 @@ Libdonut also includes the following utility APIs which encompass all of the mai
 - Basic geometric shapes:
     - [donut::Point](@ref donut::Point) - Generic N-dimensional point
     - [donut::Length](@ref donut::Length) - Generic N-dimensional length
-    - [donut::LineSegment](@ref donut::LineSegment) - Generic line segment with start/end points
+    - [donut::LineSegment](@ref donut::LineSegment) - Generic line segment between two points
     - [donut::Sphere](@ref donut::Sphere) - Generic sphere shape with a center and radius
     - [donut::Circle](@ref donut::Circle) - Flat 2D circle shape with a center and radius
     - [donut::Capsule](@ref donut::Capsule) - Generic capsule shape with a center line segment and radius
@@ -66,6 +66,7 @@ Libdonut also includes the following utility APIs which encompass all of the mai
     - [donut::Variant](@ref donut::Variant) - Generic tagged union type
 - Other:
     - [donut::AtlasPacker](@ref donut::AtlasPacker) - Rectangle packer for expandable square texture atlases
+    - [donut::LooseQuadtree](@ref donut::LooseQuadtree) - Container for fast AABB collision tests between a large number of 2D objects
     - [donut::random](@ref donut::random) - Fast pseudo-random number generation
     - [donut::reflection](@ref donut::reflection) - Compile-time reflection of aggregate types
     - [donut::Timer](@ref donut::Timer) - Time counting utility

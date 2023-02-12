@@ -27,6 +27,7 @@
 #include <cstdlib>                       // EXIT_SUCCESS, EXIT_FAILURE
 #include <exception>                     // std::exception
 #include <fmt/format.h>                  // fmt::format, fmt::print
+#include <forward_list>                  // std::forward_list
 #include <glm/ext/matrix_clip_space.hpp> // glm::ortho, glm::perspective
 #include <glm/ext/matrix_transform.hpp>  // glm::identity, glm::translate, glm::rotate, glm::scale
 #include <glm/glm.hpp>                   // glm::...
@@ -64,6 +65,19 @@ public:
 	Game(const char* programFilepath, const GameOptions& options)
 		: app::Application(programFilepath, options.applicationOptions)
 		, verticalFieldOfView(2.0f * glm::atan((3.0f / 4.0f) * glm::tan(glm::radians(options.fieldOfView) * 0.5f))) {
+		constexpr Circle<float> CIRCLE_A{.center{60.0f, 80.0f}, .radius = 20.0f};
+		constexpr Circle<float> CIRCLE_B{.center{50.0f, 90.0f}, .radius = 20.0f};
+		constexpr Circle<float> CIRCLE_C{.center{60.0f, 120.0f}, .radius = 20.0f};
+		constexpr Circle<float> CIRCLE_D{.center{300.0f, 100.0f}, .radius = 10.0f};
+		constexpr Circle<float> CIRCLE_E{.center{200.0f, 180.0f}, .radius = 30.0f};
+		constexpr Circle<float> CIRCLE_F{.center{140.0f, 440.0f}, .radius = 20.0f};
+		quadtree[getAabbOf(CIRCLE_A)].push_front(CIRCLE_A);
+		quadtree[getAabbOf(CIRCLE_B)].push_front(CIRCLE_B);
+		quadtree[getAabbOf(CIRCLE_C)].push_front(CIRCLE_C);
+		quadtree[getAabbOf(CIRCLE_D)].push_front(CIRCLE_D);
+		quadtree[getAabbOf(CIRCLE_E)].push_front(CIRCLE_E);
+		quadtree[getAabbOf(CIRCLE_F)].push_front(CIRCLE_F);
+
 		loadBindingsConfiguration("configuration/bindings.json");
 		initializeSoundStage();
 		playMainMenuMusic(options.mainMenuMusicFilepath);
@@ -84,15 +98,11 @@ protected:
 		worldProjectionViewMatrix = glm::perspective(verticalFieldOfView, aspectRatio, 0.1f, 100.0f);
 	}
 
-	void prepareForEvents(app::FrameInfo frameInfo) override {
-		(void)frameInfo; // TODO: Use?
-
+	void prepareForEvents(app::FrameInfo /*frameInfo*/) override {
 		inputManager.prepareForEvents();
 	}
 
-	void handleEvent(app::FrameInfo frameInfo, const app::Event& event) override {
-		(void)frameInfo; // TODO: Use?
-
+	void handleEvent(app::FrameInfo /*frameInfo*/, const app::Event& event) override {
 		inputManager.handleEvent(event);
 	}
 
@@ -557,40 +567,97 @@ private:
 			.position{410.0f, 240.0f},
 		});
 
-		const Capsule<2, float> capsule{.centerLine{.start{80.0f, 80.0f}, .end{300.0f, 200.0f}}, .radius = 50.0f};
-		const Circle<float> circle{.center = glm::vec2{200.0f, 50.0f} + glm::vec2{carrotCakeDisplayPosition} * 50.0f, .radius = 32.0f};
-		const Color circleColor = (intersects(circle, capsule)) ? Color::RED : Color::YELLOW;
+		if (inputManager.isPressed(app::Input::KEY_SPACE)) {
+			constexpr Capsule<2, float> STATIC_CAPSULE{.centerLine{.pointA{80.0f, 80.0f}, .pointB{300.0f, 200.0f}}, .radius = 50.0f};
+			constexpr glm::vec2 STATIC_CAPSULE_VECTOR = STATIC_CAPSULE.centerLine.pointB - STATIC_CAPSULE.centerLine.pointA;
+			const Circle<float> movingCircle{.center = glm::vec2{200.0f, 50.0f} + glm::vec2{carrotCakeDisplayPosition} * 50.0f, .radius = 32.0f};
+			const Color movingCircleColor = (intersects(movingCircle, STATIC_CAPSULE)) ? Color::RED : Color::YELLOW;
 
-		const glm::vec2 capsuleVector = capsule.centerLine.end - capsule.centerLine.start;
-		renderPass.draw(gfx::RectangleInstance{
-			.texture = &circleTexture,
-			.position = capsule.centerLine.start,
-			.size{capsule.radius * 2.0f, capsule.radius * 2.0f},
-			.origin{0.5f, 0.5f},
-			.tintColor = Color::GREEN,
-		});
-		renderPass.draw(gfx::RectangleInstance{
-			.texture = &circleTexture,
-			.position = capsule.centerLine.end,
-			.size{capsule.radius * 2.0f, capsule.radius * 2.0f},
-			.origin{0.5f, 0.5f},
-			.tintColor = Color::GREEN,
-		});
-		renderPass.draw(gfx::RectangleInstance{
-			.position = capsule.centerLine.start,
-			.size{glm::length(capsuleVector), capsule.radius * 2.0f},
-			.angle = std::atan2(capsuleVector.y, capsuleVector.x),
-			.origin{0.0f, 0.5f},
-			.tintColor = Color::GREEN,
-		});
+			renderPass.draw(gfx::RectangleInstance{
+				.texture = &circleTexture,
+				.position = STATIC_CAPSULE.centerLine.pointA,
+				.size{STATIC_CAPSULE.radius * 2.0f, STATIC_CAPSULE.radius * 2.0f},
+				.origin{0.5f, 0.5f},
+				.tintColor = Color::GREEN,
+			});
+			renderPass.draw(gfx::RectangleInstance{
+				.texture = &circleTexture,
+				.position = STATIC_CAPSULE.centerLine.pointB,
+				.size{STATIC_CAPSULE.radius * 2.0f, STATIC_CAPSULE.radius * 2.0f},
+				.origin{0.5f, 0.5f},
+				.tintColor = Color::GREEN,
+			});
+			renderPass.draw(gfx::RectangleInstance{
+				.position = STATIC_CAPSULE.centerLine.pointA,
+				.size{glm::length(STATIC_CAPSULE_VECTOR), STATIC_CAPSULE.radius * 2.0f},
+				.angle = std::atan2(STATIC_CAPSULE_VECTOR.y, STATIC_CAPSULE_VECTOR.x),
+				.origin{0.0f, 0.5f},
+				.tintColor = Color::GREEN,
+			});
 
-		renderPass.draw(gfx::RectangleInstance{
-			.texture = &circleTexture,
-			.position = circle.center,
-			.size{circle.radius * 2.0f, circle.radius * 2.0f},
-			.origin{0.5f, 0.5f},
-			.tintColor = circleColor,
-		});
+			renderPass.draw(gfx::RectangleInstance{
+				.texture = &circleTexture,
+				.position = movingCircle.center,
+				.size{movingCircle.radius * 2.0f, movingCircle.radius * 2.0f},
+				.origin{0.5f, 0.5f},
+				.tintColor = movingCircleColor,
+			});
+
+			const auto drawBorder = [&](const AxisAlignedBox<2, float>& box, float lineThickness, Color color) -> void {
+				const glm::vec2 extent = box.max - box.min;
+				renderPass.draw(gfx::RectangleInstance{.position = box.min, .size{extent.x, lineThickness}, .origin{0.0f, 0.0f}, .tintColor = color});
+				renderPass.draw(gfx::RectangleInstance{.position{box.min.x, box.max.y}, .size{extent.x, lineThickness}, .origin{0.0f, 1.0f}, .tintColor = color});
+				renderPass.draw(gfx::RectangleInstance{.position = box.min, .size{lineThickness, extent.y}, .origin{0.0f, 0.0f}, .tintColor = color});
+				renderPass.draw(gfx::RectangleInstance{.position{box.max.x, box.min.y}, .size{lineThickness, extent.y}, .origin{1.0f, 0.0f}, .tintColor = color});
+			};
+
+			quadtree.traverseActiveNodes([&](const AxisAlignedBox<2, float>& looseBounds, const std::forward_list<Circle<float>>* circles) -> void {
+				drawBorder(looseBounds, 2.0f, Color::BLANCHED_ALMOND);
+				if (circles) {
+					for (const Circle<float>& circle : *circles) {
+						renderPass.draw(gfx::RectangleInstance{
+							.texture = &circleTexture,
+							.position = circle.center,
+							.size{circle.radius * 2.0f, circle.radius * 2.0f},
+							.origin{0.5f, 0.5f},
+							.tintColor = Color::BLUE,
+						});
+					}
+				}
+			});
+			const AxisAlignedBox<2, float> movingCircleAabb = getAabbOf(movingCircle);
+			std::size_t aabbTestCount = 0;
+			std::size_t circleTestCount = 0;
+			quadtree.traverseActiveNodes(
+				[&](const AxisAlignedBox<2, float>& looseBounds, const std::forward_list<Circle<float>>* circles) -> void {
+					drawBorder(looseBounds, 2.0f, Color::DARK_BLUE);
+					if (circles) {
+						for (const Circle<float>& circle : *circles) {
+							++circleTestCount;
+							if (intersects(circle, movingCircle)) {
+								renderPass.draw(gfx::RectangleInstance{
+									.texture = &circleTexture,
+									.position = circle.center,
+									.size{circle.radius * 2.0f, circle.radius * 2.0f},
+									.origin{0.5f, 0.5f},
+									.tintColor = Color::DARK_GOLDEN_ROD,
+								});
+							}
+						}
+					}
+				},
+				[&](const AxisAlignedBox<2, float>& looseBounds) -> bool {
+					++aabbTestCount;
+					return intersects(movingCircleAabb, looseBounds);
+				});
+
+			renderPass.draw(gfx::TextInstance{
+				.font = &mainFont,
+				.text = mainFont.shapeText(renderer, 8, fmt::format("AABB tests: {}\nCircle tests: {}", aabbTestCount, circleTestCount)),
+				.position{410.0f, 450.0f},
+				.color = Color::BURLY_WOOD,
+			});
+		}
 	}
 
 	void drawFpsCounter(gfx::RenderPass& renderPass) {
@@ -630,6 +697,10 @@ private:
 	Timer<float> timerB{};
 	unsigned counterA = 0u;
 	unsigned counterB = 0u;
+	LooseQuadtree<std::forward_list<Circle<float>>> quadtree{
+		AxisAlignedBox<2, float>{.min{15.0f, 15.0f}, .max{15.0f + 380.0f, 15.0f + 450.0f}},
+		glm::vec2{32.0f, 32.0f},
+	};
 };
 
 class OptionsParser {

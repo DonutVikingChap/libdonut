@@ -45,6 +45,9 @@ class LinearMemoryResource;
 template <typename T>
 class LinearAllocator;
 
+template <typename T>
+class LooseQuadtree;
+
 namespace obj {
 
 struct Error;

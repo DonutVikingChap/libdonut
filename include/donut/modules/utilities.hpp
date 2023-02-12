@@ -6,6 +6,7 @@
 #include <donut/File.hpp>
 #include <donut/InputFileStream.hpp>
 #include <donut/LinearAllocator.hpp>
+#include <donut/LooseQuadtree.hpp>
 #include <donut/OutputFileStream.hpp>
 #include <donut/Resource.hpp>
 #include <donut/Timer.hpp>

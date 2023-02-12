@@ -31,6 +31,8 @@ using donut::LinearMemoryResource; // NOLINT(misc-unused-using-decls)
 
 using donut::LinearAllocator; // NOLINT(misc-unused-using-decls)
 
+using donut::LooseQuadtree; // NOLINT(misc-unused-using-decls)
+
 using donut::OutputFileStream; // NOLINT(misc-unused-using-decls)
 
 using donut::Resource; // NOLINT(misc-unused-using-decls)

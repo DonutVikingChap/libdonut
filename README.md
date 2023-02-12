@@ -44,6 +44,7 @@ Note: This library is currently a **work in progress** and makes no guarantees r
         - Writing/parsing to/from strings and iostreams.
         - Extensible serialization/deserialization of arbitrary types.
         - Supports [JSON5](https://json5.org/) features (comments, trailing commas, identifier keys, etc.).
+    - [Loose Quadtree](include/donut/LooseQuadtree.hpp) container for accelerating AABB collision tests between a large number of objects in 2D.
     - [OBJ](include/donut/obj.hpp) model/material parsing.
     - Fast [pseudo-random number generation engine](include/donut/random.hpp) using [xoroshiro128++](https://prng.di.unimi.it/):
         - Designed to be used as a URBG in conjunction with the [standard C++ distributions](https://en.cppreference.com/w/cpp/numeric/random#Random_number_distributions).
