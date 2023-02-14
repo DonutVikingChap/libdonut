@@ -504,6 +504,14 @@ private:
 			.origin{0.5f, 0.5f},
 		});
 
+		renderPass.draw(gfx::SpriteInstance{
+			.atlas = &spriteAtlas,
+			.id = testSubSprite,
+			.position{450.0f + glm::cos(frameInfo.elapsedTime) * 50.0f, 320.0f + glm::sin(frameInfo.elapsedTime) * 50.0f},
+			.scale{0.2f + glm::sin(frameInfo.elapsedTime) * 0.1f, 0.2f + glm::cos(frameInfo.elapsedTime) * 0.1f},
+			.origin{0.5f, 0.5f},
+		});
+
 		renderPass.draw(gfx::TextInstance{
 			.font = &mainFont,
 			.text = mainFont.shapeText(renderer,
@@ -680,6 +688,7 @@ private:
 	gfx::Model carrotCakeModel{"models/carrot_cake.obj"};
 	gfx::SpriteAtlas spriteAtlas{};
 	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas.insert(renderer, gfx::ImageLDR{"textures/test.png", {.flipVertically = true}});
+	gfx::SpriteAtlas::SpriteId testSubSprite = spriteAtlas.createSubSprite(testSprite, 200, 200, 100, 100);
 	gfx::Font mainFont{"fonts/unscii/unscii-8.ttf"};
 	TestShader3D testShader3D{};
 	app::InputManager inputManager{};
