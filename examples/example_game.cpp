@@ -688,7 +688,7 @@ private:
 	gfx::Model carrotCakeModel{"models/carrot_cake.obj"};
 	gfx::SpriteAtlas spriteAtlas{};
 	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas.insert(renderer, gfx::ImageLDR{"textures/test.png", {.flipVertically = true}});
-	gfx::SpriteAtlas::SpriteId testSubSprite = spriteAtlas.createSubSprite(testSprite, 200, 200, 100, 100);
+	gfx::SpriteAtlas::SpriteId testSubSprite = spriteAtlas.createSubSprite(testSprite, 200, 200, 100, 100, gfx::SpriteAtlas::FLIP_HORIZONTALLY);
 	gfx::Font mainFont{"fonts/unscii/unscii-8.ttf"};
 	TestShader3D testShader3D{};
 	app::InputManager inputManager{};

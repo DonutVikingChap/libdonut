@@ -8,6 +8,7 @@
 
 #include <cassert>     // assert
 #include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint8_t
 #include <glm/glm.hpp> // glm::...
 #include <vector>      // std::vector
 
@@ -22,6 +23,20 @@ class Renderer; // Forward declaration, to avoid including Renderer.hpp.
  */
 class SpriteAtlas {
 public:
+	/**
+	 * Flags that describe how a sprite is flipped when rendered.
+	 */
+	using Flip = std::uint8_t;
+
+	/**
+	 * Flag values for Flip that describe how a sprite is flipped when rendered.
+	 */
+	enum FlipAxis : Flip {
+		NO_FLIP = 0,                ///< Do not flip the sprite.
+		FLIP_HORIZONTALLY = 1 << 0, ///< Flip the sprite along the X axis.
+		FLIP_VERTICALLY = 1 << 1,   ///< Flip the sprite along the Y axis.
+	};
+
 	/**
 	 * Identifier for a specific image in the spritesheet.
 	 */
@@ -52,6 +67,8 @@ public:
 	 * \param renderer renderer to use for expanding the texture atlas, if
 	 *        needed.
 	 * \param image non-owning view over the image to copy into the spritesheet.
+	 * \param flip flags that describe how the sprite should be flipped when
+	 *        rendered.
 	 *
 	 * \return an identifier for the inserted image.
 	 *
@@ -61,7 +78,7 @@ public:
 	 *
 	 * \sa createSubSprite()
 	 */
-	[[nodiscard]] SpriteId insert(Renderer& renderer, const ImageLDRView& image) {
+	[[nodiscard]] SpriteId insert(Renderer& renderer, const ImageLDRView& image, Flip flip = NO_FLIP) {
 		const auto [x, y, resized] = atlasPacker.insertRectangle(image.getWidth(), image.getHeight());
 		prepareAtlasTexture(renderer, resized);
 
@@ -70,10 +87,26 @@ public:
 		const glm::vec2 textureSize = atlasTexture.getSize2D();
 		const glm::vec2 position{static_cast<float>(x), static_cast<float>(y)};
 		const glm::vec2 size{static_cast<float>(image.getWidth()), static_cast<float>(image.getHeight())};
+		glm::vec2 textureOffset{};
+		glm::vec2 textureScale{};
+		if ((flip & FLIP_HORIZONTALLY) != 0) {
+			textureOffset.x = (position.x + size.x) / textureSize.x;
+			textureScale.x = -size.x / textureSize.x;
+		} else {
+			textureOffset.x = position.x / textureSize.x;
+			textureScale.x = size.x / textureSize.x;
+		}
+		if ((flip & FLIP_VERTICALLY) != 0) {
+			textureOffset.y = (position.y + size.y) / textureSize.y;
+			textureScale.y = -size.y / textureSize.y;
+		} else {
+			textureOffset.y = position.y / textureSize.y;
+			textureScale.y = size.y / textureSize.y;
+		}
 		const std::size_t index = sprites.size();
-		sprites.push_back({
-			.textureOffset = position / textureSize,
-			.textureScale = size / textureSize,
+		sprites.push_back(Sprite{
+			.textureOffset = textureOffset,
+			.textureScale = textureScale,
 			.position = position,
 			.size = size,
 		});
@@ -99,6 +132,8 @@ public:
 	 * \param height height, in pixels, of the new sprite region. Must be less
 	 *        than or equal to the height of the original sprite image minus
 	 *        offsetY.
+	 * \param flip flags that describe how the sprite should be flipped when
+	 *        rendered.
 	 *
 	 * \return an identifier for the new sub-sprite.
 	 *
@@ -108,7 +143,7 @@ public:
 	 *
 	 * \sa insert()
 	 */
-	[[nodiscard]] SpriteId createSubSprite(SpriteId baseSpriteId, std::size_t offsetX, std::size_t offsetY, std::size_t width, std::size_t height) {
+	[[nodiscard]] SpriteId createSubSprite(SpriteId baseSpriteId, std::size_t offsetX, std::size_t offsetY, std::size_t width, std::size_t height, Flip flip = NO_FLIP) {
 		const Sprite& baseSprite = getSprite(baseSpriteId);
 		assert(static_cast<float>(offsetX) <= baseSprite.size.x);
 		assert(static_cast<float>(offsetY) <= baseSprite.size.y);
@@ -118,10 +153,26 @@ public:
 		const glm::vec2 textureSize = atlasTexture.getSize2D();
 		const glm::vec2 position = baseSprite.position + glm::vec2{static_cast<float>(offsetX), static_cast<float>(offsetY)};
 		const glm::vec2 size{static_cast<float>(width), static_cast<float>(height)};
+		glm::vec2 textureOffset{};
+		glm::vec2 textureScale{};
+		if ((flip & FLIP_HORIZONTALLY) != 0) {
+			textureOffset.x = (position.x + size.x) / textureSize.x;
+			textureScale.x = -size.x / textureSize.x;
+		} else {
+			textureOffset.x = position.x / textureSize.x;
+			textureScale.x = size.x / textureSize.x;
+		}
+		if ((flip & FLIP_VERTICALLY) != 0) {
+			textureOffset.y = (position.y + size.y) / textureSize.y;
+			textureScale.y = -size.y / textureSize.y;
+		} else {
+			textureOffset.y = position.y / textureSize.y;
+			textureScale.y = size.y / textureSize.y;
+		}
 		const std::size_t index = sprites.size();
-		sprites.push_back({
-			.textureOffset = position / textureSize,
-			.textureScale = size / textureSize,
+		sprites.push_back(Sprite{
+			.textureOffset = textureOffset,
+			.textureScale = textureScale,
 			.position = position,
 			.size = size,
 		});
@@ -166,8 +217,20 @@ private:
 				atlasTexture.grow2D(renderer, atlasPacker.getResolution(), atlasPacker.getResolution(), Color::INVISIBLE);
 				const glm::vec2 textureSize = atlasTexture.getSize2D();
 				for (Sprite& sprite : sprites) {
-					sprite.textureOffset = sprite.position / textureSize;
-					sprite.textureScale = sprite.size / textureSize;
+					if (sprite.textureScale.x < 0.0f) {
+						sprite.textureOffset.x = (sprite.position.x + sprite.size.x) / textureSize.x;
+						sprite.textureScale.x = -sprite.size.x / textureSize.x;
+					} else {
+						sprite.textureOffset.x = sprite.position.x / textureSize.x;
+						sprite.textureScale.x = sprite.size.x / textureSize.x;
+					}
+					if (sprite.textureScale.y < 0.0f) {
+						sprite.textureOffset.y = (sprite.position.y + sprite.size.y) / textureSize.y;
+						sprite.textureScale.y = -sprite.size.y / textureSize.y;
+					} else {
+						sprite.textureOffset.y = sprite.position.y / textureSize.y;
+						sprite.textureScale.y = sprite.size.y / textureSize.y;
+					}
 				}
 			}
 		} else {
