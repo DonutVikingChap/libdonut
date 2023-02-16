@@ -13,6 +13,8 @@
 #include <cstddef>                       // std::size_t, std::byte
 #include <fmt/format.h>                  // fmt::format
 #include <glm/ext/matrix_clip_space.hpp> // glm::ortho
+#include <memory>                        // std::construct_at, std::destroy_at
+#include <new>                           // std::launder
 #include <optional>                      // std::optional
 #include <utility>                       // std::move
 
@@ -22,15 +24,15 @@ namespace graphics {
 namespace {
 
 std::size_t sharedTextureReferenceCount = 0;
-Texture sharedWhiteTexture{};
-Texture sharedGrayTexture{};
-Texture sharedNormalTexture{};
+alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedWhiteTextureStorage;
+alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedGrayTextureStorage;
+alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedNormalTextureStorage;
 
 } // namespace
 
-const Texture* const Texture::whiteR8G8B8A8Srgb1x1 = &sharedWhiteTexture;
-const Texture* const Texture::grayR8G8B8A8Unorm1x1 = &sharedGrayTexture;
-const Texture* const Texture::normalR8G8B8Unorm1x1 = &sharedNormalTexture;
+const Texture* const Texture::whiteR8G8B8A8Srgb1x1 = std::launder(reinterpret_cast<Texture*>(sharedWhiteTextureStorage.data()));
+const Texture* const Texture::grayR8G8B8A8Unorm1x1 = std::launder(reinterpret_cast<Texture*>(sharedGrayTextureStorage.data()));
+const Texture* const Texture::normalR8G8B8Unorm1x1 = std::launder(reinterpret_cast<Texture*>(sharedNormalTextureStorage.data()));
 
 void Texture::createSharedTextures() {
 	if (sharedTextureReferenceCount == 0) {
@@ -38,18 +40,21 @@ void Texture::createSharedTextures() {
 		constexpr std::array<std::byte, 4> GRAY_PIXEL_R8G8B8A8_UNORM{std::byte{128}, std::byte{128}, std::byte{128}, std::byte{255}};
 		constexpr std::array<std::byte, 3> NORMAL_PIXEL_R8G8B8_UNORM{std::byte{128}, std::byte{128}, std::byte{255}};
 		constexpr TextureOptions PIXEL_TEXTURE_OPTIONS{.repeat = true, .useLinearFiltering = false, .useMipmap = false};
-		sharedWhiteTexture = Texture{TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, WHITE_PIXEL_R8G8B8A8_SRGB.data(), PIXEL_TEXTURE_OPTIONS};
+		std::construct_at(
+			whiteR8G8B8A8Srgb1x1, TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, WHITE_PIXEL_R8G8B8A8_SRGB.data(), PIXEL_TEXTURE_OPTIONS);
 		try {
-			sharedGrayTexture = Texture{TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, GRAY_PIXEL_R8G8B8A8_UNORM.data(), PIXEL_TEXTURE_OPTIONS};
+			std::construct_at(
+				grayR8G8B8A8Unorm1x1, TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, GRAY_PIXEL_R8G8B8A8_UNORM.data(), PIXEL_TEXTURE_OPTIONS);
 		} catch (...) {
-			sharedWhiteTexture = Texture{};
+			std::destroy_at(whiteR8G8B8A8Srgb1x1);
 			throw;
 		}
 		try {
-			sharedNormalTexture = Texture{TextureInternalFormat::RGB8, 1, 1, TextureFormat::RGB, TextureComponentType::U8, NORMAL_PIXEL_R8G8B8_UNORM.data(), PIXEL_TEXTURE_OPTIONS};
+			std::construct_at(
+				normalR8G8B8Unorm1x1, TextureInternalFormat::RGB8, 1, 1, TextureFormat::RGB, TextureComponentType::U8, NORMAL_PIXEL_R8G8B8_UNORM.data(), PIXEL_TEXTURE_OPTIONS);
 		} catch (...) {
-			sharedGrayTexture = Texture{};
-			sharedWhiteTexture = Texture{};
+			std::destroy_at(grayR8G8B8A8Unorm1x1);
+			std::destroy_at(whiteR8G8B8A8Srgb1x1);
 			throw;
 		}
 	}
@@ -58,9 +63,9 @@ void Texture::createSharedTextures() {
 
 void Texture::destroySharedTextures() noexcept {
 	if (sharedTextureReferenceCount-- == 1) {
-		sharedNormalTexture = Texture{};
-		sharedGrayTexture = Texture{};
-		sharedWhiteTexture = Texture{};
+		std::destroy_at(normalR8G8B8Unorm1x1);
+		std::destroy_at(grayR8G8B8A8Unorm1x1);
+		std::destroy_at(whiteR8G8B8A8Srgb1x1);
 	}
 }
 
