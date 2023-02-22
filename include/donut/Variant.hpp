@@ -34,9 +34,7 @@ template <template <typename...> typename Template, typename... TemplateArgs>
 constexpr void derivedFromTemplateSpecializationTest(const Template<TemplateArgs...>&);
 
 template <typename T, template <typename...> typename Template>
-concept derived_from_template_specialization_of = requires(const T& t) {
-	derivedFromTemplateSpecializationTest<Template>(t);
-};
+concept derived_from_template_specialization_of = requires(const T& t) { derivedFromTemplateSpecializationTest<Template>(t); };
 
 template <typename T, std::size_t Index, typename... Ts>
 struct VariantIndexImpl;
@@ -189,8 +187,7 @@ namespace donut {
  * alternative of a Variant when using a safe access function such as
  * Variant::get().
  */
-class BadVariantAccess : public std::exception {
-public:
+struct BadVariantAccess : std::exception {
 	BadVariantAccess() noexcept = default;
 
 	[[nodiscard]] const char* what() const noexcept override {
@@ -219,7 +216,8 @@ private:
 	template <typename T>
 	struct SelectAlternativeTypeOverload {
 		template <typename U>
-		T operator()(T, U&& u) requires(requires { T{std::forward<U>(u)}; });
+		T operator()(T, U&& u)
+			requires(requires { T{std::forward<U>(u)}; });
 	};
 
 	struct SelectAlternativeTypeOverloadSet : SelectAlternativeTypeOverload<Ts>... {
@@ -257,7 +255,8 @@ public:
 	 * \throws any exception thrown by the underlying constructor of the first
 	 *         alternative type.
 	 */
-	Variant() noexcept(std::is_nothrow_default_constructible_v<FirstAlternative>) requires(HAS_DEFAULT_CONSTRUCTOR)
+	Variant() noexcept(std::is_nothrow_default_constructible_v<FirstAlternative>)
+		requires(HAS_DEFAULT_CONSTRUCTOR)
 		: activeTypeIndex(0) {
 		std::construct_at(reinterpret_cast<FirstAlternative*>(&storage));
 	}
@@ -275,8 +274,9 @@ public:
 	 *         relevant alternative type.
 	 */
 	template <typename U>
-	Variant(U&& value) noexcept(std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value)))>) requires(!std::is_same_v<std::remove_cvref_t<U>, Variant> &&
-		variant_has_alternative_v<decltype(F(std::forward<U>(value))), Variant> && std::is_constructible_v<decltype(F(std::forward<U>(value))), U>)
+	Variant(U&& value) noexcept(std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value)))>)
+		requires(!std::is_same_v<std::remove_cvref_t<U>, Variant> && variant_has_alternative_v<decltype(F(std::forward<U>(value))), Variant> &&
+			std::is_constructible_v<decltype(F(std::forward<U>(value))), U>)
 		: activeTypeIndex(variant_index_v<decltype(F(std::forward<U>(value))), Variant>) {
 		std::construct_at(reinterpret_cast<decltype(F(std::forward<U>(value)))*>(&storage), std::forward<U>(value));
 	}
@@ -293,7 +293,8 @@ public:
 	 *         relevant alternative type.
 	 */
 	template <typename T, typename... Args>
-	explicit Variant(std::in_place_type_t<T>, Args&&... args) requires(variant_has_alternative_v<T, Variant>&& std::is_constructible_v<T, Args...>)
+	explicit Variant(std::in_place_type_t<T>, Args&&... args)
+		requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, Args...>)
 		: activeTypeIndex(variant_index_v<T, Variant>) {
 		std::construct_at(reinterpret_cast<T*>(&storage), std::forward<Args>(args)...);
 	}
@@ -314,8 +315,8 @@ public:
 	 *         relevant alternative type.
 	 */
 	template <typename T, typename U, typename... Args>
-	explicit Variant(std::in_place_type_t<T>, std::initializer_list<U> ilist, Args&&... args) requires(
-		variant_has_alternative_v<T, Variant>&& std::is_constructible_v<T, std::initializer_list<U>&, Args...>)
+	explicit Variant(std::in_place_type_t<T>, std::initializer_list<U> ilist, Args&&... args)
+		requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, std::initializer_list<U>&, Args...>)
 		: activeTypeIndex(variant_index_v<T, Variant>) {
 		std::construct_at(reinterpret_cast<T*>(&storage), ilist, std::forward<Args>(args)...);
 	}
@@ -332,7 +333,8 @@ public:
 	 *         relevant alternative type.
 	 */
 	template <std::size_t Index, typename... Args>
-	explicit Variant(std::in_place_index_t<Index>, Args&&... args) requires(Index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<Index, Variant>, Args...>)
+	explicit Variant(std::in_place_index_t<Index>, Args&&... args)
+		requires(Index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<Index, Variant>, Args...>)
 		: activeTypeIndex(Index) {
 		std::construct_at(reinterpret_cast<variant_alternative_t<Index, Variant>*>(&storage), std::forward<Args>(args)...);
 	}
@@ -353,8 +355,8 @@ public:
 	 *         relevant alternative type.
 	 */
 	template <std::size_t Index, typename U, typename... Args>
-	explicit Variant(std::in_place_index_t<Index>, std::initializer_list<U> ilist, Args&&... args) requires(
-		Index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<Index, Variant>, std::initializer_list<U>&, Args...>)
+	explicit Variant(std::in_place_index_t<Index>, std::initializer_list<U> ilist, Args&&... args)
+		requires(Index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<Index, Variant>, std::initializer_list<U>&, Args...>)
 		: activeTypeIndex(Index) {
 		std::construct_at(reinterpret_cast<variant_alternative_t<Index, Variant>*>(&storage), ilist, std::forward<Args>(args)...);
 	}
@@ -365,16 +367,23 @@ public:
 	}
 
 	/** Trivial destructor. */
-	~Variant() requires(HAS_TRIVIAL_DESTRUCTOR) = default;
+	~Variant()
+		requires(HAS_TRIVIAL_DESTRUCTOR)
+	= default;
 
 	/** Deleted copy constructor. */
-	Variant(const Variant& other) requires(!HAS_COPY_CONSTRUCTOR) = delete;
+	Variant(const Variant& other)
+		requires(!HAS_COPY_CONSTRUCTOR)
+	= delete;
 
 	/** Trivial copy constructor. */
-	Variant(const Variant& other) requires(HAS_COPY_CONSTRUCTOR&& HAS_TRIVIAL_COPY_CONSTRUCTOR) = default;
+	Variant(const Variant& other)
+		requires(HAS_COPY_CONSTRUCTOR && HAS_TRIVIAL_COPY_CONSTRUCTOR)
+	= default;
 
 	/** Copy constructor. */
-	Variant(const Variant& other) requires(HAS_COPY_CONSTRUCTOR && !HAS_TRIVIAL_COPY_CONSTRUCTOR)
+	Variant(const Variant& other)
+		requires(HAS_COPY_CONSTRUCTOR && !HAS_TRIVIAL_COPY_CONSTRUCTOR)
 		: activeTypeIndex(other.activeTypeIndex) {
 		const auto visitor = [&]<typename T>(const T& value) -> void {
 			std::construct_at(reinterpret_cast<T*>(&storage), value);
@@ -386,10 +395,13 @@ public:
 	}
 
 	/** Trivial move constructor. */
-	Variant(Variant&& other) noexcept requires(HAS_MOVE_CONSTRUCTOR&& HAS_TRIVIAL_MOVE_CONSTRUCTOR) = default;
+	Variant(Variant&& other) noexcept
+		requires(HAS_MOVE_CONSTRUCTOR && HAS_TRIVIAL_MOVE_CONSTRUCTOR)
+	= default;
 
 	/** Move constructor. */
-	Variant(Variant&& other) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...)) requires(HAS_MOVE_CONSTRUCTOR && !HAS_TRIVIAL_MOVE_CONSTRUCTOR)
+	Variant(Variant&& other) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...))
+		requires(HAS_MOVE_CONSTRUCTOR && !HAS_TRIVIAL_MOVE_CONSTRUCTOR)
 		: activeTypeIndex(other.activeTypeIndex) {
 		const auto visitor = [&]<typename T>(T& value) -> void {
 			std::construct_at(reinterpret_cast<T*>(&storage), std::move(value));
@@ -401,10 +413,14 @@ public:
 	}
 
 	/** Deleted copy assignment. */
-	Variant& operator=(const Variant& other) requires(!HAS_COPY_ASSIGNMENT) = delete;
+	Variant& operator=(const Variant& other)
+		requires(!HAS_COPY_ASSIGNMENT)
+	= delete;
 
 	/** Trivial copy assignment. */
-	Variant& operator=(const Variant& other) requires(HAS_COPY_ASSIGNMENT&& HAS_TRIVIAL_COPY_ASSIGNMENT) = default;
+	Variant& operator=(const Variant& other)
+		requires(HAS_COPY_ASSIGNMENT && HAS_TRIVIAL_COPY_ASSIGNMENT)
+	= default;
 
 	/**
 	 * Copy assignment.
@@ -412,13 +428,17 @@ public:
 	 * \note If an exception is thrown after the old value has been destroyed,
 	 *       the variant ends up in the valueless by exception state.
 	 */
-	Variant& operator=(const Variant& other) requires(HAS_COPY_ASSIGNMENT && !HAS_TRIVIAL_COPY_ASSIGNMENT) {
+	Variant& operator=(const Variant& other)
+		requires(HAS_COPY_ASSIGNMENT && !HAS_TRIVIAL_COPY_ASSIGNMENT)
+	{
 		*this = Variant{other};
 		return *this;
 	}
 
 	/** Trivial move assignment. */
-	Variant& operator=(Variant&& other) noexcept requires(HAS_MOVE_ASSIGNMENT&& HAS_TRIVIAL_MOVE_ASSIGNMENT) = default;
+	Variant& operator=(Variant&& other) noexcept
+		requires(HAS_MOVE_ASSIGNMENT && HAS_TRIVIAL_MOVE_ASSIGNMENT)
+	= default;
 
 	/**
 	 * Move assignment.
@@ -426,8 +446,9 @@ public:
 	 * \note If an exception is thrown after the old value has been destroyed,
 	 *       the variant ends up in the valueless by exception state.
 	 */
-	Variant& operator=(Variant&& other) noexcept(((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_move_assignable_v<Ts>)&&...)) requires(
-		HAS_MOVE_ASSIGNMENT && !HAS_TRIVIAL_MOVE_ASSIGNMENT) {
+	Variant& operator=(Variant&& other) noexcept(((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_move_assignable_v<Ts>)&&...))
+		requires(HAS_MOVE_ASSIGNMENT && !HAS_TRIVIAL_MOVE_ASSIGNMENT)
+	{
 		if (activeTypeIndex == other.activeTypeIndex) {
 			const auto visitor = [&]<typename T>(T& value) -> void {
 				*std::launder(reinterpret_cast<T*>(&storage)) = std::move(value);
@@ -484,9 +505,11 @@ public:
 	 *       the variant ends up in the valueless by exception state.
 	 */
 	template <typename U>
-	Variant& operator=(U&& value) noexcept(std::is_nothrow_assignable_v<decltype(F(std::forward<U>(value)))&, U>&&
-			std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value))), U>) requires(!std::is_same_v<std::remove_cvref_t<U>, Variant> &&
-		variant_has_alternative_v<decltype(F(std::forward<U>(value))), Variant> && std::is_assignable_v<decltype(F(std::forward<U>(value))), U>) {
+	Variant& operator=(U&& value) noexcept(
+		std::is_nothrow_assignable_v<decltype(F(std::forward<U>(value)))&, U>&& std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value))), U>)
+		requires(!std::is_same_v<std::remove_cvref_t<U>, Variant> && variant_has_alternative_v<decltype(F(std::forward<U>(value))), Variant> &&
+			std::is_assignable_v<decltype(F(std::forward<U>(value))), U>)
+	{
 		using T = decltype(F(std::forward<U>(value)));
 		if (is<T>()) {
 			as<T>() = std::forward<U>(value);
@@ -515,7 +538,9 @@ public:
 	 *       the variant ends up in the valueless by exception state.
 	 */
 	template <typename T, typename... Args>
-	T& emplace(Args&&... args) requires(variant_has_alternative_v<T, Variant>&& std::is_constructible_v<T, Args...>) {
+	T& emplace(Args&&... args)
+		requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, Args...>)
+	{
 		return emplace<variant_index_v<T, Variant>>(std::forward<Args>(args)...);
 	}
 
@@ -538,7 +563,9 @@ public:
 	 *       the variant ends up in the valueless by exception state.
 	 */
 	template <typename T, typename U, typename... Args>
-	T& emplace(std::initializer_list<U> ilist, Args&&... args) requires(variant_has_alternative_v<T, Variant>&& std::is_constructible_v<T, std::initializer_list<U>&, Args...>) {
+	T& emplace(std::initializer_list<U> ilist, Args&&... args)
+		requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, std::initializer_list<U>&, Args...>)
+	{
 		return emplace<variant_index_v<T, Variant>>(ilist, std::forward<Args>(args)...);
 	}
 
@@ -557,7 +584,9 @@ public:
 	 *       the variant ends up in the valueless by exception state.
 	 */
 	template <std::size_t Index, typename... Args>
-	variant_alternative_t<Index, Variant>& emplace(Args&&... args) requires(std::is_constructible_v<variant_alternative_t<Index, Variant>, Args...>) {
+	variant_alternative_t<Index, Variant>& emplace(Args&&... args)
+		requires(std::is_constructible_v<variant_alternative_t<Index, Variant>, Args...>)
+	{
 		static_assert(Index < sizeof...(Ts));
 		using T = variant_alternative_t<Index, Variant>;
 		destroy();
@@ -590,8 +619,9 @@ public:
 	 *       the variant ends up in the valueless by exception state.
 	 */
 	template <std::size_t Index, typename U, typename... Args>
-	variant_alternative_t<Index, Variant>& emplace(std::initializer_list<U> ilist, Args&&... args) requires(
-		std::is_constructible_v<variant_alternative_t<Index, Variant>, std::initializer_list<U>&, Args...>) {
+	variant_alternative_t<Index, Variant>& emplace(std::initializer_list<U> ilist, Args&&... args)
+		requires(std::is_constructible_v<variant_alternative_t<Index, Variant>, std::initializer_list<U>&, Args...>)
+	{
 		static_assert(Index < sizeof...(Ts));
 		using T = variant_alternative_t<Index, Variant>;
 		destroy();
@@ -682,7 +712,9 @@ public:
 	 *         otherwise.
 	 */
 	template <typename T>
-	[[nodiscard]] constexpr bool is() const noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] constexpr bool is() const noexcept
+		requires(variant_has_alternative_v<T, Variant>)
+	{
 		return activeTypeIndex == variant_index_v<T, Variant>;
 	}
 
@@ -726,7 +758,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-	[[nodiscard]] T& as() & noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] T& as() & noexcept
+		requires(variant_has_alternative_v<T, Variant>)
+	{
 		assert(is<T>());
 		return *std::launder(reinterpret_cast<T*>(&storage));
 	}
@@ -756,7 +790,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-	[[nodiscard]] const T& as() const& noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] const T& as() const& noexcept
+		requires(variant_has_alternative_v<T, Variant>)
+	{
 		assert(is<T>());
 		return *std::launder(reinterpret_cast<const T*>(&storage));
 	}
@@ -786,7 +822,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-	[[nodiscard]] T&& as() && noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] T&& as() && noexcept
+		requires(variant_has_alternative_v<T, Variant>)
+	{
 		assert(is<T>());
 		return std::move(*std::launder(reinterpret_cast<T*>(&storage)));
 	}
@@ -816,7 +854,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-	[[nodiscard]] const T&& as() const&& noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] const T&& as() const&& noexcept
+		requires(variant_has_alternative_v<T, Variant>)
+	{
 		assert(is<T>());
 		return std::move(*std::launder(reinterpret_cast<const T*>(&storage)));
 	}
@@ -960,14 +1000,15 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-		[[nodiscard]] T& get() & requires(variant_has_alternative_v<T, Variant>) {
-		if (!is<T>()) {
-			throw BadVariantAccess{};
+		[[nodiscard]] T& get() &
+		requires(variant_has_alternative_v<T, Variant>) {
+			if (!is<T>()) {
+				throw BadVariantAccess{};
+			}
+			return as<T>();
 		}
-		return as<T>();
-	}
 
-	/**
+		/**
 	 * Access the underlying value with the given type.
 	 *
 	 * \tparam T type of the currently active value to get. Must be one of the
@@ -981,8 +1022,10 @@ public:
 	 * \sa as()
 	 * \sa get_if()
 	 */
-	template <typename T>
-	[[nodiscard]] const T& get() const& requires(variant_has_alternative_v<T, Variant>) {
+		template <typename T>
+		[[nodiscard]] const T& get() const&
+			requires(variant_has_alternative_v<T, Variant>)
+	{
 		if (!is<T>()) {
 			throw BadVariantAccess{};
 		}
@@ -1004,14 +1047,15 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-		[[nodiscard]] T&& get() && requires(variant_has_alternative_v<T, Variant>) {
-		if (!is<T>()) {
-			throw BadVariantAccess{};
+		[[nodiscard]] T&& get() &&
+		requires(variant_has_alternative_v<T, Variant>) {
+			if (!is<T>()) {
+				throw BadVariantAccess{};
+			}
+			return std::move(as<T>());
 		}
-		return std::move(as<T>());
-	}
 
-	/**
+		/**
 	 * Access the underlying value with the given type.
 	 *
 	 * \tparam T type of the currently active value to get. Must be one of the
@@ -1025,8 +1069,10 @@ public:
 	 * \sa as()
 	 * \sa get_if()
 	 */
-	template <typename T>
-	[[nodiscard]] const T&& get() const&& requires(variant_has_alternative_v<T, Variant>) {
+		template <typename T>
+		[[nodiscard]] const T&& get() const&&
+			requires(variant_has_alternative_v<T, Variant>)
+	{
 		if (!is<T>()) {
 			throw BadVariantAccess{};
 		}
@@ -1139,7 +1185,9 @@ public:
 	 * \sa get()
 	 */
 	template <typename T>
-	[[nodiscard]] T* get_if() noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] T* get_if() noexcept
+		requires(variant_has_alternative_v<T, Variant>)
+	{
 		return (is<T>()) ? &as<T>() : nullptr;
 	}
 
@@ -1158,7 +1206,9 @@ public:
 	 * \sa get()
 	 */
 	template <typename T>
-	[[nodiscard]] const T* get_if() const noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] const T* get_if() const noexcept
+		requires(variant_has_alternative_v<T, Variant>)
+	{
 		return (is<T>()) ? &as<T>() : nullptr;
 	}
 
