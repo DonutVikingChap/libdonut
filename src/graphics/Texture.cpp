@@ -14,7 +14,6 @@
 #include <fmt/format.h>                  // fmt::format
 #include <glm/ext/matrix_clip_space.hpp> // glm::ortho
 #include <memory>                        // std::construct_at, std::destroy_at
-#include <new>                           // std::launder
 #include <optional>                      // std::optional
 #include <utility>                       // std::move
 
@@ -30,9 +29,9 @@ alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedNormalTextureStora
 
 } // namespace
 
-const Texture* const Texture::whiteR8G8B8A8Srgb1x1 = std::launder(reinterpret_cast<Texture*>(sharedWhiteTextureStorage.data()));
-const Texture* const Texture::grayR8G8B8A8Unorm1x1 = std::launder(reinterpret_cast<Texture*>(sharedGrayTextureStorage.data()));
-const Texture* const Texture::normalR8G8B8Unorm1x1 = std::launder(reinterpret_cast<Texture*>(sharedNormalTextureStorage.data()));
+const Texture* const Texture::whiteR8G8B8A8Srgb1x1 = reinterpret_cast<Texture*>(sharedWhiteTextureStorage.data());
+const Texture* const Texture::grayR8G8B8A8Unorm1x1 = reinterpret_cast<Texture*>(sharedGrayTextureStorage.data());
+const Texture* const Texture::normalR8G8B8Unorm1x1 = reinterpret_cast<Texture*>(sharedNormalTextureStorage.data());
 
 void Texture::createSharedTextures() {
 	if (sharedTextureReferenceCount == 0) {

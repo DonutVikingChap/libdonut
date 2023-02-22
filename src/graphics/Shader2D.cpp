@@ -3,7 +3,6 @@
 #include <array>   // std::array
 #include <cstddef> // std::size_t, std::byte
 #include <memory>  // std::construct_at, std::destroy_at
-#include <new>     // std::launder
 
 namespace donut {
 namespace graphics {
@@ -61,8 +60,8 @@ const char* const Shader2D::fragmentShaderSourceCodeTexturedQuadAlpha = R"GLSL(
     }
 )GLSL";
 
-Shader2D* const Shader2D::plainShader = std::launder(reinterpret_cast<Shader2D*>(sharedPlainShaderStorage.data()));
-Shader2D* const Shader2D::alphaShader = std::launder(reinterpret_cast<Shader2D*>(sharedAlphaShaderStorage.data()));
+Shader2D* const Shader2D::plainShader = reinterpret_cast<Shader2D*>(sharedPlainShaderStorage.data());
+Shader2D* const Shader2D::alphaShader = reinterpret_cast<Shader2D*>(sharedAlphaShaderStorage.data());
 
 void Shader2D::createSharedShaders() {
 	if (sharedShaderReferenceCount == 0) {

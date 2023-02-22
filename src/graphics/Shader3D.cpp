@@ -3,7 +3,6 @@
 #include <array>   // std::array
 #include <cstddef> // std::size_t, std::byte
 #include <memory>  // std::construct_at, std::destroy_at
-#include <new>     // std::launder
 
 namespace donut {
 namespace graphics {
@@ -129,7 +128,7 @@ const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
     }
 )GLSL";
 
-Shader3D* const Shader3D::blinnPhongShader = std::launder(reinterpret_cast<Shader3D*>(sharedBlinnPhongShaderStorage.data()));
+Shader3D* const Shader3D::blinnPhongShader = reinterpret_cast<Shader3D*>(sharedBlinnPhongShaderStorage.data());
 
 void Shader3D::createSharedShaders() {
 	if (sharedShaderReferenceCount == 0) {
