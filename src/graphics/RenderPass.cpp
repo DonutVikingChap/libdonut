@@ -1,11 +1,8 @@
 #include <donut/graphics/RenderPass.hpp>
 
-#include <algorithm>                    // std::lower_bound
-#include <cstddef>                      // std::size_t
 #include <glm/ext/matrix_transform.hpp> // glm::identity, glm::translate, glm::rotate, glm::scale
 #include <glm/glm.hpp>                  // glm::...
 #include <glm/gtc/matrix_inverse.hpp>   // glm::inverseTranspose
-#include <vector>                       // std::vector
 
 namespace donut {
 namespace graphics {
@@ -14,29 +11,12 @@ RenderPass& RenderPass::draw(const ModelInstance& model) {
 	assert(model.shader);
 	assert(model.model);
 
-	const glm::mat3 normalMatrix = glm::inverseTranspose(glm::mat3{model.transformation});
-
-	const std::size_t objectCount = model.model->objects.size();
-
-	decltype(ModelObjectInstancesFromModel::objectInstances)* objectInstances = nullptr;
-	const auto it = std::lower_bound(objectsSortedByShaderAndModel.begin(), objectsSortedByShaderAndModel.end(), model);
-	if (it == objectsSortedByShaderAndModel.end()) {
-		objectInstances = &objectsSortedByShaderAndModel.emplace_back(model.shader, model.model, &memoryResource).objectInstances;
-		objectInstances->resize(objectCount, std::vector<Model::Object::Instance, LinearAllocator<Model::Object::Instance>>{&memoryResource});
-	} else if (it->shader == model.shader && it->model == model.model) {
-		objectInstances = &it->objectInstances;
-		assert(objectInstances->size() == objectCount);
-	} else {
-		objectInstances = &objectsSortedByShaderAndModel.emplace(it, model.shader, model.model, &memoryResource)->objectInstances;
-		objectInstances->resize(objectCount, std::vector<Model::Object::Instance, LinearAllocator<Model::Object::Instance>>{&memoryResource});
-	}
-	for (std::size_t i = 0; i < objectCount; ++i) {
-		(*objectInstances)[i].push_back({
+	models.try_emplace(ModelInstances::Key{.shader = model.shader, .model = model.model}, &memoryResource)
+		.first->second.instances.push_back(Model::Object::Instance{
 			.transformation = model.transformation,
-			.normalMatrix = normalMatrix,
+			.normalMatrix = glm::inverseTranspose(glm::mat3{model.transformation}),
 			.tintColor = model.tintColor,
 		});
-	}
 	return *this;
 }
 
@@ -78,17 +58,15 @@ RenderPass& RenderPass::draw(const RectangleInstance& rectangle) {
 RenderPass& RenderPass::draw(const QuadInstance& quad) {
 	assert(quad.shader);
 
-	const TexturedQuad::Instance instance{
+	if (quads.empty() || last_quad->shader != quad.shader || last_quad->texture != quad.texture) {
+		last_quad = quads.emplace_after(last_quad, quad.shader, quad.texture, &memoryResource);
+	}
+	last_quad->instances.push_back(TexturedQuad::Instance{
 		.transformation = quad.transformation,
 		.textureOffset = quad.textureOffset,
 		.textureScale = quad.textureScale,
 		.tintColor = quad.tintColor,
-	};
-	if (!quads.empty() && quads.back().shader == quad.shader && quads.back().texture == quad.texture) {
-		quads.back().instances.push_back(instance);
-	} else {
-		quads.emplace_back(quad.shader, quad.texture, &memoryResource).instances.push_back(instance);
-	}
+	});
 	return *this;
 }
 
@@ -116,15 +94,11 @@ RenderPass& RenderPass::draw(const TextInstance& text) {
 	assert(text.font);
 
 	const Texture* texture = &text.font->getAtlasTexture();
-
-	decltype(TexturedQuadInstances::instances)* instances = nullptr;
-	if (!quads.empty() && quads.back().shader == text.shader && quads.back().texture == texture) {
-		instances = &quads.back().instances;
-	} else {
-		instances = &quads.emplace_back(text.shader, texture, &memoryResource).instances;
+	if (quads.empty() || last_quad->shader != text.shader || last_quad->texture != texture) {
+		last_quad = quads.emplace_after(last_quad, text.shader, texture, &memoryResource);
 	}
 	for (const Font::ShapedText::ShapedGlyph& shapedGlyph : text.text.shapedGlyphs) {
-		instances->push_back({
+		last_quad->instances.push_back(TexturedQuad::Instance{
 			.transformation = glm::scale(glm::translate(glm::identity<glm::mat4>(), {text.position + shapedGlyph.offset, 0.0f}), {shapedGlyph.size, 1.0f}),
 			.textureOffset = shapedGlyph.textureOffset,
 			.textureScale = shapedGlyph.textureScale,

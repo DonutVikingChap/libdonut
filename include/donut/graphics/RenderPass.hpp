@@ -12,10 +12,12 @@
 #include <donut/graphics/TexturedQuad.hpp>
 
 #include <array>                        // std::array
-#include <compare>                      // std::strong_ordering
 #include <cstddef>                      // std::byte, std::max_align_t
+#include <forward_list>                 // std::forward_list
 #include <glm/ext/matrix_transform.hpp> // glm::identity
 #include <glm/glm.hpp>                  // glm::...
+#include <map>                          // std::map
+#include <utility>                      // std::pair
 #include <vector>                       // std::vector
 
 namespace donut {
@@ -511,32 +513,24 @@ public:
 private:
 	friend Renderer;
 
-	struct ModelObjectInstancesFromModel {
-		using allocator_type = LinearAllocator<std::vector<Model::Object::Instance, LinearAllocator<Model::Object::Instance>>>;
+	struct ModelInstances {
+		struct Key {
+			struct Compare {
+				[[nodiscard]] constexpr bool operator()(const Key& a, const Key& b) const noexcept {
+					return (a.shader->options.orderIndex != b.shader->options.orderIndex) ? a.shader->options.orderIndex < b.shader->options.orderIndex : a.model < b.model;
+				}
+			};
 
-		Shader3D* shader;
-		const Model* model;
-		std::vector<std::vector<Model::Object::Instance, LinearAllocator<Model::Object::Instance>>, allocator_type> objectInstances;
+			Shader3D* shader;
+			const Model* model;
+		};
 
-		ModelObjectInstancesFromModel(ModelObjectInstancesFromModel&& other, const allocator_type& alloc) noexcept
-			: shader(other.shader)
-			, model(other.model)
-			, objectInstances(other.objectInstances.begin(), other.objectInstances.end(), alloc) {}
+		using allocator_type = LinearAllocator<Model::Object::Instance>;
 
-		ModelObjectInstancesFromModel(Shader3D* shader, const Model* model, const allocator_type& alloc)
-			: shader(shader)
-			, model(model)
-			, objectInstances(alloc) {}
+		std::vector<Model::Object::Instance, allocator_type> instances;
 
-		[[nodiscard]] std::strong_ordering operator<=>(const ModelObjectInstancesFromModel& other) const {
-			const std::strong_ordering shaderOrdering = shader->options.orderIndex <=> other.shader->options.orderIndex;
-			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : model <=> other.model;
-		}
-
-		[[nodiscard]] std::strong_ordering operator<=>(const ModelInstance& instance) const {
-			const std::strong_ordering shaderOrdering = shader->options.orderIndex <=> instance.shader->options.orderIndex;
-			return (shaderOrdering != std::strong_ordering::equal) ? shaderOrdering : model <=> instance.model;
-		}
+		explicit ModelInstances(const allocator_type& alloc)
+			: instances(alloc) {}
 	};
 
 	struct TexturedQuadInstances {
@@ -546,11 +540,6 @@ private:
 		const Texture* texture;
 		std::vector<TexturedQuad::Instance, allocator_type> instances;
 
-		TexturedQuadInstances(TexturedQuadInstances&& other, const allocator_type& alloc) noexcept
-			: shader(other.shader)
-			, texture(other.texture)
-			, instances(other.instances.begin(), other.instances.end(), alloc) {}
-
 		TexturedQuadInstances(Shader2D* shader, const Texture* texture, const allocator_type& alloc)
 			: shader(shader)
 			, texture(texture)
@@ -559,8 +548,9 @@ private:
 
 	alignas(std::max_align_t) std::array<std::byte, 1024> initialMemory;
 	LinearMemoryResource memoryResource{initialMemory};
-	std::vector<ModelObjectInstancesFromModel, LinearAllocator<ModelObjectInstancesFromModel>> objectsSortedByShaderAndModel{&memoryResource};
-	std::vector<TexturedQuadInstances, LinearAllocator<TexturedQuadInstances>> quads{&memoryResource};
+	std::map<ModelInstances::Key, ModelInstances, ModelInstances::Key::Compare, LinearAllocator<std::pair<const ModelInstances::Key, ModelInstances>>> models{&memoryResource};
+	std::forward_list<TexturedQuadInstances, LinearAllocator<TexturedQuadInstances>> quads{&memoryResource};
+	decltype(quads)::iterator last_quad = quads.before_begin();
 };
 
 } // namespace graphics

@@ -93,11 +93,8 @@ void useShader(Shader2D& shader, const glm::mat4& projectionViewMatrix) {
 	glUniform1i(shader.textureUnit.getLocation(), TexturedQuad::TEXTURE_UNIT);
 }
 
-void renderModelObjectInstances(Shader3D& shader, std::span<const Model::Object> objects, const auto& objectInstances) {
-	assert(objects.size() == objectInstances.size());
-	for (std::size_t i = 0; i < objects.size(); ++i) {
-		const Model::Object& object = objects[i];
-
+void renderModelInstances(Shader3D& shader, std::span<const Model::Object> objects, std::span<const Model::Object::Instance> instances) {
+	for (const Model::Object& object : objects) {
 		glBindVertexArray(object.mesh.get());
 		glBindBuffer(GL_ARRAY_BUFFER, object.mesh.getInstanceBuffer());
 
@@ -112,7 +109,6 @@ void renderModelObjectInstances(Shader3D& shader, std::span<const Model::Object>
 
 		glUniform1f(shader.specularExponent.getLocation(), object.material.specularExponent);
 
-		const auto& instances = objectInstances[i];
 		glBufferData(
 			GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(instances.size() * sizeof(Model::Object::Instance)), instances.data(), static_cast<GLenum>(Model::Object::INSTANCES_USAGE));
 		glDrawElementsInstanced(static_cast<GLenum>(Model::Object::PRIMITIVE_TYPE),
@@ -181,23 +177,14 @@ void Renderer::render( // NOLINT(readability-make-member-function-const)
 	// Render 3D objects.
 	{
 		// Render models.
-		if (!renderPass.objectsSortedByShaderAndModel.empty()) {
-			const RenderPass::ModelObjectInstancesFromModel& firstModels = renderPass.objectsSortedByShaderAndModel.front();
-
-			Shader3D* shader = firstModels.shader;
-			useShader(*shader, projectionViewMatrix);
-
-			const Model* model = firstModels.model;
-			renderModelObjectInstances(*shader, model->objects, firstModels.objectInstances);
-
-			for (const RenderPass::ModelObjectInstancesFromModel& models : std::span{renderPass.objectsSortedByShaderAndModel}.subspan(1)) {
-				if (shader != models.shader) {
-					shader = models.shader;
-					useShader(*shader, projectionViewMatrix);
-				}
-
-				renderModelObjectInstances(*shader, models.model->objects, models.objectInstances);
+		Shader3D* shader = nullptr;
+		for (const auto& [key, model] : renderPass.models) {
+			if (shader != key.shader) {
+				shader = key.shader;
+				useShader(*shader, projectionViewMatrix);
 			}
+
+			renderModelInstances(*shader, key.model->objects, model.instances);
 		}
 	}
 
@@ -209,30 +196,20 @@ void Renderer::render( // NOLINT(readability-make-member-function-const)
 		glActiveTexture(GL_TEXTURE0 + TexturedQuad::TEXTURE_UNIT);
 
 		// Render quads.
-		if (!renderPass.quads.empty()) {
-			const RenderPass::TexturedQuadInstances& firstQuads = renderPass.quads.front();
-
-			Shader2D* shader = firstQuads.shader;
-			useShader(*shader, projectionViewMatrix);
-
-			const Texture* texture = firstQuads.texture;
-			glBindTexture(GL_TEXTURE_2D, texture->get());
-
-			renderTexturedQuadInstances(firstQuads.instances);
-
-			for (const RenderPass::TexturedQuadInstances& quads : std::span{renderPass.quads}.subspan(1)) {
-				if (shader != quads.shader) {
-					shader = quads.shader;
-					useShader(*shader, projectionViewMatrix);
-				}
-
-				if (texture != quads.texture) {
-					texture = quads.texture;
-					glBindTexture(GL_TEXTURE_2D, texture->get());
-				}
-
-				renderTexturedQuadInstances(quads.instances);
+		Shader2D* shader = nullptr;
+		const Texture* texture = nullptr;
+		for (const RenderPass::TexturedQuadInstances& quad : renderPass.quads) {
+			if (shader != quad.shader) {
+				shader = quad.shader;
+				useShader(*shader, projectionViewMatrix);
 			}
+
+			if (texture != quad.texture) {
+				texture = quad.texture;
+				glBindTexture(GL_TEXTURE_2D, texture->get());
+			}
+
+			renderTexturedQuadInstances(quad.instances);
 		}
 	}
 }
