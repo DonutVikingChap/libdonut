@@ -588,12 +588,14 @@ void InputManager::setControllerLeftStickPosition(glm::vec2 position) noexcept {
 	const glm::vec2 oldPosition = controllerLeftStickPosition.value_or(glm::vec2{0.0f, 0.0f});
 	const float oldLength = glm::length(oldPosition);
 	const float length = glm::length(position);
-	const glm::vec2 oldAdjustedPosition = (oldLength > controllerLeftStickDeadzone) ?
-		oldPosition * (controllerLeftStickSensitivity * ((oldLength - controllerLeftStickDeadzone) / (oldLength * (1.0f - controllerLeftStickDeadzone)))) :
-		glm::vec2{0.0f, 0.0f};
-	const glm::vec2 adjustedPosition = (length > controllerLeftStickDeadzone) ?
-		position * (controllerLeftStickSensitivity * ((length - controllerLeftStickDeadzone) / (length * (1.0f - controllerLeftStickDeadzone)))) :
-		glm::vec2{0.0f, 0.0f};
+	const glm::vec2 oldAdjustedPosition =
+		(oldLength > controllerLeftStickDeadzone)
+			? oldPosition * (controllerLeftStickSensitivity * ((oldLength - controllerLeftStickDeadzone) / (oldLength * (1.0f - controllerLeftStickDeadzone))))
+			: glm::vec2{0.0f, 0.0f};
+	const glm::vec2 adjustedPosition =
+		(length > controllerLeftStickDeadzone)
+			? position * (controllerLeftStickSensitivity * ((length - controllerLeftStickDeadzone) / (length * (1.0f - controllerLeftStickDeadzone))))
+			: glm::vec2{0.0f, 0.0f};
 	const glm::i32vec2 oldIntegerPosition{getIntegerValue(oldAdjustedPosition.x), getIntegerValue(oldAdjustedPosition.y)};
 	const glm::i32vec2 integerPosition{getIntegerValue(adjustedPosition.x), getIntegerValue(adjustedPosition.y)};
 	const glm::i32vec2 offset = integerPosition - oldIntegerPosition;
@@ -638,12 +640,14 @@ void InputManager::setControllerRightStickPosition(glm::vec2 position) noexcept 
 	const glm::vec2 oldPosition = controllerRightStickPosition.value_or(glm::vec2{0.0f, 0.0f});
 	const float oldLength = glm::length(oldPosition);
 	const float length = glm::length(position);
-	const glm::vec2 oldAdjustedPosition = (oldLength > controllerRightStickDeadzone) ?
-		oldPosition * (controllerRightStickSensitivity * ((oldLength - controllerRightStickDeadzone) / (oldLength * (1.0f - controllerRightStickDeadzone)))) :
-		glm::vec2{0.0f, 0.0f};
-	const glm::vec2 adjustedPosition = (length > controllerRightStickDeadzone) ?
-		position * (controllerRightStickSensitivity * ((length - controllerRightStickDeadzone) / (length * (1.0f - controllerRightStickDeadzone)))) :
-		glm::vec2{0.0f, 0.0f};
+	const glm::vec2 oldAdjustedPosition =
+		(oldLength > controllerRightStickDeadzone)
+			? oldPosition * (controllerRightStickSensitivity * ((oldLength - controllerRightStickDeadzone) / (oldLength * (1.0f - controllerRightStickDeadzone))))
+			: glm::vec2{0.0f, 0.0f};
+	const glm::vec2 adjustedPosition =
+		(length > controllerRightStickDeadzone)
+			? position * (controllerRightStickSensitivity * ((length - controllerRightStickDeadzone) / (length * (1.0f - controllerRightStickDeadzone))))
+			: glm::vec2{0.0f, 0.0f};
 	const glm::i32vec2 oldIntegerPosition{getIntegerValue(oldAdjustedPosition.x), getIntegerValue(oldAdjustedPosition.y)};
 	const glm::i32vec2 integerPosition{getIntegerValue(adjustedPosition.x), getIntegerValue(adjustedPosition.y)};
 	const glm::i32vec2 offset = integerPosition - oldIntegerPosition;

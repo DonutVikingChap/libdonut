@@ -260,11 +260,11 @@ void Application::runFrame() {
 	}
 }
 
-Application::PhysFSManager::PhysFSManager(
-	const char* programFilepath, const char* organizationName, const char* applicationName, const char* dataDirectoryFilepath, const char* archiveFilenameExtension) {
+Application::PhysFSManager::PhysFSManager(const char* programFilepath, const char* organizationName, const char* applicationName, const char* dataDirectoryFilepath,
+	const char* archiveFilenameExtension) {
 	struct Context {
-		[[nodiscard]] Context(
-			const char* programFilepath, const char* organizationName, const char* applicationName, const char* dataDirectoryFilepath, const char* archiveFilenameExtension) {
+		[[nodiscard]] Context(const char* programFilepath, const char* organizationName, const char* applicationName, const char* dataDirectoryFilepath,
+			const char* archiveFilenameExtension) {
 			if (PHYSFS_init(programFilepath) == 0) {
 				throw Error{fmt::format("Failed to initialize PhysicsFS: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 			}

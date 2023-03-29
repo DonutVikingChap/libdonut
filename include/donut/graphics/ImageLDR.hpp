@@ -230,12 +230,11 @@ public:
 	 *       gamma value of 2.2.
 	 */
 	explicit ImageLDR(const char* filepath, const ImageLDROptions& options = {})
-		: Image(filepath,
-			  {
-				  .desiredChannelCount = options.desiredChannelCount,
-				  .highDynamicRange = false,
-				  .flipVertically = options.flipVertically,
-			  }) {}
+		: Image(filepath, {
+							  .desiredChannelCount = options.desiredChannelCount,
+							  .highDynamicRange = false,
+							  .flipVertically = options.flipVertically,
+						  }) {}
 
 	/**
 	 * Construct an image copied from a contiguous 2D range of pixels where each

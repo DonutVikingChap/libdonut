@@ -137,12 +137,11 @@ public:
 	 *       value of 2.2.
 	 */
 	explicit ImageHDR(const char* filepath, const ImageHDROptions& options = {})
-		: Image(filepath,
-			  {
-				  .desiredChannelCount = options.desiredChannelCount,
-				  .highDynamicRange = true,
-				  .flipVertically = options.flipVertically,
-			  }) {}
+		: Image(filepath, {
+							  .desiredChannelCount = options.desiredChannelCount,
+							  .highDynamicRange = true,
+							  .flipVertically = options.flipVertically,
+						  }) {}
 
 	/**
 	 * Construct an image copied from a contiguous 2D range of pixels where each

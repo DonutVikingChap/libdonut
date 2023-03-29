@@ -33,8 +33,8 @@ namespace json {
 namespace detail {
 
 template <typename T>
-concept number = std::is_arithmetic_v<T> && !std::is_same_v<T, bool> && !std::is_same_v<T, char> && !std::is_same_v<T, char8_t> && !std::is_same_v<T, char16_t> &&
-	!std::is_same_v<T, char32_t> && !std::is_same_v<T, wchar_t>;
+concept number = std::is_arithmetic_v<T> && !
+std::is_same_v<T, bool> && !std::is_same_v<T, char> && !std::is_same_v<T, char8_t> && !std::is_same_v<T, char16_t> && !std::is_same_v<T, char32_t> && !std::is_same_v<T, wchar_t>;
 
 } // namespace detail
 
@@ -572,8 +572,8 @@ class Lexer {
 public:
 	[[nodiscard]] constexpr bool isWhitespaceCharacter(char32_t codePoint) noexcept {
 		return codePoint == '\t' || codePoint == '\n' || codePoint == '\v' || codePoint == '\f' || codePoint == '\r' || codePoint == ' ' || codePoint == 0x00A0 ||
-			codePoint == 0x1680 || (codePoint >= 0x2000 && codePoint <= 0x200A) || codePoint == 0x2028 || codePoint == 0x2029 || codePoint == 0x202F || codePoint == 0x205F ||
-			codePoint == 0x3000 || codePoint == 0xFEFF;
+		       codePoint == 0x1680 || (codePoint >= 0x2000 && codePoint <= 0x200A) || codePoint == 0x2028 || codePoint == 0x2029 || codePoint == 0x202F || codePoint == 0x205F ||
+		       codePoint == 0x3000 || codePoint == 0xFEFF;
 	}
 
 	[[nodiscard]] constexpr bool isPunctuationCharacter(char32_t codePoint) noexcept {
@@ -1289,79 +1289,86 @@ inline void deserialize(std::istream& stream, T& value, const DeserializationOpt
 namespace detail {
 
 template <typename T>
-concept nullable = !std::is_arithmetic_v<T> && requires(const T& value) {
-	static_cast<bool>(value);
-	static_cast<bool>(!value);
-	T{};
-};
+concept nullable = //
+	!
+std::is_arithmetic_v<T>&& //
+	requires(const T& value) {
+		static_cast<bool>(value);
+		static_cast<bool>(!value);
+		T{};
+	};
 
 template <typename T>
-concept serializable_as_string = std::is_same_v<T, String> || requires(const T& value) {
-	std::string_view{value};
-} || requires(const T& value) {
-	std::u8string_view{value};
-} || requires(const T& value) {
-	std::u16string_view{value};
-} || requires(const T& value) {
-	std::u32string_view{value};
-} || requires(const T& value) {
-	std::wstring_view{value};
-};
+concept serializable_as_string =                                //
+	std::is_same_v<T, String> ||                                //
+	requires(const T& value) { std::string_view{value}; } ||    //
+	requires(const T& value) { std::u8string_view{value}; } ||  //
+	requires(const T& value) { std::u16string_view{value}; } || //
+	requires(const T& value) { std::u32string_view{value}; } || //
+	requires(const T& value) { std::wstring_view{value}; };
 
 template <typename T>
-concept deserializable_as_string = std::is_same_v<T, String> || requires(T& value) {
-	value = std::string{};
-} || requires(T& value) {
-	value = std::u8string{};
-} || requires(T& value) {
-	value = std::u16string{};
-} || requires(T& value) {
-	value = std::u32string{};
-} || requires(T& value) {
-	value = std::wstring{};
-};
+concept deserializable_as_string =                      //
+	std::is_same_v<T, String> ||                        //
+	requires(T& value) { value = std::string{}; } ||    //
+	requires(T& value) { value = std::u8string{}; } ||  //
+	requires(T& value) { value = std::u16string{}; } || //
+	requires(T& value) { value = std::u32string{}; } || //
+	requires(T& value) { value = std::wstring{}; };
 
 template <typename T>
-concept serializable_as_object = std::is_same_v<T, Object> || requires(SerializationState& state, const T& value) {
-	state.writeString(std::begin(value)->first);
-	state.serialize(std::begin(value)->second);
-};
+concept serializable_as_object = //
+	std::is_same_v<T, Object> || //
+	requires(SerializationState& state, const T& value) {
+		state.writeString(std::begin(value)->first);
+		state.serialize(std::begin(value)->second);
+	};
 
 template <typename T>
-concept deserializable_as_object = std::is_same_v<T, Object> || requires(DeserializationState& state, T& value) {
-	value.clear();
-	std::remove_cvref_t<decltype(std::begin(value)->first)>{};
-	std::remove_cvref_t<decltype(std::begin(value)->second)>{};
-	state.readString(std::begin(value)->first);
-	state.deserialize(std::begin(value)->second);
-	value.emplace(std::remove_cvref_t<decltype(std::begin(value)->first)>{}, std::remove_cvref_t<decltype(std::begin(value)->second)>{});
-};
+concept deserializable_as_object = //
+	std::is_same_v<T, Object> ||   //
+	requires(DeserializationState& state, T& value) {
+		value.clear();
+		std::remove_cvref_t<decltype(std::begin(value)->first)>{};
+		std::remove_cvref_t<decltype(std::begin(value)->second)>{};
+		state.readString(std::begin(value)->first);
+		state.deserialize(std::begin(value)->second);
+		value.emplace(std::remove_cvref_t<decltype(std::begin(value)->first)>{}, std::remove_cvref_t<decltype(std::begin(value)->second)>{});
+	};
 
 template <typename T>
-concept serializable_as_array = std::is_same_v<T, Array> || requires(SerializationState& state, const T& value) {
-	state.serialize(*std::begin(value));
-};
+concept serializable_as_array = //
+	std::is_same_v<T, Array> || //
+	requires(SerializationState& state, const T& value) { state.serialize(*std::begin(value)); };
 
 template <typename T>
-concept deserializable_as_array = std::is_same_v<T, Array> || requires(DeserializationState& state, T& value) {
-	value.clear();
-	std::remove_cvref_t<decltype(*std::begin(value))>{};
-	state.deserialize(*std::begin(value));
-	value.push_back(std::remove_cvref_t<decltype(*std::begin(value))>{});
-};
+concept deserializable_as_array = //
+	std::is_same_v<T, Array> ||   //
+	requires(DeserializationState& state, T& value) {
+		value.clear();
+		std::remove_cvref_t<decltype(*std::begin(value))>{};
+		state.deserialize(*std::begin(value));
+		value.push_back(std::remove_cvref_t<decltype(*std::begin(value))>{});
+	};
 
 template <typename T>
-concept serializable_as_optional = !std::is_pointer_v<T> && requires(SerializationState & state, const T& value) {
-	static_cast<bool>(value);
-	state.serialize(*value);
-};
+concept serializable_as_optional = //
+	!
+std::is_pointer_v<T>&& //
+	requires(SerializationState& state, const T& value) {
+		static_cast<bool>(value);
+		state.serialize(*value);
+	};
 
 template <typename T>
-concept deserializable_as_optional = !std::is_pointer_v<T> && requires(DeserializationState & state, T& value) {
-	value = T{};
-	value = std::remove_cvref_t<decltype(*value)>{};
-	state.deserialize(*value);
-};
+concept deserializable_as_optional = //
+	!
+std::is_pointer_v<T>&& //
+	requires(DeserializationState& state, T& value) {
+		value = T{};
+		value = std::remove_cvref_t<decltype(*value)>{};
+		state.deserialize(*value);
+	};
 
 template <typename T>
 inline constexpr bool always_false_v = false;
@@ -1378,8 +1385,8 @@ inline std::size_t getRecursiveSize(const T& value) {
 				return 1;
 			}
 		}
-		return std::accumulate(
-			std::begin(value), std::end(value), std::size_t{1}, [](std::size_t count, const auto& kv) -> std::size_t { return count + getRecursiveSize(kv.second); });
+		return std::accumulate(std::begin(value), std::end(value), std::size_t{1},
+			[](std::size_t count, const auto& kv) -> std::size_t { return count + getRecursiveSize(kv.second); });
 	} else if constexpr (serializable_as_array<T>) {
 		if constexpr (nullable<T>) {
 			if (!value) {

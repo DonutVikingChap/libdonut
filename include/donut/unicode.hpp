@@ -257,7 +257,7 @@ private:
  * \tparam Sentinel sentinel type for It.
  */
 template <typename It, typename Sentinel>
-requires std::is_same_v<typename std::iterator_traits<It>::iterator_category, std::input_iterator_tag>
+requires std::is_same_v<typename std::iterator_traits<It>::iterator_category, std::input_iterator_tag> //
 class UTF8Iterator<It, Sentinel> {
 public:
 	using difference_type = std::ptrdiff_t;

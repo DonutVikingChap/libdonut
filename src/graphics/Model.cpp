@@ -118,7 +118,7 @@ void loadObjScene(Model& output, const obj::Scene& scene) {
 	struct FaceVertexHash {
 		[[nodiscard]] std::size_t operator()(const obj::FaceVertex& faceVertex) const {
 			return (std::hash<std::uint32_t>{}(faceVertex.vertexIndex) ^ (std::hash<std::uint32_t>{}(faceVertex.textureCoordinateIndex) << 1) >> 1) ^
-				(std::hash<std::uint32_t>{}(faceVertex.normalIndex) << 1);
+			       (std::hash<std::uint32_t>{}(faceVertex.normalIndex) << 1);
 		}
 	};
 
@@ -150,9 +150,9 @@ void loadObjScene(Model& output, const obj::Scene& scene) {
 									.normal = (faceVertex.normalIndex < scene.normals.size()) ? scene.normals[faceVertex.normalIndex] : glm::vec3{0.0f, 0.0f, 0.0f},
 									.tangent{},
 									.bitangent{},
-									.textureCoordinates = (faceVertex.textureCoordinateIndex < scene.textureCoordinates.size()) ?
-										scene.textureCoordinates[faceVertex.textureCoordinateIndex] :
-										glm::vec2{0.0f, 0.0f},
+									.textureCoordinates = (faceVertex.textureCoordinateIndex < scene.textureCoordinates.size())
+								                              ? scene.textureCoordinates[faceVertex.textureCoordinateIndex]
+								                              : glm::vec2{0.0f, 0.0f},
 								});
 							} else {
 								vertexIndex = it->second;
@@ -171,8 +171,7 @@ void loadObjScene(Model& output, const obj::Scene& scene) {
 			Model::Object::Material groupMaterial{.diffuseMap{}, .specularMap{}, .normalMap{}, .specularExponent = 0.0f};
 			if (!group.materialName.empty()) {
 				for (const obj::mtl::Library& materialLibrary : materialLibraries) {
-					if (const auto it = std::find_if(materialLibrary.materials.begin(),
-							materialLibrary.materials.end(),
+					if (const auto it = std::find_if(materialLibrary.materials.begin(), materialLibrary.materials.end(),
 							[&](const obj::mtl::Material& material) -> bool { return material.name == group.materialName; });
 						it != materialLibrary.materials.end()) {
 						const obj::mtl::Material& material = *it;

@@ -619,8 +619,8 @@ private:
 	void runFrame();
 
 	struct PhysFSManager {
-		PhysFSManager(
-			const char* programFilepath, const char* organizationName, const char* applicationName, const char* dataDirectoryFilepath, const char* archiveFilenameExtension);
+		PhysFSManager(const char* programFilepath, const char* organizationName, const char* applicationName, const char* dataDirectoryFilepath,
+			const char* archiveFilenameExtension);
 	};
 
 	struct SDLManager {

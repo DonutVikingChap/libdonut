@@ -260,8 +260,8 @@ private:
 		}
 		++it;
 		const std::int64_t textureCoordinateIndex = parseSignedInteger<std::int64_t>();
-		result.textureCoordinateIndex = static_cast<std::uint32_t>(
-			(textureCoordinateIndex < 0) ? static_cast<std::int64_t>(textureCoordinateCount) + textureCoordinateIndex : textureCoordinateIndex - 1);
+		result.textureCoordinateIndex =
+			static_cast<std::uint32_t>((textureCoordinateIndex < 0) ? static_cast<std::int64_t>(textureCoordinateCount) + textureCoordinateIndex : textureCoordinateIndex - 1);
 		if (it == end || *it != '/') {
 			return result;
 		}

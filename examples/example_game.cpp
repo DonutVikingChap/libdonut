@@ -514,8 +514,7 @@ private:
 
 		renderPass.draw(gfx::TextInstance{
 			.font = &mainFont,
-			.text = mainFont.shapeText(renderer,
-				8,
+			.text = mainFont.shapeText(renderer, 8,
 				u8"The quick brown fox\n"
 				"jumps over the lazy dog\n"
 				"\n"
@@ -531,14 +530,9 @@ private:
 
 		renderPass.draw(gfx::TextInstance{
 			.font = &mainFont,
-			.text = mainFont.shapeText(renderer,
-				8,
-				fmt::format("Position:\n({:.2f}, {:.2f}, {:.2f})\n\nScale:\n({:.2f}, {:.2f})",
-					carrotCakeDisplayPosition.x,
-					carrotCakeDisplayPosition.y,
-					carrotCakeDisplayPosition.z,
-					carrotCakeScale.x,
-					carrotCakeScale.y)),
+			.text = mainFont.shapeText(renderer, 8,
+				fmt::format("Position:\n({:.2f}, {:.2f}, {:.2f})\n\nScale:\n({:.2f}, {:.2f})", carrotCakeDisplayPosition.x, carrotCakeDisplayPosition.y,
+					carrotCakeDisplayPosition.z, carrotCakeScale.x, carrotCakeScale.y)),
 			.position{410.0f, 310.0f},
 		});
 
@@ -570,8 +564,8 @@ private:
 
 		renderPass.draw(gfx::TextInstance{
 			.font = &mainFont,
-			.text = mainFont.shapeText(
-				renderer, 8, fmt::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", timerA.getTime(), counterA, timerB.getTime(), counterB)),
+			.text = mainFont.shapeText(renderer, 8,
+				fmt::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", timerA.getTime(), counterA, timerB.getTime(), counterB)),
 			.position{410.0f, 240.0f},
 		});
 

@@ -39,18 +39,18 @@ void Texture::createSharedTextures() {
 		constexpr std::array<std::byte, 4> GRAY_PIXEL_R8G8B8A8_UNORM{std::byte{128}, std::byte{128}, std::byte{128}, std::byte{255}};
 		constexpr std::array<std::byte, 3> NORMAL_PIXEL_R8G8B8_UNORM{std::byte{128}, std::byte{128}, std::byte{255}};
 		constexpr TextureOptions PIXEL_TEXTURE_OPTIONS{.repeat = true, .useLinearFiltering = false, .useMipmap = false};
-		std::construct_at(
-			whiteR8G8B8A8Srgb1x1, TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, WHITE_PIXEL_R8G8B8A8_SRGB.data(), PIXEL_TEXTURE_OPTIONS);
+		std::construct_at(whiteR8G8B8A8Srgb1x1, TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, WHITE_PIXEL_R8G8B8A8_SRGB.data(),
+			PIXEL_TEXTURE_OPTIONS);
 		try {
-			std::construct_at(
-				grayR8G8B8A8Unorm1x1, TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, GRAY_PIXEL_R8G8B8A8_UNORM.data(), PIXEL_TEXTURE_OPTIONS);
+			std::construct_at(grayR8G8B8A8Unorm1x1, TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, GRAY_PIXEL_R8G8B8A8_UNORM.data(),
+				PIXEL_TEXTURE_OPTIONS);
 		} catch (...) {
 			std::destroy_at(whiteR8G8B8A8Srgb1x1);
 			throw;
 		}
 		try {
-			std::construct_at(
-				normalR8G8B8Unorm1x1, TextureInternalFormat::RGB8, 1, 1, TextureFormat::RGB, TextureComponentType::U8, NORMAL_PIXEL_R8G8B8_UNORM.data(), PIXEL_TEXTURE_OPTIONS);
+			std::construct_at(normalR8G8B8Unorm1x1, TextureInternalFormat::RGB8, 1, 1, TextureFormat::RGB, TextureComponentType::U8, NORMAL_PIXEL_R8G8B8_UNORM.data(),
+				PIXEL_TEXTURE_OPTIONS);
 		} catch (...) {
 			std::destroy_at(grayR8G8B8A8Unorm1x1);
 			std::destroy_at(whiteR8G8B8A8Srgb1x1);
@@ -161,8 +161,8 @@ TextureInternalFormat Texture::getTexelFormatF32(std::size_t channelCount) {
 	throw Error{fmt::format("Invalid texture channel count \"{}\"!", channelCount)};
 }
 
-Texture::Texture(
-	TextureInternalFormat internalFormat, std::size_t width, std::size_t height, TextureFormat format, TextureComponentType type, const void* pixels, const TextureOptions& options)
+Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, TextureFormat format, TextureComponentType type, const void* pixels,
+	const TextureOptions& options)
 	: internalFormat(internalFormat)
 	, width(width)
 	, height(height) {
@@ -180,15 +180,8 @@ Texture::Texture(
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D, texture.get());
-	glTexImage2D(GL_TEXTURE_2D,
-		0,
-		static_cast<GLint>(internalFormat),
-		static_cast<GLsizei>(width),
-		static_cast<GLsizei>(height),
-		0,
-		static_cast<GLenum>(format),
-		static_cast<GLenum>(type),
-		pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(internalFormat), static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, static_cast<GLenum>(format),
+		static_cast<GLenum>(type), pixels);
 
 	setOptions2D(options);
 
@@ -215,16 +208,8 @@ Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::s
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, texture.get());
-	glTexImage3D(GL_TEXTURE_2D_ARRAY,
-		0,
-		static_cast<GLint>(internalFormat),
-		static_cast<GLsizei>(width),
-		static_cast<GLsizei>(height),
-		static_cast<GLsizei>(depth),
-		0,
-		static_cast<GLenum>(format),
-		static_cast<GLenum>(type),
-		pixels);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, static_cast<GLint>(internalFormat), static_cast<GLsizei>(width), static_cast<GLsizei>(height), static_cast<GLsizei>(depth), 0,
+		static_cast<GLenum>(format), static_cast<GLenum>(type), pixels);
 
 	setOptions2DArray(options);
 
@@ -301,15 +286,8 @@ void Texture::pasteImage2D(std::size_t width, std::size_t height, TextureFormat 
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D, texture.get());
-	glTexSubImage2D(GL_TEXTURE_2D,
-		0,
-		static_cast<GLint>(x),
-		static_cast<GLint>(y),
-		static_cast<GLsizei>(width),
-		static_cast<GLsizei>(height),
-		static_cast<GLenum>(format),
-		static_cast<GLenum>(type),
-		pixels);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(x), static_cast<GLint>(y), static_cast<GLsizei>(width), static_cast<GLsizei>(height), static_cast<GLenum>(format),
+		static_cast<GLenum>(type), pixels);
 
 	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(oldTextureBinding2D));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
@@ -323,8 +301,8 @@ void Texture::pasteImage2D(const ImageHDRView& image, std::size_t x, std::size_t
 	pasteImage2D(image.getWidth(), image.getHeight(), getPixelFormat(image.getChannelCount()), TextureComponentType::F32, image.getPixels(), x, y);
 }
 
-void Texture::pasteImage2DArray(
-	std::size_t width, std::size_t height, std::size_t depth, TextureFormat format, TextureComponentType type, const void* pixels, std::size_t x, std::size_t y, std::size_t z) {
+void Texture::pasteImage2DArray(std::size_t width, std::size_t height, std::size_t depth, TextureFormat format, TextureComponentType type, const void* pixels, std::size_t x,
+	std::size_t y, std::size_t z) {
 	GLint oldUnpackAlignment = 0;
 	GLint oldTextureBinding2DArray = 0;
 	glGetIntegerv(GL_UNPACK_ALIGNMENT, &oldUnpackAlignment);
@@ -332,17 +310,8 @@ void Texture::pasteImage2DArray(
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, texture.get());
-	glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-		0,
-		static_cast<GLint>(x),
-		static_cast<GLint>(y),
-		static_cast<GLint>(z),
-		static_cast<GLsizei>(width),
-		static_cast<GLsizei>(height),
-		static_cast<GLsizei>(depth),
-		static_cast<GLenum>(format),
-		static_cast<GLenum>(type),
-		pixels);
+	glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, static_cast<GLint>(x), static_cast<GLint>(y), static_cast<GLint>(z), static_cast<GLsizei>(width), static_cast<GLsizei>(height),
+		static_cast<GLsizei>(depth), static_cast<GLenum>(format), static_cast<GLenum>(type), pixels);
 
 	glBindTexture(GL_TEXTURE_2D_ARRAY, static_cast<GLuint>(oldTextureBinding2DArray));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
@@ -373,9 +342,7 @@ void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHe
 		if (backgroundColor) {
 			renderer.clearFramebufferColor(framebuffer, *backgroundColor);
 		}
-		renderer.render(framebuffer,
-			RenderPass{}.draw(TextureInstance{.texture = this}),
-			Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
+		renderer.render(framebuffer, RenderPass{}.draw(TextureInstance{.texture = this}), Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
 			glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
 	}
 	newTexture.setOptions2D(options);
@@ -387,9 +354,7 @@ Texture Texture::copy2D(Renderer& renderer) const {
 	{
 		Framebuffer framebuffer{};
 		const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(newTexture);
-		renderer.render(framebuffer,
-			RenderPass{}.draw(TextureInstance{.texture = this}),
-			Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
+		renderer.render(framebuffer, RenderPass{}.draw(TextureInstance{.texture = this}), Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
 			glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
 	}
 	newTexture.setOptions2D(options);

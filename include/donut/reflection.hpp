@@ -56,7 +56,7 @@ template <typename T> constexpr auto aggregateSizeImpl(AggregateSizeTag< 0>) -> 
 
 /// \cond
 template <typename T>
-requires std::is_aggregate_v<T>
+requires std::is_aggregate_v<T> //
 struct aggregate_size : std::integral_constant<std::size_t, detail::aggregateSizeImpl<T>(detail::AggregateSizeTag<26>{})> {};
 /// \endcond
 

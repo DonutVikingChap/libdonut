@@ -847,9 +847,7 @@ private:
 				}
 
 				const float halfQuadrantSize = quadrantSize * 0.5f;
-				forEachActiveQuadrant(node.subQuadrantIndices,
-					center,
-					halfQuadrantSize,
+				forEachActiveQuadrant(node.subQuadrantIndices, center, halfQuadrantSize,
 					[this, &predicate, quadrantSize = quadrantSize, halfQuadrantSize](TreeIndex quadrantIndex, glm::vec2 quadrantCenter) {
 						const AxisAlignedBox<2, float> looseBounds{quadrantCenter - glm::vec2{quadrantSize, quadrantSize}, quadrantCenter + glm::vec2{quadrantSize, quadrantSize}};
 						if (predicate(looseBounds)) {
@@ -869,8 +867,8 @@ private:
 
 	void cleanup(TreeIndex treeIndex) noexcept {
 		Quadrant* node = &tree[treeIndex];
-		while (
-			!node->element && std::all_of(node->subQuadrantIndices.begin(), node->subQuadrantIndices.end(), [](TreeIndex quadrantIndex) -> bool { return quadrantIndex == 0; })) {
+		while (!node->element &&
+			   std::all_of(node->subQuadrantIndices.begin(), node->subQuadrantIndices.end(), [](TreeIndex quadrantIndex) -> bool { return quadrantIndex == 0; })) {
 			if (treeIndex == 0) {
 				clear();
 				break;

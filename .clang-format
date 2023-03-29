@@ -5,11 +5,10 @@ AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignConsecutiveMacros: true
 AlignEscapedNewlines: DontAlign
-AlignOperands: false
+AlignOperands: Align
 AlignTrailingComments: true
 
-AllowAllArgumentsOnNextLine: true
-AllowAllConstructorInitializersOnNextLine: false
+AllowAllArgumentsOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true
@@ -22,7 +21,7 @@ AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: Yes
 
-BinPackArguments: false
+BinPackArguments: true
 BinPackParameters: true
 
 BreakBeforeBraces: Custom
@@ -39,13 +38,15 @@ BraceWrapping:
     AfterExternBlock: false
     BeforeCatch: false
     BeforeElse: false
+    BeforeLambdaBody: false
+    BeforeWhile: false
     IndentBraces: false
     SplitEmptyFunction: false
     SplitEmptyRecord: false
     SplitEmptyNamespace: true
 
 BreakBeforeBinaryOperators: None
-BreakBeforeTernaryOperators: false
+BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeComma
 BreakInheritanceList: BeforeComma
 BreakStringLiterals: true
@@ -56,9 +57,7 @@ CommentPragmas: ""
 
 CompactNamespaces: false
 
-ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ConstructorInitializerIndentWidth: 4
-
 ContinuationIndentWidth: 4
 
 Cpp11BracedListStyle: true
@@ -66,6 +65,9 @@ Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 
 DisableFormat: false
+
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: LogicalBlock
 
 FixNamespaceComments: true
 
@@ -87,8 +89,11 @@ IncludeIsMainRegex: "(_test)?$"
 
 IndentCaseLabels: true
 IndentPPDirectives: None
+IndentRequiresClause: false
 IndentWidth: 4
 IndentWrappedFunctionNames: false
+
+InsertBraces: true
 
 KeepEmptyLinesAtTheStartOfBlocks: false
 
@@ -103,18 +108,26 @@ NamespaceIndentation: None
 NamespaceMacros:
     - NAMESPACE
 
-PenaltyBreakAssignment: 100
+PackConstructorInitializers: Never
+
+PenaltyBreakAssignment: 10
 PenaltyBreakBeforeFirstCallParameter: 10
 PenaltyBreakComment: 10
 PenaltyBreakFirstLessLess: 100
+PenaltyBreakOpenParenthesis: 10
 PenaltyBreakString: 10
 PenaltyBreakTemplateDeclaration: 10000
 PenaltyExcessCharacter: 999999
+PenaltyIndentedWhitespace: 1
 PenaltyReturnTypeOnItsOwnLine: 10000
 
 PointerAlignment: Left
 
 ReflowComments: false
+
+RequiresClausePosition: SingleLine
+
+ShortNamespaceLines: 0
 
 SortIncludes: true
 SortUsingDeclarations: true
@@ -148,4 +161,4 @@ TypenameMacros:
     - LIST
     - LIST_ENTRY
 
-UseTab: ForContinuationAndIndentation
+UseTab: AlignWithSpaces

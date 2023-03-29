@@ -505,8 +505,8 @@ public:
 	 *          array to fit at the given position. Otherwise, the behavior is
 	 *          undefined.
 	 */
-	void pasteImage2DArray(
-		std::size_t width, std::size_t height, std::size_t depth, TextureFormat format, TextureComponentType type, const void* pixels, std::size_t x, std::size_t y, std::size_t z);
+	void pasteImage2DArray(std::size_t width, std::size_t height, std::size_t depth, TextureFormat format, TextureComponentType type, const void* pixels, std::size_t x,
+		std::size_t y, std::size_t z);
 
 	/**
 	 * Copy an LDR 2D image into the 2D array texture at a specific position.

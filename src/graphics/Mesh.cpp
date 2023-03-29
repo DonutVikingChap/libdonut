@@ -45,19 +45,12 @@ void vertexAttribDivisor(std::uint32_t index, std::uint32_t divisor) {
 }
 
 void vertexAttribPointerUint(std::uint32_t index, std::size_t count, std::size_t stride, std::uintptr_t offset) {
-	glVertexAttribIPointer(static_cast<GLuint>(index),
-		static_cast<GLint>(count),
-		GL_UNSIGNED_INT,
-		static_cast<GLsizei>(stride),
+	glVertexAttribIPointer(static_cast<GLuint>(index), static_cast<GLint>(count), GL_UNSIGNED_INT, static_cast<GLsizei>(stride),
 		reinterpret_cast<const void*>(offset)); // NOLINT(performance-no-int-to-ptr)
 }
 
 void vertexAttribPointerFloat(std::uint32_t index, std::size_t count, std::size_t stride, std::uintptr_t offset) {
-	glVertexAttribPointer(static_cast<GLuint>(index),
-		static_cast<GLint>(count),
-		GL_FLOAT,
-		GL_FALSE,
-		static_cast<GLsizei>(stride),
+	glVertexAttribPointer(static_cast<GLuint>(index), static_cast<GLint>(count), GL_FLOAT, GL_FALSE, static_cast<GLsizei>(stride),
 		reinterpret_cast<const void*>(offset)); // NOLINT(performance-no-int-to-ptr)
 }
 

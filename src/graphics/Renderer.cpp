@@ -37,11 +37,9 @@ void applyShaderConfiguration(const ShaderConfiguration& configuration) {
 		case StencilBufferMode::IGNORE: glDisable(GL_STENCIL_TEST); break;
 		case StencilBufferMode::USE_STENCIL_TEST:
 			glEnable(GL_STENCIL_TEST);
-			glStencilFunc(static_cast<GLenum>(configuration.stencilTestPredicate),
-				static_cast<GLint>(configuration.stencilTestReferenceValue),
+			glStencilFunc(static_cast<GLenum>(configuration.stencilTestPredicate), static_cast<GLint>(configuration.stencilTestReferenceValue),
 				static_cast<GLuint>(configuration.stencilTestMask));
-			glStencilOp(static_cast<GLenum>(configuration.stencilBufferOperationOnStencilTestFail),
-				static_cast<GLenum>(configuration.stencilBufferOperationOnDepthTestFail),
+			glStencilOp(static_cast<GLenum>(configuration.stencilBufferOperationOnStencilTestFail), static_cast<GLenum>(configuration.stencilBufferOperationOnDepthTestFail),
 				static_cast<GLenum>(configuration.stencilBufferOperationOnPass));
 			break;
 	}
@@ -77,21 +75,21 @@ void applyShaderConfiguration(const ShaderConfiguration& configuration) {
 void uploadShaderUniforms(ShaderProgram& program) {
 	for (const auto& [location, value] : program.getUniformUploadQueue()) {
 		const GLint loc = location;
-		match(value)( //
-			[loc](float v) -> void { glUniform1f(loc, v); },
-			[loc](glm::vec2 v) -> void { glUniform2f(loc, v.x, v.y); },
-			[loc](glm::vec3 v) -> void { glUniform3f(loc, v.x, v.y, v.z); },
-			[loc](glm::vec4 v) -> void { glUniform4f(loc, v.x, v.y, v.z, v.w); },
-			[loc](glm::i32 v) -> void { glUniform1i(loc, v); },
-			[loc](glm::i32vec2 v) -> void { glUniform2i(loc, v.x, v.y); },
-			[loc](glm::i32vec3 v) -> void { glUniform3i(loc, v.x, v.y, v.z); },
-			[loc](glm::i32vec4 v) -> void { glUniform4i(loc, v.x, v.y, v.z, v.w); },
-			[loc](glm::u32 v) -> void { glUniform1ui(loc, v); },
-			[loc](glm::u32vec2 v) -> void { glUniform2ui(loc, v.x, v.y); },
-			[loc](glm::u32vec3 v) -> void { glUniform3ui(loc, v.x, v.y, v.z); },
-			[loc](glm::u32vec4 v) -> void { glUniform4ui(loc, v.x, v.y, v.z, v.w); },
-			[loc](const glm::mat2& v) -> void { glUniformMatrix2fv(loc, 1, GL_FALSE, glm::value_ptr(v)); },
-			[loc](const glm::mat3& v) -> void { glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(v)); },
+		match(value)(                                                                                       //
+			[loc](float v) -> void { glUniform1f(loc, v); },                                                //
+			[loc](glm::vec2 v) -> void { glUniform2f(loc, v.x, v.y); },                                     //
+			[loc](glm::vec3 v) -> void { glUniform3f(loc, v.x, v.y, v.z); },                                //
+			[loc](glm::vec4 v) -> void { glUniform4f(loc, v.x, v.y, v.z, v.w); },                           //
+			[loc](glm::i32 v) -> void { glUniform1i(loc, v); },                                             //
+			[loc](glm::i32vec2 v) -> void { glUniform2i(loc, v.x, v.y); },                                  //
+			[loc](glm::i32vec3 v) -> void { glUniform3i(loc, v.x, v.y, v.z); },                             //
+			[loc](glm::i32vec4 v) -> void { glUniform4i(loc, v.x, v.y, v.z, v.w); },                        //
+			[loc](glm::u32 v) -> void { glUniform1ui(loc, v); },                                            //
+			[loc](glm::u32vec2 v) -> void { glUniform2ui(loc, v.x, v.y); },                                 //
+			[loc](glm::u32vec3 v) -> void { glUniform3ui(loc, v.x, v.y, v.z); },                            //
+			[loc](glm::u32vec4 v) -> void { glUniform4ui(loc, v.x, v.y, v.z, v.w); },                       //
+			[loc](const glm::mat2& v) -> void { glUniformMatrix2fv(loc, 1, GL_FALSE, glm::value_ptr(v)); }, //
+			[loc](const glm::mat3& v) -> void { glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(v)); }, //
 			[loc](const glm::mat4& v) -> void { glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(v)); });
 	}
 	program.clearUniformUploadQueue();
@@ -131,13 +129,10 @@ void renderModelInstances(Shader3D& shader, std::span<const Model::Object> objec
 
 		glUniform1f(shader.specularExponent.getLocation(), object.material.specularExponent);
 
-		glBufferData(
-			GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(instances.size() * sizeof(Model::Object::Instance)), instances.data(), static_cast<GLenum>(Model::Object::INSTANCES_USAGE));
-		glDrawElementsInstanced(static_cast<GLenum>(Model::Object::PRIMITIVE_TYPE),
-			static_cast<GLsizei>(object.indexCount),
-			static_cast<GLenum>(Model::Object::INDEX_TYPE),
-			nullptr,
-			static_cast<GLsizei>(instances.size()));
+		glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(instances.size() * sizeof(Model::Object::Instance)), instances.data(),
+			static_cast<GLenum>(Model::Object::INSTANCES_USAGE));
+		glDrawElementsInstanced(static_cast<GLenum>(Model::Object::PRIMITIVE_TYPE), static_cast<GLsizei>(object.indexCount), static_cast<GLenum>(Model::Object::INDEX_TYPE),
+			nullptr, static_cast<GLsizei>(instances.size()));
 	}
 }
 

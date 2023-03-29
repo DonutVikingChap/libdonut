@@ -93,8 +93,11 @@ std::string decode(std::string_view string) {
 		const unsigned char sextetB = DECODING_TABLE[static_cast<unsigned char>(string[i++])];
 		const unsigned char sextetC = DECODING_TABLE[static_cast<unsigned char>(string[i++])];
 		const unsigned char sextetD = DECODING_TABLE[static_cast<unsigned char>(string[i++])];
-		const std::uint32_t triple = (static_cast<std::uint32_t>(sextetA) << 3 * 6) + (static_cast<std::uint32_t>(sextetB) << 2 * 6) +
-			(static_cast<std::uint32_t>(sextetC) << 1 * 6) + (static_cast<std::uint32_t>(sextetD) << 0 * 6);
+		const std::uint32_t triple =                         //
+			(static_cast<std::uint32_t>(sextetA) << 3 * 6) + //
+			(static_cast<std::uint32_t>(sextetB) << 2 * 6) + //
+			(static_cast<std::uint32_t>(sextetC) << 1 * 6) + //
+			(static_cast<std::uint32_t>(sextetD) << 0 * 6);
 		if (result.size() < decodedSize) {
 			result.push_back(static_cast<char>((triple >> 2 * 8) & 0xFF));
 		}

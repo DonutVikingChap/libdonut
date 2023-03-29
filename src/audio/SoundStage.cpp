@@ -25,18 +25,8 @@ void SoundStage::update(float deltaTime, const SoundListener& listener) {
 
 	time += deltaTime;
 
-	soloud.set3dListenerParameters(listener.position.x,
-		listener.position.y,
-		listener.position.z,
-		listener.aimDirection.x,
-		listener.aimDirection.y,
-		listener.aimDirection.z,
-		listener.up.x,
-		listener.up.y,
-		listener.up.z,
-		listener.velocity.x,
-		listener.velocity.y,
-		listener.velocity.z);
+	soloud.set3dListenerParameters(listener.position.x, listener.position.y, listener.position.z, listener.aimDirection.x, listener.aimDirection.y, listener.aimDirection.z,
+		listener.up.x, listener.up.y, listener.up.z, listener.velocity.x, listener.velocity.y, listener.velocity.z);
 
 	soloud.update3dAudio();
 }
