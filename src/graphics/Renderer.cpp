@@ -2,9 +2,9 @@
 #include <donut/graphics/Framebuffer.hpp>
 #include <donut/graphics/Model.hpp>
 #include <donut/graphics/Renderer.hpp>
-#include <donut/graphics/Shader.hpp>
 #include <donut/graphics/Shader2D.hpp>
 #include <donut/graphics/Shader3D.hpp>
+#include <donut/graphics/ShaderProgram.hpp>
 #include <donut/graphics/SpriteAtlas.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>

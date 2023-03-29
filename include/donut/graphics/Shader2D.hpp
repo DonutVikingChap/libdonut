@@ -1,7 +1,8 @@
 #ifndef DONUT_GRAPHICS_SHADER_2D_HPP
 #define DONUT_GRAPHICS_SHADER_2D_HPP
 
-#include <donut/graphics/Shader.hpp>
+#include <donut/graphics/ShaderProgram.hpp>
+#include <donut/graphics/ShaderUniform.hpp>
 
 namespace donut {
 namespace graphics {

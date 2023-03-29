@@ -56,10 +56,12 @@ struct SpriteInstance;
 struct TextInstance;
 class RenderPass;
 
-enum class ShaderStageType : unsigned;
-class ShaderStage;
 struct ShaderProgramOptions;
 class ShaderProgram;
+
+enum class ShaderStageType : unsigned;
+class ShaderStage;
+
 class ShaderUniform;
 template <typename T, std::size_t N>
 class ShaderArray;
