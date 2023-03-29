@@ -1,6 +1,7 @@
 #ifndef DONUT_GRAPHICS_SHADER_2D_HPP
 #define DONUT_GRAPHICS_SHADER_2D_HPP
 
+#include <donut/graphics/ShaderConfiguration.hpp>
 #include <donut/graphics/ShaderProgram.hpp>
 #include <donut/graphics/ShaderUniform.hpp>
 
@@ -14,39 +15,13 @@ class Renderer; // Forward declaration, to avoid a circular include of Renderer.
  */
 struct Shader2DOptions {
 	/**
-	 * Write any new depth values to the depth buffer while ignoring the old
-	 * values.
+	 * Shader configuration options, see ShaderConfiguration.
 	 */
-	bool overwriteDepthBuffer = false;
-
-	/**
-	 * Perform a depth test against the depth buffer before rendering a fragment
-	 * in order to avoid 3D objects and faces being incorrectly rendered on top
-	 * of each other. If the new depth value is closer, it overrides the old
-	 * value in the depth buffer.
-	 *
-	 * \note This should typically be disabled for 2D shaders since all vertices
-	 *       on the z=0 plane share the same depth value.
-	 */
-	bool useDepthTest = false;
-
-	/**
-	 * Don't render primitives that are facing away from the viewer.
-	 *
-	 * The facing is determined by the winding order of the vertices on each
-	 * rendered primitive. A counter-clockwise winding represents a front-facing
-	 * primitive that is facing towards the viewer and should be rendered, while
-	 * a clockwise winding represents a back-facing primitive that is facing
-	 * away from the viewer and should not be rendered.
-	 */
-	bool useBackfaceCulling = false;
-
-	/**
-	 * Blend the old and new pixel colors depending on the alpha value of the
-	 * new pixel according to the standard "over" compositing operator for
-	 * transparency.
-	 */
-	bool useAlphaBlending = true;
+	ShaderConfiguration configuration{
+		.depthBufferMode = DepthBufferMode::IGNORE,
+		.faceCullingMode = FaceCullingMode::IGNORE,
+		.alphaMode = AlphaMode::USE_ALPHA_BLENDING,
+	};
 };
 
 /**

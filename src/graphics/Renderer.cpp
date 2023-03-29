@@ -4,6 +4,7 @@
 #include <donut/graphics/Renderer.hpp>
 #include <donut/graphics/Shader2D.hpp>
 #include <donut/graphics/Shader3D.hpp>
+#include <donut/graphics/ShaderConfiguration.hpp>
 #include <donut/graphics/ShaderProgram.hpp>
 #include <donut/graphics/SpriteAtlas.hpp>
 #include <donut/graphics/Texture.hpp>
@@ -23,32 +24,53 @@ namespace graphics {
 
 namespace {
 
-void applyShaderOptions(const auto& options) {
-	if (options.overwriteDepthBuffer) {
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_ALWAYS);
-	} else if (options.useDepthTest) {
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
-	} else {
-		glDisable(GL_DEPTH_TEST);
+void applyShaderConfiguration(const ShaderConfiguration& configuration) {
+	switch (configuration.depthBufferMode) {
+		case DepthBufferMode::IGNORE: glDisable(GL_DEPTH_TEST); break;
+		case DepthBufferMode::USE_DEPTH_TEST:
+			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(static_cast<GLenum>(configuration.depthTestPredicate));
+			break;
 	}
 
-	glDisable(GL_STENCIL_TEST);
-
-	if (options.useBackfaceCulling) {
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(GL_CCW);
-	} else {
-		glDisable(GL_CULL_FACE);
+	switch (configuration.stencilBufferMode) {
+		case StencilBufferMode::IGNORE: glDisable(GL_STENCIL_TEST); break;
+		case StencilBufferMode::USE_STENCIL_TEST:
+			glEnable(GL_STENCIL_TEST);
+			glStencilFunc(static_cast<GLenum>(configuration.stencilTestPredicate),
+				static_cast<GLint>(configuration.stencilTestReferenceValue),
+				static_cast<GLuint>(configuration.stencilTestMask));
+			glStencilOp(static_cast<GLenum>(configuration.stencilBufferOperationOnStencilTestFail),
+				static_cast<GLenum>(configuration.stencilBufferOperationOnDepthTestFail),
+				static_cast<GLenum>(configuration.stencilBufferOperationOnPass));
+			break;
 	}
 
-	if (options.useAlphaBlending) {
-		glEnable(GL_BLEND);
-		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	} else {
-		glDisable(GL_BLEND);
+	switch (configuration.faceCullingMode) {
+		case FaceCullingMode::IGNORE: glDisable(GL_CULL_FACE); break;
+		case FaceCullingMode::CULL_BACK_FACES:
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_BACK);
+			glFrontFace(static_cast<GLenum>(configuration.frontFace));
+			break;
+		case FaceCullingMode::CULL_FRONT_FACES:
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_FRONT);
+			glFrontFace(static_cast<GLenum>(configuration.frontFace));
+			break;
+		case FaceCullingMode::CULL_FRONT_AND_BACK_FACES:
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_FRONT_AND_BACK);
+			glFrontFace(static_cast<GLenum>(configuration.frontFace));
+			break;
+	}
+
+	switch (configuration.alphaMode) {
+		case AlphaMode::IGNORE: glDisable(GL_BLEND); break;
+		case AlphaMode::USE_ALPHA_BLENDING:
+			glEnable(GL_BLEND);
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			break;
 	}
 }
 
@@ -77,7 +99,7 @@ void uploadShaderUniforms(ShaderProgram& program) {
 
 void useShader(Shader3D& shader, const glm::mat4& projectionViewMatrix) {
 	glUseProgram(shader.program.get());
-	applyShaderOptions(shader.options);
+	applyShaderConfiguration(shader.options.configuration);
 	uploadShaderUniforms(shader.program);
 	glUniformMatrix4fv(shader.projectionViewMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(projectionViewMatrix));
 	glUniform1i(shader.diffuseMap.getLocation(), Model::Object::TEXTURE_UNIT_DIFFUSE);
@@ -87,7 +109,7 @@ void useShader(Shader3D& shader, const glm::mat4& projectionViewMatrix) {
 
 void useShader(Shader2D& shader, const glm::mat4& projectionViewMatrix) {
 	glUseProgram(shader.program.get());
-	applyShaderOptions(shader.options);
+	applyShaderConfiguration(shader.options.configuration);
 	uploadShaderUniforms(shader.program);
 	glUniformMatrix4fv(shader.projectionViewMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(projectionViewMatrix));
 	glUniform1i(shader.textureUnit.getLocation(), TexturedQuad::TEXTURE_UNIT);

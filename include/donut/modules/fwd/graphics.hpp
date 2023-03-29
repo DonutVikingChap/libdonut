@@ -56,6 +56,8 @@ struct SpriteInstance;
 struct TextInstance;
 class RenderPass;
 
+struct ShaderConfiguration;
+
 struct ShaderProgramOptions;
 class ShaderProgram;
 

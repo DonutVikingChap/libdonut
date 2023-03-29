@@ -94,6 +94,8 @@ public:
 	 *
 	 * \param other the handle to compare this handle to.
 	 *
+	 * \return true if the handles are equal, false otherwise.
+	 *
 	 * \note This does not compare the values of any associated resources. It
 	 *       only compares the values of the handles themselves.
 	 */

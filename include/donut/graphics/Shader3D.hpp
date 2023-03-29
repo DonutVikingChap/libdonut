@@ -1,6 +1,7 @@
 #ifndef DONUT_GRAPHICS_SHADER_3D_HPP
 #define DONUT_GRAPHICS_SHADER_3D_HPP
 
+#include <donut/graphics/ShaderConfiguration.hpp>
 #include <donut/graphics/ShaderProgram.hpp>
 #include <donut/graphics/ShaderUniform.hpp>
 
@@ -23,36 +24,9 @@ struct Shader3DOptions {
 	int orderIndex = 1;
 
 	/**
-	 * Write any new depth values to the depth buffer while ignoring the old
-	 * values.
+	 * Shader configuration options, see ShaderConfiguration.
 	 */
-	bool overwriteDepthBuffer = false;
-
-	/**
-	 * Perform a depth test against the depth buffer before rendering a fragment
-	 * in order to avoid 3D objects and faces being incorrectly rendered on top
-	 * of each other. If the new depth value is closer, it overrides the old
-	 * value in the depth buffer.
-	 */
-	bool useDepthTest = true;
-
-	/**
-	 * Don't render primitives that are facing away from the viewer.
-	 *
-	 * The facing is determined by the winding order of the vertices on each
-	 * rendered primitive. A counter-clockwise winding represents a front-facing
-	 * primitive that is facing towards the viewer and should be rendered, while
-	 * a clockwise winding represents a back-facing primitive that is facing
-	 * away from the viewer and should not be rendered.
-	 */
-	bool useBackfaceCulling = true;
-
-	/**
-	 * Blend the old and new pixel colors depending on the alpha value of the
-	 * new pixel according to the standard "over" compositing operator for
-	 * transparency.
-	 */
-	bool useAlphaBlending = false;
+	ShaderConfiguration configuration{};
 };
 
 /**
