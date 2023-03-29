@@ -26,8 +26,7 @@ The main API of libdonut is organized into the following modules, listed along w
 - [donut::graphics](@ref donut::graphics) - Graphics rendering module
     - [Font](@ref donut::graphics::Font) - Text shaping facility
     - [Framebuffer](@ref donut::graphics::Framebuffer) - Render target on the GPU
-    - [ImageHDR](@ref donut::graphics::ImageHDR) - High dynamic range image loading/saving
-    - [ImageLDR](@ref donut::graphics::ImageLDR) - Low dynamic range image loading/saving
+    - [Image](@ref donut::graphics::Image) - Image loading/saving
     - [Renderer](@ref donut::graphics::Renderer) - Rendering onto a framebuffer
     - [RenderPass](@ref donut::graphics::RenderPass) - Graphics drawing queue for batch rendering
     - [Model](@ref donut::graphics::Model) - Loading of 3D models

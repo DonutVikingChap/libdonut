@@ -187,7 +187,7 @@ struct RectangleInstance {
 	 * \warning The pointed-to texture must remain valid for the duration of its
 	 *          use in the RenderPass, and must not be nullptr.
 	 */
-	const Texture* texture = Texture::whiteR8G8B8A8Srgb1x1;
+	const Texture* texture = Texture::defaultWhite;
 
 	/**
 	 * Position, in world coordinates, to render the rectangle at, with respect
@@ -272,7 +272,7 @@ struct QuadInstance {
 	 * \warning The pointed-to texture must remain valid for the duration of its
 	 *          use in the RenderPass, and must not be nullptr.
 	 */
-	const Texture* texture = Texture::whiteR8G8B8A8Srgb1x1;
+	const Texture* texture = Texture::defaultWhite;
 
 	/**
 	 * Transformation matrix to apply to every corner of the quad, in world

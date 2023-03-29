@@ -3,21 +3,39 @@
 
 #include <donut/Resource.hpp>
 
-#include <cassert> // assert
-#include <cstddef> // std::size_t
-#include <utility> // std::move
+#include <cassert>  // assert
+#include <cstddef>  // std::size_t
+#include <cstdint>  // std::uint32_t
+#include <optional> // std::optional
+#include <utility>  // std::move
 
 namespace donut {
 namespace graphics {
 
 /**
- * Read-only non-owning view over a 2D image with any pixel format.
+ * Description of the number and meaning of the pixel component channels of an
+ * image.
+ */
+enum class PixelFormat : std::uint32_t {
+	R = 0x1903,    ///< Each pixel comprises 1 component: red. \hideinitializer
+	RG = 0x8227,   ///< Each pixel comprises 2 components: red, green. \hideinitializer
+	RGB = 0x1907,  ///< Each pixel comprises 3 components: red, green, blue. \hideinitializer
+	RGBA = 0x1908, ///< Each pixel comprises 4 components: red, green, blue, alpha. \hideinitializer
+};
+
+/**
+ * Description of the data type of the pixel components of an image.
+ */
+enum class PixelComponentType : std::uint32_t {
+	U8 = 0x1401,  ///< Each pixel component is an 8-bit unsigned integer. \hideinitializer
+	F16 = 0x140B, ///< Each pixel component is a 16-bit floating-point number. \hideinitializer
+	F32 = 0x1406, ///< Each pixel component is a 32-bit floating-point number. \hideinitializer
+};
+
+/**
+ * Read-only non-owning view over a 2D image.
  *
- * \sa ImageLDRView
- * \sa ImageHDRView
  * \sa Image
- * \sa ImageLDR
- * \sa ImageHDR
  */
 class ImageView {
 public:
@@ -29,21 +47,24 @@ public:
 	/**
 	 * Construct an image view over arbitrary 2D pixel data.
 	 *
-	 * \param pixels read-only non-owning pointer to the pixel data, or nullptr
-	 *        to create a view that doesn't reference an image.
 	 * \param width width of the image, in pixels. Must be 0 if pixels is
 	 *        nullptr.
 	 * \param height height of the image, in pixels. Must be 0 if pixels is
 	 *        nullptr.
-	 * \param channelCount number of components per pixel. Must be 0 if pixels
-	 *        is nullptr.
+	 * \param pixelFormat pixel format of the image. Must be PixelFormat::R if
+	 *        pixels is nullptr.
+	 * \param pixelComponentType pixel component data type of the image. Must be
+	 *        PixelComponentType::U8 if pixels is nullptr.
+	 * \param pixels read-only non-owning pointer to the pixel data, or nullptr
+	 *        to create a view that doesn't reference an image.
 	 */
-	constexpr ImageView(const void* pixels, std::size_t width, std::size_t height, std::size_t channelCount) noexcept
+	constexpr ImageView(std::size_t width, std::size_t height, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels) noexcept
 		: pixels(pixels)
 		, width(width)
 		, height(height)
-		, channelCount(channelCount) {
-		assert(pixels || (width == 0 && height == 0 && channelCount == 0));
+		, pixelFormat(pixelFormat)
+		, pixelComponentType(pixelComponentType) {
+		assert(pixels || (width == 0 && height == 0 && pixelFormat == PixelFormat::R && pixelComponentType == PixelComponentType::U8));
 	}
 
 	/**
@@ -56,30 +77,13 @@ public:
 	}
 
 	/**
-	 * Get the pixel data referenced by this view.
-	 *
-	 * \return an untyped read-only non-owning pointer to the pixel data, or
-	 *         nullptr if the view does not reference an image.
-	 *
-	 * \note The size and stride of the pixel data cannot be determined from the
-	 *       information stored in this view alone. The pixel format information
-	 *       must be implied through context or communicated through a separate
-	 *       channel to the user of this view. This is the purpose of the
-	 *       derived types ImageLDRView and ImageHDRView, which imply an 8-bit
-	 *       or floating-point component format, respectively.
-	 */
-	[[nodiscard]] constexpr const void* getPixels() const noexcept {
-		return pixels;
-	}
-
-	/**
 	 * Get the width of the image referenced by this view.
 	 *
 	 * \return the width of the image, in pixels, or 0 if the view does not
 	 *         reference an image.
 	 *
 	 * \sa getHeight()
-	 * \sa getChannelCount()
+	 * \sa getSizeInBytes()
 	 */
 	[[nodiscard]] constexpr std::size_t getWidth() const noexcept {
 		return width;
@@ -92,31 +96,221 @@ public:
 	 *         reference an image.
 	 *
 	 * \sa getWidth()
-	 * \sa getChannelCount()
+	 * \sa getSizeInBytes()
 	 */
 	[[nodiscard]] constexpr std::size_t getHeight() const noexcept {
 		return height;
 	}
 
 	/**
-	 * Get the number of components per pixel of the image referenced by
-	 * this view.
+	 * Get the pixel format of the image referenced by this view.
+	 *
+	 * \return the pixel format, or PixelFormat::R if the view does not
+	 *         reference an image.
+	 *
+	 * \sa getChannelCount()
+	 */
+	[[nodiscard]] constexpr PixelFormat getPixelFormat() const noexcept {
+		return pixelFormat;
+	}
+
+	/**
+	 * Get the pixel component type of the image referenced by this view.
+	 *
+	 * \return the pixel component type, or PixelComponentType::U8 if the view
+	 *         does not reference an image.
+	 *
+	 * \sa getPixelComponentSize()
+	 */
+	[[nodiscard]] constexpr PixelComponentType getPixelComponentType() const noexcept {
+		return pixelComponentType;
+	}
+
+	/**
+	 * Get the pixel data referenced by this view.
+	 *
+	 * The pixel data is tightly packed and fully contiguous, so the total size
+	 * of the image in bytes is:
+	 * ```
+	 * width * height * pixelSize
+	 * ```.
+	 *
+	 * The size of a single pixel, `pixelSize`, is
+	 * ```
+	 * pixelFormatChannelCount * pixelComponentTypeSize
+	 * ```
+	 * where `pixelFormatChannelCount` is the number of component channels in
+	 * the pixel format, and `pixelComponentTypeSize` is the size in bytes of a
+	 * single pixel component.
+	 *
+	 * The pixels are stored in row-major order, starting at the bottom left of
+	 * the image (unless the image is flipped).
+	 *
+	 * \return a read-only non-owning pointer to the pixel data, or nullptr if
+	 *         the view does not reference an image.
+	 *
+	 * \sa getWidth()
+	 * \sa getHeight()
+	 * \sa getPixelFormat()
+	 * \sa getPixelComponentType()
+	 */
+	[[nodiscard]] constexpr const void* getPixels() const noexcept {
+		return pixels;
+	}
+
+	/**
+	 * Get the number of component channels in the pixel format of the image
+	 * referenced by this view.
 	 *
 	 * \return the number of channels, or 0 if the view does not reference an
 	 *         image.
 	 *
-	 * \sa getWidth()
-	 * \sa getHeight()
+	 * \sa getPixelFormat()
+	 * \sa getPixelStride()
 	 */
 	[[nodiscard]] constexpr std::size_t getChannelCount() const noexcept {
-		return channelCount;
+		if (pixels) {
+			switch (pixelFormat) {
+				case PixelFormat::R: return 1;
+				case PixelFormat::RG: return 2;
+				case PixelFormat::RGB: return 3;
+				case PixelFormat::RGBA: return 4;
+			}
+		}
+		return 0;
+	}
+
+	/**
+	 * Get the size in bytes of a single component of a pixel in the image
+	 * referenced by this view.
+	 *
+	 * \return the size of the pixel component type, or 0 if the view does not
+	 *         reference an image.
+	 *
+	 * \sa getPixelComponentType()
+	 * \sa getPixelStride()
+	 */
+	[[nodiscard]] constexpr std::size_t getPixelComponentSize() const noexcept {
+		if (pixels) {
+			switch (pixelComponentType) {
+				case PixelComponentType::U8: return 1;
+				case PixelComponentType::F16: return 2;
+				case PixelComponentType::F32: return 4;
+			}
+		}
+		return 0;
+	}
+
+	/**
+	 * Get the stride in bytes of the pixels in the image referenced by this
+	 * view.
+	 *
+	 * \return the number of bytes to advance to get from one pixel to the next,
+	 *         or 0 if the view does not reference an image.
+	 *
+	 * \sa getChannelCount()
+	 * \sa getPixelComponentSize()
+	 * \sa getSizeInBytes()
+	 */
+	[[nodiscard]] constexpr std::size_t getPixelStride() const noexcept {
+		return getChannelCount() * getPixelComponentSize();
+	}
+
+	/**
+	 * Get the size in bytes of the image referenced by this view.
+	 *
+	 * \return the total size of the image, or 0 if the view does not reference
+	 *         an image.
+	 *
+	 * \sa getWidth()
+	 * \sa getHeight()
+	 * \sa getPixelStride()
+	 */
+	[[nodiscard]] constexpr std::size_t getSizeInBytes() const noexcept {
+		return getWidth() * getHeight() * getPixelStride();
 	}
 
 private:
 	const void* pixels = nullptr;
 	std::size_t width = 0;
 	std::size_t height = 0;
-	std::size_t channelCount = 0;
+	PixelFormat pixelFormat = PixelFormat::R;
+	PixelComponentType pixelComponentType = PixelComponentType::U8;
+};
+
+/**
+ * Options for saving an image in PNG format.
+ */
+struct ImageSavePNGOptions {
+	/**
+	 * PNG compression level.
+	 *
+	 * Use a higher value for a higher degree of compression and smaller file
+	 * size at the cost of encoding/decoding performance. The compression is
+	 * lossless.
+	 */
+	int compressionLevel = 8;
+
+	/**
+	 * Flip the saved image vertically.
+	 */
+	bool flipVertically = false;
+};
+
+/**
+ * Options for saving an image in Windows Bitmap format.
+ */
+struct ImageSaveBMPOptions {
+	/**
+	 * Flip the saved image vertically.
+	 */
+	bool flipVertically = false;
+};
+
+/**
+ * Options for saving an image in Truevision TARGA format.
+ */
+struct ImageSaveTGAOptions {
+	/**
+	 * Use run-length encoding to compress the image.
+	 *
+	 * This kind of compression works best for simple images with infrequent
+	 * changes in color. The compression is lossless.
+	 */
+	bool useRleCompression = true;
+
+	/**
+	 * Flip the saved image vertically.
+	 */
+	bool flipVertically = false;
+};
+
+/**
+ * Options for saving an image in JPEG format.
+ */
+struct ImageSaveJPGOptions {
+	/**
+	 * JPEG quality.
+	 *
+	 * Higher values yield better image quality but results in a larger file
+	 * size. The compression is lossy.
+	 */
+	int quality = 90;
+
+	/**
+	 * Flip the saved image vertically.
+	 */
+	bool flipVertically = false;
+};
+
+/**
+ * Options for saving an image in Radiance HDR RGBE format.
+ */
+struct ImageSaveHDROptions {
+	/**
+	 * Flip the saved image vertically.
+	 */
+	bool flipVertically = false;
 };
 
 /**
@@ -124,18 +318,15 @@ private:
  */
 struct ImageOptions {
 	/**
-	 * If non-zero, request the loaded image to be converted to this number of
-	 * channels.
-	 *
-	 * \warning If set greater than 4, the result is undefined.
+	 * If set, request the loaded image to be converted to this format.
 	 */
-	std::size_t desiredChannelCount = 0;
+	std::optional<PixelFormat> desiredFormat{};
 
 	/**
 	 * Load and store the image with high dynamic range.
 	 *
-	 * If set to true, the pixel component type will be 32-bit floating-point.
-	 * Otherwise, the component type is 8-bit unsigned integer.
+	 * If set to true, the pixel component type will be PixelComponentType::F32.
+	 * Otherwise, the component type is PixelComponentType::U8.
 	 *
 	 * If the loaded image is high dynamic range and this option is set to
 	 * false, or vice versa, the image is automatically gamma corrected from
@@ -151,20 +342,128 @@ struct ImageOptions {
 };
 
 /**
- * Container for a 2D image with any pixel format.
+ * Container for a 2D image.
  *
- * \sa ImageLDR
- * \sa ImageHDR
  * \sa ImageView
- * \sa ImageLDRView
- * \sa ImageHDRView
  */
 class Image {
 public:
 	/**
+	 * Save an 8-bit-per-channel image to a PNG file.
+	 *
+	 * \param image view over the image to save.
+	 * \param filepath virtual filepath to save the image to, see File.
+	 * \param options saving options, see ImageSavePNGOptions.
+	 *
+	 * \note This function will fail if the image does not have pixel component
+	 *       type PixelComponentType::U8.
+	 *
+	 * \throws File::Error on failure to create the file.
+	 * \throws graphics::Error on failure to write the image to the file.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	static void savePNG(const ImageView& image, const char* filepath, const ImageSavePNGOptions& options = {});
+
+	/**
+	 * Save an 8-bit-per-channel image to a Windows Bitmap file.
+	 *
+	 * \param image view over the image to save.
+	 * \param filepath virtual filepath to save the image to, see File.
+	 * \param options saving options, see ImageSaveBMPOptions.
+	 *
+	 * \note This function will fail if the image does not have pixel component
+	 *       type PixelComponentType::U8.
+	 *
+	 * \throws File::Error on failure to create the file.
+	 * \throws graphics::Error on failure to write the image to the file.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	static void saveBMP(const ImageView& image, const char* filepath, const ImageSaveBMPOptions& options = {});
+
+	/**
+	 * Save an 8-bit-per-channel image to a Truevision TARGA file.
+	 *
+	 * \param image view over the image to save.
+	 * \param filepath virtual filepath to save the image to, see File.
+	 * \param options saving options, see ImageSaveTGAOptions.
+	 *
+	 * \note This function will fail if the image does not have pixel component
+	 *       type PixelComponentType::U8.
+	 *
+	 * \throws File::Error on failure to create the file.
+	 * \throws graphics::Error on failure to write the image to the file.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	static void saveTGA(const ImageView& image, const char* filepath, const ImageSaveTGAOptions& options = {});
+
+	/**
+	 * Save an 8-bit-per-channel image to a JPEG file.
+	 *
+	 * \param image view over the image to save.
+	 * \param filepath virtual filepath to save the image to, see File.
+	 * \param options saving options, see ImageSaveJPGOptions.
+	 *
+	 * \note This function will fail if the image does not have pixel component
+	 *       type PixelComponentType::U8.
+	 *
+	 * \throws File::Error on failure to create the file.
+	 * \throws graphics::Error on failure to write the image to the file.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	static void saveJPG(const ImageView& image, const char* filepath, const ImageSaveJPGOptions& options = {});
+
+	/**
+	 * Save a floating-point 32-bit-per-channel image to a Radiance HDR RGBE
+	 * file.
+	 *
+	 * \param image view over the image to save.
+	 * \param filepath virtual filepath to save the image to, see File.
+	 * \param options saving options, see ImageSaveHDROptions.
+	 *
+	 * \note This function will fail if the image does not have pixel component
+	 *       type PixelComponentType::F32.
+	 *
+	 * \throws File::Error on failure to create the file.
+	 * \throws graphics::Error on failure to write the image to the file.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	static void saveHDR(const ImageView& image, const char* filepath, const ImageSaveHDROptions& options = {});
+
+	/**
 	 * Construct an empty image without a value.
 	 */
 	Image() noexcept = default;
+
+	/**
+	 * Construct an image copied from a contiguous 2D range of pixels.
+	 *
+	 * \param width width of the image, in pixels. Must be 0 if pixels is
+	 *        nullptr.
+	 * \param height height of the image, in pixels. Must be 0 if pixels is
+	 *        nullptr.
+	 * \param pixelFormat pixel format of the image. Must be PixelFormat::R if
+	 *        pixels is nullptr.
+	 * \param pixelComponentType pixel component data type of the image. Must be
+	 *        PixelComponentType::U8 if pixels is nullptr.
+	 * \param pixels read-only non-owning pointer to the pixel data to copy, or
+	 *        nullptr to create an empty image without a value.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \warning If pixels is not nullptr and does not point to a readable
+	 *          contiguous region of memory containing image data of the
+	 *          specified size, format and type, the result is undefined.
+	 */
+	Image(std::size_t width, std::size_t height, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels);
+
+	/**
+	 * Construct an image copied from an image view.
+	 *
+	 * \param image read-only view over the image to copy.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	explicit Image(const ImageView& image);
 
 	/**
 	 * Load an image from a virtual file.
@@ -223,7 +522,7 @@ public:
 	 *         image.
 	 */
 	operator ImageView() const noexcept {
-		return ImageView{getPixels(), getWidth(), getHeight(), getChannelCount()};
+		return ImageView{getWidth(), getHeight(), getPixelFormat(), getPixelComponentType(), getPixels()};
 	}
 
 	/**
@@ -234,83 +533,13 @@ public:
 	}
 
 	/**
-	 * Get the pixel data stored in this image.
-	 *
-	 * The pixel data is tightly packed and fully contiguous, but the format of
-	 * the pixels depends on the loaded file and cannot be determined from the
-	 * information stored in this object alone. The pixel format information
-	 * must be implied through context or communicated through a separate
-	 * channel to the user of this image. This is the purpose of the derived
-	 * types ImageLDR and ImageHDR, which imply an 8-bit or floating-point
-	 * component format, respectively. Assuming the component type is known, the
-	 * total size of the image in bytes is:
-	 * ```
-	 * width * height * channelCount * componentSize
-	 * ```
-	 * and the size of a single pixel is `channelCount * componentSize`. The
-	 * pixels are stored in row-major order starting at the top left of the
-	 * image.
-	 *
-	 * Depending on the channel count, the pixel components have the following
-	 * meanings:
-	 *
-	 * | channels | 0     | 1     | 2     | 3     |
-	 * | -------- | ----- | ----- | ----- | ----- |
-	 * |        1 | Gray  |       |       |       |
-	 * |        2 | Gray  | Alpha |       |       |
-	 * |        3 | Red   | Green | Blue  |       |
-	 * |        4 | Red   | Green | Blue  | Alpha |
-	 *
-	 * \return an untyped non-owning pointer to the pixel data, or nullptr if
-	 *         the image does not have a value.
-	 */
-	[[nodiscard]] void* getPixels() noexcept {
-		return pixels.get();
-	}
-
-	/**
-	 * Get the pixel data stored in this image.
-	 *
-	 * The pixel data is tightly packed and fully contiguous, but the format of
-	 * the pixels depends on the loaded file and cannot be determined from the
-	 * information stored in this object alone. The pixel format information
-	 * must be implied through context or communicated through a separate
-	 * channel to the user of this image. This is the purpose of the derived
-	 * types ImageLDR and ImageHDR, which imply an 8-bit or floating-point
-	 * component format, respectively. Assuming the component type is known, the
-	 * total size of the image in bytes is:
-	 * ```
-	 * width * height * channelCount * componentSize
-	 * ```
-	 * and the size of a single pixel is `channelCount * componentSize`. The
-	 * pixels are stored in row-major order starting at the top left of the
-	 * image.
-	 *
-	 * Depending on the channel count, the pixel components have the following
-	 * meanings:
-	 *
-	 * | channels | 0     | 1     | 2     | 3     |
-	 * | -------- | ----- | ----- | ----- | ----- |
-	 * |        1 | Gray  |       |       |       |
-	 * |        2 | Gray  | Alpha |       |       |
-	 * |        3 | Red   | Green | Blue  |       |
-	 * |        4 | Red   | Green | Blue  | Alpha |
-	 *
-	 * \return an untyped read-only non-owning pointer to the pixel data, or
-	 *         nullptr if the image does not have a value.
-	 */
-	[[nodiscard]] const void* getPixels() const noexcept {
-		return pixels.get();
-	}
-
-	/**
 	 * Get the width of the image.
 	 *
 	 * \return the width of the image, in pixels, or 0 if the image does not
 	 *         have a value.
 	 *
 	 * \sa getHeight()
-	 * \sa getChannelCount()
+	 * \sa getSizeInBytes()
 	 */
 	[[nodiscard]] std::size_t getWidth() const noexcept {
 		return width;
@@ -323,25 +552,125 @@ public:
 	 *         have a value.
 	 *
 	 * \sa getWidth()
-	 * \sa getChannelCount()
+	 * \sa getSizeInBytes()
 	 */
 	[[nodiscard]] std::size_t getHeight() const noexcept {
 		return height;
 	}
 
 	/**
-	 * Get the number of components per pixel of this image.
+	 * Get the pixel format of the image.
 	 *
-	 * \return the number of channels, or 0 if the image does not have a value.
+	 * \return the pixel format, or PixelFormat::R if the image does not have a
+	 *         value.
 	 *
-	 * \note The maximum number of channels is 4.
-	 * \note The meaning of the pixel components is documented in getPixels().
+	 * \sa getChannelCount()
+	 */
+	[[nodiscard]] PixelFormat getPixelFormat() const noexcept {
+		return pixelFormat;
+	}
+
+	/**
+	 * Get the pixel component type of the image.
+	 *
+	 * \return the pixel component type, or PixelComponentType::U8 if the image
+	 *         does not have a value.
+	 *
+	 * \sa getPixelComponentSize()
+	 */
+	[[nodiscard]] PixelComponentType getPixelComponentType() const noexcept {
+		return pixelComponentType;
+	}
+
+	/**
+	 * Get the pixel data of this image.
+	 *
+	 * The pixel data is tightly packed and fully contiguous, and the pixels are
+	 * stored in row-major order, starting at the bottom left of the image
+	 * (unless the image is flipped).
+	 *
+	 * \return a non-owning pointer to the pixel data, or nullptr if the image
+	 *         does not have a value.
 	 *
 	 * \sa getWidth()
 	 * \sa getHeight()
+	 * \sa getPixelFormat()
+	 * \sa getPixelComponentType()
+	 */
+	[[nodiscard]] void* getPixels() noexcept {
+		return pixels.get();
+	}
+
+	/**
+	 * Get the pixel data of this image.
+	 *
+	 * The pixel data is tightly packed and fully contiguous, and the pixels are
+	 * stored in row-major order, starting at the bottom left of the image
+	 * (unless the image is flipped).
+	 *
+	 * \return a read-only non-owning pointer to the pixel data, or nullptr if
+	 *         the image does not have a value.
+	 *
+	 * \sa getWidth()
+	 * \sa getHeight()
+	 * \sa getPixelFormat()
+	 * \sa getPixelComponentType()
+	 */
+	[[nodiscard]] const void* getPixels() const noexcept {
+		return pixels.get();
+	}
+
+	/**
+	 * Get the number of component channels in the pixel format of this image.
+	 *
+	 * \return the number of channels, or 0 if the image does not have a value.
+	 *
+	 * \sa getPixelFormat()
+	 * \sa getPixelStride()
 	 */
 	[[nodiscard]] std::size_t getChannelCount() const noexcept {
-		return channelCount;
+		return ImageView{*this}.getChannelCount();
+	}
+
+	/**
+	 * Get the size in bytes of a single component of a pixel in this image.
+	 *
+	 * \return the size of the pixel component type, or 0 if the image does not
+	 *         have a value.
+	 *
+	 * \sa getPixelComponentType()
+	 * \sa getPixelStride()
+	 */
+	[[nodiscard]] std::size_t getPixelComponentSize() const noexcept {
+		return ImageView{*this}.getPixelComponentSize();
+	}
+
+	/**
+	 * Get the stride in bytes of the pixels in this image.
+	 *
+	 * \return the number of bytes to advance to get from one pixel to the next,
+	 *         or 0 if the image does not have a value.
+	 *
+	 * \sa getChannelCount()
+	 * \sa getPixelComponentSize()
+	 * \sa getSizeInBytes()
+	 */
+	[[nodiscard]] std::size_t getPixelStride() const noexcept {
+		return ImageView{*this}.getPixelStride();
+	}
+
+	/**
+	 * Get the size in bytes of this image.
+	 *
+	 * \return the total size of the image, or 0 if the image does not have a
+	 *         value.
+	 *
+	 * \sa getWidth()
+	 * \sa getHeight()
+	 * \sa getPixelStride()
+	 */
+	[[nodiscard]] std::size_t getSizeInBytes() const noexcept {
+		return ImageView{*this}.getSizeInBytes();
 	}
 
 private:
@@ -349,20 +678,13 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-protected:
 	using Pixels = Resource<void*, PixelsDeleter, nullptr>;
 
-	Image(Pixels pixels, std::size_t width, std::size_t height, std::size_t channelCount)
-		: pixels(std::move(pixels))
-		, width(width)
-		, height(height)
-		, channelCount(channelCount) {}
-
-private:
 	Pixels pixels{};
 	std::size_t width = 0;
 	std::size_t height = 0;
-	std::size_t channelCount = 0;
+	PixelFormat pixelFormat = PixelFormat::R;
+	PixelComponentType pixelComponentType = PixelComponentType::U8;
 };
 
 } // namespace graphics

@@ -677,11 +677,11 @@ private:
 	gfx::Viewport worldViewport{};
 	glm::mat4 screenProjectionViewMatrix{};
 	glm::mat4 worldProjectionViewMatrix{};
-	gfx::Texture testTexture{gfx::ImageLDR{"textures/test.png", {.flipVertically = true}}};
-	gfx::Texture circleTexture{gfx::ImageLDR{"textures/circle.png"}, {.useLinearFiltering = false, .useMipmap = false}};
+	gfx::Texture testTexture{gfx::Image{"textures/test.png"}};
+	gfx::Texture circleTexture{gfx::Image{"textures/circle.png"}, {.useLinearFiltering = false, .useMipmap = false}};
 	gfx::Model carrotCakeModel{"models/carrot_cake.obj"};
 	gfx::SpriteAtlas spriteAtlas{};
-	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas.insert(renderer, gfx::ImageLDR{"textures/test.png", {.flipVertically = true}});
+	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas.insert(renderer, gfx::Image{"textures/test.png"});
 	gfx::SpriteAtlas::SpriteId testSubSprite = spriteAtlas.createSubSprite(testSprite, 200, 200, 100, 100, gfx::SpriteAtlas::FLIP_HORIZONTALLY);
 	gfx::Font mainFont{"fonts/unscii/unscii-8.ttf"};
 	TestShader3D testShader3D{};

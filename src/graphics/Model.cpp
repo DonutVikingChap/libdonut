@@ -1,7 +1,6 @@
 #include <donut/InputFileStream.hpp>
 #include <donut/graphics/Error.hpp>
-#include <donut/graphics/ImageHDR.hpp>
-#include <donut/graphics/ImageLDR.hpp>
+#include <donut/graphics/Image.hpp>
 #include <donut/graphics/Mesh.hpp>
 #include <donut/graphics/Model.hpp>
 #include <donut/graphics/Texture.hpp>
@@ -105,7 +104,7 @@ void generateTangentSpace(std::span<Model::Object::Vertex> vertices, std::span<c
 }
 
 [[nodiscard]] Texture loadTexture(const std::string& filepath) {
-	return (filepath.ends_with(".hdr")) ? Texture{ImageHDR{filepath.c_str(), {.flipVertically = true}}} : Texture{ImageLDR{filepath.c_str(), {.flipVertically = true}}};
+	return Texture{Image{filepath.c_str(), {.highDynamicRange = filepath.ends_with(".hdr")}}};
 }
 
 void loadObjScene(Model& output, const obj::Scene& scene) {

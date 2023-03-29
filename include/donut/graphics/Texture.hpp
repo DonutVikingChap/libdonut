@@ -4,59 +4,35 @@
 #include <donut/Color.hpp>
 #include <donut/Resource.hpp>
 #include <donut/graphics/Handle.hpp>
+#include <donut/graphics/Image.hpp>
 
 #include <cstddef>     // std::size_t
-#include <cstdint>     // std::int32_t, std::uint32_t
+#include <cstdint>     // std::int32_t
 #include <glm/glm.hpp> // glm::...
 #include <optional>    // std::optional
 
 namespace donut {
 namespace graphics {
 
-class Renderer;     // Forward declaration, to avoid a circular include of Renderer.hpp.
-class ImageLDRView; // Forward declaration, to avoid including ImageLDR.hpp.
-class ImageHDRView; // Forward declaration, to avoid including ImageHDR.hpp.
-
-/**
- * Description of the number and meaning of the pixel component channels of an
- * image when passed as an input to a Texture.
- */
-enum class TextureFormat : std::uint32_t {
-	NONE = 0,      ///< Invalid format. \hideinitializer
-	R = 0x1903,    ///< Each pixel comprises 1 component: red. \hideinitializer
-	RG = 0x8227,   ///< Each pixel comprises 2 components: red, green. \hideinitializer
-	RGB = 0x1907,  ///< Each pixel comprises 3 components: red, green, blue. \hideinitializer
-	RGBA = 0x1908, ///< Each pixel comprises 4 components: red, green, blue, alpha. \hideinitializer
-};
+class Renderer; // Forward declaration, to avoid a circular include of Renderer.hpp.
 
 /**
  * Description of the internal texel format of a Texture, including the number
  * of component channels, their meaning and their data type.
  */
-enum class TextureInternalFormat : std::int32_t {
-	NONE = 0,         ///< Invalid format. \hideinitializer
-	R8 = 0x8229,      ///< Each texel comprises 1 8-bit unsigned integer component: red. \hideinitializer
-	RG8 = 0x822B,     ///< Each texel comprises 2 8-bit unsigned integer components: red, green. \hideinitializer
-	RGB8 = 0x8051,    ///< Each texel comprises 3 8-bit unsigned integer components: red, green, blue. \hideinitializer
-	RGBA8 = 0x8058,   ///< Each texel comprises 4 8-bit unsigned integer components: red, green, blue, alpha. \hideinitializer
-	R16F = 0x822D,    ///< Each texel comprises 1 16-bit floating-point component: red. \hideinitializer
-	RG16F = 0x822F,   ///< Each texel comprises 2 16-bit floating-point components: red, green. \hideinitializer
-	RGB16F = 0x881B,  ///< Each texel comprises 3 16-bit floating-point components: red, green, blue. \hideinitializer
-	RGBA16F = 0x881A, ///< Each texel comprises 4 16-bit floating-point components: red, green, blue, alpha. \hideinitializer
-	R32F = 0x822E,    ///< Each texel comprises 1 32-bit floating-point component: red. \hideinitializer
-	RG32F = 0x8230,   ///< Each texel comprises 2 32-bit floating-point components: red, green. \hideinitializer
-	RGB32F = 0x8815,  ///< Each texel comprises 3 32-bit floating-point components: red, green, blue. \hideinitializer
-	RGBA32F = 0x8814, ///< Each texel comprises 4 32-bit floating-point components: red, green, blue, alpha. \hideinitializer
-};
-
-/**
- * Description of the data type of the pixel components of an image when passed
- * as an input to a Texture.
- */
-enum class TextureComponentType : std::uint32_t {
-	U8 = 0x1401,  ///< Each pixel component is an 8-bit unsigned integer. \hideinitializer
-	F16 = 0x140B, ///< Each pixel component is a 16-bit floating-point number. \hideinitializer
-	F32 = 0x1406, ///< Each pixel component is a 32-bit floating-point number. \hideinitializer
+enum class TextureFormat : std::int32_t {
+	R8_UNORM = 0x8229,           ///< Each texel comprises 1 normalized 8-bit unsigned integer component: red. \hideinitializer
+	R16_FLOAT = 0x822D,          ///< Each texel comprises 1 16-bit floating-point component: red. \hideinitializer
+	R32_FLOAT = 0x822E,          ///< Each texel comprises 1 32-bit floating-point component: red. \hideinitializer
+	R8G8_UNORM = 0x822B,         ///< Each texel comprises 2 normalized 8-bit unsigned integer components: red, green. \hideinitializer
+	R16G16_FLOAT = 0x822F,       ///< Each texel comprises 2 16-bit floating-point components: red, green. \hideinitializer
+	R32G32_FLOAT = 0x8230,       ///< Each texel comprises 2 32-bit floating-point components: red, green. \hideinitializer
+	R8G8B8_UNORM = 0x8051,       ///< Each texel comprises 3 normalized 8-bit unsigned integer components: red, green, blue. \hideinitializer
+	R16G16B16_FLOAT = 0x881B,    ///< Each texel comprises 3 16-bit floating-point components: red, green, blue. \hideinitializer
+	R32G32B32_FLOAT = 0x8815,    ///< Each texel comprises 3 32-bit floating-point components: red, green, blue. \hideinitializer
+	R8G8B8A8_UNORM = 0x8058,     ///< Each texel comprises 4 normalized 8-bit unsigned integer components: red, green, blue, alpha. \hideinitializer
+	R16G16B16A16_FLOAT = 0x881A, ///< Each texel comprises 4 16-bit floating-point components: red, green, blue, alpha. \hideinitializer
+	R32G32B32A32_FLOAT = 0x8814, ///< Each texel comprises 4 32-bit floating-point components: red, green, blue, alpha. \hideinitializer
 };
 
 /**
@@ -103,131 +79,71 @@ public:
 	 * Pointer to the statically allocated storage for the built-in white 2D
 	 * texture.
 	 *
-	 * The internal texel format is TextureInternalFormat::RGBA8.
-	 * The color space is SRGB.
-	 * The size is 1x1 texels.
-	 *
 	 * \warning This pointer must not be dereferenced in application code. It is
 	 *          not guaranteed that the underlying texture will be present at
 	 *          all times.
 	 */
-	static const Texture* const whiteR8G8B8A8Srgb1x1;
+	static const Texture* const defaultWhite;
 
 	/**
 	 * Pointer to the statically allocated storage for the built-in mid-gray 2D
 	 * texture.
 	 *
-	 * The internal texel format is TextureInternalFormat::RGBA8.
-	 * The color space is linear.
-	 * The size is 1x1 texels.
-	 *
 	 * \warning This pointer must not be dereferenced in application code. It is
 	 *          not guaranteed that the underlying texture will be present at
 	 *          all times.
 	 */
-	static const Texture* const grayR8G8B8A8Unorm1x1;
+	static const Texture* const defaultGray;
 
 	/**
 	 * Pointer to the statically allocated storage for the built-in normal-map
 	 * 2D texture.
 	 *
-	 * The internal texel format is TextureInternalFormat::RGB8.
-	 * The color space is linear.
-	 * The size is 1x1 texels.
-	 *
 	 * \warning This pointer must not be dereferenced in application code. It is
 	 *          not guaranteed that the underlying texture will be present at
 	 *          all times.
 	 */
-	static const Texture* const normalR8G8B8Unorm1x1;
+	static const Texture* const defaultNormal;
 
 	/**
-	 * Get the number of pixel component channels defined by a texture format.
-	 *
-	 * \param format the format to get the number of channels of.
-	 *
-	 * \return the number of channels in the given format.
-	 */
-	[[nodiscard]] static std::size_t getChannelCount(TextureFormat format) noexcept;
-
-	/**
-	 * Get the number of texel component channels defined by an internal texture
+	 * Get the number of texel component channels defined by an internal texel
 	 * format.
 	 *
 	 * \param format the format to get the number of channels of.
 	 *
 	 * \return the number of channels in the given format.
 	 */
-	[[nodiscard]] static std::size_t getInternalChannelCount(TextureInternalFormat internalFormat) noexcept;
+	[[nodiscard]] static std::size_t getChannelCount(TextureFormat internalFormat) noexcept;
 
 	/**
-	 * Get a description of the pixel component data type that corresponds to
-	 * the texel component data type of an internal texture format.
+	 * Get a description of the pixel format that corresponds to the texel
+	 * format of an internal texture format.
 	 *
-	 * \param format the format to get the component data type of.
+	 * \param format the internal texel format to get the pixel format of.
 	 *
-	 * \return the pixel data type that corresponds to the given format.
+	 * \return the corresponding pixel format.
 	 */
-	[[nodiscard]] static TextureComponentType getInternalComponentType(TextureInternalFormat internalFormat) noexcept;
+	[[nodiscard]] static PixelFormat getPixelFormat(TextureFormat internalFormat) noexcept;
 
 	/**
-	 * Get an appropriate texture format where the number of pixel components
-	 * corresponds to a desired number of channels.
+	 * Get a description of the pixel component type that corresponds to
+	 * the texel component type of an internal texture format.
 	 *
-	 * \param channelCount the desired number of pixel component channels.
+	 * \param format the internal texel format to get the component type of.
 	 *
-	 * \return a texture format with the given number of channels, if one
-	 *         exists.
-	 *
-	 * \throws graphics::Error if no appropriate texture format exists that
-	 *         satisfies the constraint.
+	 * \return the corresponding pixel component type.
 	 */
-	[[nodiscard]] static TextureFormat getPixelFormat(std::size_t channelCount);
+	[[nodiscard]] static PixelComponentType getPixelComponentType(TextureFormat internalFormat) noexcept;
 
 	/**
-	 * Get an appropriate internal texture format where the number of texel
-	 * components corresponds to a desired number of channels and the data type
-	 * is 8-bit unsigned integer.
+	 * Get the internal texture format that correspons to an image format.
 	 *
-	 * \param channelCount the desired number of texel component channels.
+	 * \param pixelFormat the pixel format of the image format.
+	 * \param pixelComponentType the pixel component type of the image format.
 	 *
-	 * \return an internal texture format with 8-bit unsigned integer data type
-	 *         and the given number of channels, if one exists.
-	 *
-	 * \throws graphics::Error if no appropriate internal texture format exists
-	 *         that satisfies the constraints.
+	 * \return the corresponding texture format.
 	 */
-	[[nodiscard]] static TextureInternalFormat getTexelFormatU8(std::size_t channelCount);
-
-	/**
-	 * Get an appropriate internal texture format where the number of texel
-	 * components corresponds to a desired number of channels and the data type
-	 * is 16-bit floating-point.
-	 *
-	 * \param channelCount the desired number of texel component channels.
-	 *
-	 * \return an internal texture format with 16-bit floating-point data type
-	 *         and the given number of channels, if one exists.
-	 *
-	 * \throws graphics::Error if no appropriate internal texture format exists
-	 *         that satisfies the constraints.
-	 */
-	[[nodiscard]] static TextureInternalFormat getTexelFormatF16(std::size_t channelCount);
-
-	/**
-	 * Get an appropriate internal texture format where the number of texel
-	 * components corresponds to a desired number of channels and the data type
-	 * is 32-bit floating-point.
-	 *
-	 * \param channelCount the desired number of texel component channels.
-	 *
-	 * \return an internal texture format with 32-bit floating-point data type
-	 *         and the given number of channels, if one exists.
-	 *
-	 * \throws graphics::Error if no appropriate internal texture format exists
-	 *         that satisfies the constraints.
-	 */
-	[[nodiscard]] static TextureInternalFormat getTexelFormatF32(std::size_t channelCount);
+	[[nodiscard]] static TextureFormat getInternalFormat(PixelFormat pixelFormat, PixelComponentType pixelComponentType) noexcept;
 
 	/**
 	 * Construct an empty texture without a value.
@@ -241,8 +157,8 @@ public:
 	 * \param internalFormat internal texel format of the new texture.
 	 * \param width width of the 2D image data to allocate, in texels.
 	 * \param height height of the 2D image data to allocate, in texels.
-	 * \param format pixel format of the input image.
-	 * \param type pixel component data type of the input image.
+	 * \param pixelFormat pixel format of the input image.
+	 * \param pixelComponentType pixel component type of the input image.
 	 * \param pixels non-owning read-only pointer to the pixel data of the input
 	 *        image to copy into the new texture data storage, or nullptr to
 	 *        leave the data uninitialized.
@@ -258,10 +174,10 @@ public:
 	 *          width, height, format and type parameters. Otherwise, the
 	 *          behavior is undefined.
 	 *
-	 * \note For uninitialized data, consider using the Texture(TextureInternalFormat, std::size_t, std::size_t, const TextureOptions&)
+	 * \note For uninitialized data, consider using the Texture(TextureFormat, std::size_t, std::size_t, const TextureOptions&)
 	 *       overload instead of passing nullptr to the pixels parameter.
 	 */
-	Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, TextureFormat format, TextureComponentType type, const void* pixels,
+	Texture(TextureFormat internalFormat, std::size_t width, std::size_t height, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels,
 		const TextureOptions& options = {});
 
 	/**
@@ -272,8 +188,8 @@ public:
 	 * \param width width of the 2D image data to allocate, in texels.
 	 * \param height height of the 2D image data to allocate, in texels.
 	 * \param depth number of 2D image layers to allocate for the array.
-	 * \param format pixel format of the input image array.
-	 * \param type pixel component data type of the input image array.
+	 * \param pixelFormat pixel format of the input image array.
+	 * \param pixelComponentType pixel component type of the input image array.
 	 * \param pixels non-owning read-only pointer to the pixel data of the input
 	 *        image array to copy into the new texture data storage, or nullptr
 	 *        to leave the data uninitialized.
@@ -289,11 +205,11 @@ public:
 	 *          width, height, depth, format and type parameters. Otherwise, the
 	 *          behavior is undefined.
 	 *
-	 * \note For uninitialized data, consider using the Texture(TextureInternalFormat, std::size_t, std::size_t, std::size_t, const TextureOptions&)
+	 * \note For uninitialized data, consider using the Texture(TextureFormat, std::size_t, std::size_t, std::size_t, const TextureOptions&)
 	 *       overload instead of passing nullptr to the pixels parameter.
 	 */
-	Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, std::size_t depth, TextureFormat format, TextureComponentType type, const void* pixels,
-		const TextureOptions& options = {});
+	Texture(TextureFormat internalFormat, std::size_t width, std::size_t height, std::size_t depth, PixelFormat pixelFormat, PixelComponentType pixelComponentType,
+		const void* pixels, const TextureOptions& options = {});
 
 	/**
 	 * Create a new texture object and allocate uninitialized GPU memory for
@@ -309,7 +225,7 @@ public:
 	 *         CPU memory allocations. Failure to allocate GPU memory for the
 	 *         texture data might not be reported directly.
 	 */
-	Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, const TextureOptions& options = {});
+	Texture(TextureFormat internalFormat, std::size_t width, std::size_t height, const TextureOptions& options = {});
 
 	/**
 	 * Create a new texture object and allocate uninitialized GPU memory for
@@ -326,11 +242,11 @@ public:
 	 *         CPU memory allocations. Failure to allocate GPU memory for the
 	 *         texture data might not be reported directly.
 	 */
-	Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, std::size_t depth, const TextureOptions& options = {});
+	Texture(TextureFormat internalFormat, std::size_t width, std::size_t height, std::size_t depth, const TextureOptions& options = {});
 
 	/**
 	 * Create a new texture object and allocate GPU memory for storing 2D image
-	 * data loaded from an LDR image.
+	 * data loaded from an image.
 	 *
 	 * \param image non-owning read-only view over the image to copy into the
 	 *        new texture data storage. The allocated storage will be sized to
@@ -344,35 +260,12 @@ public:
 	 *         CPU memory allocations. Failure to allocate GPU memory for the
 	 *         texture data might not be reported directly.
 	 *
-	 * \note A suitable 8-bit unsigned integer internal texel format is chosen
-	 *       automatically based on the number of pixel component channels in
-	 *       the image. To choose the internal format manually, use the Texture(TextureInternalFormat, std::size_t, std::size_t, TextureFormat, TextureComponentType, const void*, const TextureOptions&)
+	 * \note A suitable internal texel format is chosen automatically based on
+	 *       the pixel format of the image. To choose the internal format
+	 *       manually, use the Texture(TextureFormat, std::size_t, std::size_t, PixelFormat, PixelComponentType, const void*, const TextureOptions&)
 	 *       overload instead.
 	 */
-	Texture(const ImageLDRView& image, const TextureOptions& options = {});
-
-	/**
-	 * Create a new texture object and allocate GPU memory for storing 2D image
-	 * data loaded from an HDR image.
-	 *
-	 * \param image non-owning read-only view over the image to copy into the
-	 *        new texture data storage. The allocated storage will be sized to
-	 *        fit the image.
-	 * \param options texture/sampler options, see TextureOptions.
-	 *
-	 * \throws graphics::Error on failure to create the texture object, or on
-	 *         failure to choose an appropriate internal texel format for the
-	 *         given image.
-	 * \throws std::bad_alloc on allocation failure. Note: this pertains only to
-	 *         CPU memory allocations. Failure to allocate GPU memory for the
-	 *         texture data might not be reported directly.
-	 *
-	 * \note A suitable 16-bit floating-point internal texel format is chosen
-	 *       automatically based on the number of pixel component channels in
-	 *       the image. To choose the internal format manually, use the Texture(TextureInternalFormat, std::size_t, std::size_t, TextureFormat, TextureComponentType, const void*, const TextureOptions&)
-	 *       overload instead.
-	 */
-	Texture(const ImageHDRView& image, const TextureOptions& options = {});
+	Texture(const ImageView& image, const TextureOptions& options = {});
 
 	/**
 	 * Check if the texture has a value.
@@ -410,8 +303,8 @@ public:
 	 *
 	 * \param width width of the 2D image data to copy, in pixels.
 	 * \param height height of the 2D image data to copy, in pixels.
-	 * \param format pixel format of the input image.
-	 * \param type pixel component data type of the input image.
+	 * \param pixelFormat pixel format of the input image.
+	 * \param pixelComponentType pixel component type of the input image.
 	 * \param pixels non-owning read-only pointer to the pixel data of the input
 	 *        image to copy into the existing texture data storage. Must not be
 	 *        nullptr.
@@ -425,16 +318,17 @@ public:
 	 * \warning This function must only be called on textures that are set up to
 	 *          store 2D image data. Otherwise, the behavior is undefined.
 	 * \warning The pixel data pointed to by the pixels parameter must be of the
-	 *          shape and format described by the width, height, format and type
-	 *          parameters. Otherwise, the behavior is undefined.
+	 *          shape and format described by the width, height, pixelFormat and
+	 *          pixelComponentType parameters. Otherwise, the behavior is
+	 *          undefined.
 	 * \warning Enough space must be allocated in the texture for the full image
 	 *          to fit at the given position. Otherwise, the behavior is
 	 *          undefined.
 	 */
-	void pasteImage2D(std::size_t width, std::size_t height, TextureFormat format, TextureComponentType type, const void* pixels, std::size_t x, std::size_t y);
+	void pasteImage2D(std::size_t width, std::size_t height, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels, std::size_t x, std::size_t y);
 
 	/**
-	 * Copy an LDR 2D image into the 2D texture at a specific position.
+	 * Copy a 2D image into the 2D texture at a specific position.
 	 *
 	 * \param image non-owning read-only view over the image to copy into the
 	 *        existing texture data storage.
@@ -451,27 +345,7 @@ public:
 	 *          to fit at the given position. Otherwise, the behavior is
 	 *          undefined.
 	 */
-	void pasteImage2D(const ImageLDRView& image, std::size_t x, std::size_t y);
-
-	/**
-	 * Copy an HDR 2D image into the 2D texture at a specific position.
-	 *
-	 * \param image non-owning read-only view over the image to copy into the
-	 *        existing texture data storage.
-	 * \param x the horizontal offset, in texels, from the left edge of the
-	 *        texture at which to paste the image, where the left edge of the
-	 *        pasted image will begin.
-	 * \param y the vertical offset, in texels, from the bottom edge of the
-	 *        texture at which to paste the image, where the bottom edge of the
-	 *        pasted image will begin.
-	 *
-	 * \warning This function must only be called on textures that are set up to
-	 *          store 2D image data. Otherwise, the behavior is undefined.
-	 * \warning Enough space must be allocated in the texture for the full image
-	 *          to fit at the given position. Otherwise, the behavior is
-	 *          undefined.
-	 */
-	void pasteImage2D(const ImageHDRView& image, std::size_t x, std::size_t y);
+	void pasteImage2D(const ImageView& image, std::size_t x, std::size_t y);
 
 	/**
 	 * Copy an array of layers of 2D image data into the 2D array texture at a
@@ -480,8 +354,8 @@ public:
 	 * \param width width of the 2D image data to copy, in pixels.
 	 * \param height height of the 2D image data to copy, in pixels.
 	 * \param depth number of 2D image layers in the array to copy.
-	 * \param format pixel format of the input image.
-	 * \param type pixel component data type of the input image.
+	 * \param pixelFormat pixel format of the input image.
+	 * \param pixelComponentType pixel component type of the input image.
 	 * \param pixels non-owning read-only pointer to the pixel data of the input
 	 *        image array to copy into the existing texture data storage. Must
 	 *        not be nullptr.
@@ -499,17 +373,18 @@ public:
 	 *          store arrays of layers of 2D image data. Otherwise, the behavior
 	 *          is undefined.
 	 * \warning The pixel data pointed to by the pixels parameter must be of the
-	 *          shape and format described by the width, height, depth, format
-	 *          and type parameters. Otherwise, the behavior is undefined.
+	 *          shape and format described by the width, height, depth,
+	 *          pixelFormat and pixelComponentType parameters. Otherwise, the
+	 *          behavior is undefined.
 	 * \warning Enough space must be allocated in the texture for the full image
 	 *          array to fit at the given position. Otherwise, the behavior is
 	 *          undefined.
 	 */
-	void pasteImage2DArray(std::size_t width, std::size_t height, std::size_t depth, TextureFormat format, TextureComponentType type, const void* pixels, std::size_t x,
-		std::size_t y, std::size_t z);
+	void pasteImage2DArray(std::size_t width, std::size_t height, std::size_t depth, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels,
+		std::size_t x, std::size_t y, std::size_t z);
 
 	/**
-	 * Copy an LDR 2D image into the 2D array texture at a specific position.
+	 * Copy a 2D image into the 2D array texture at a specific position.
 	 *
 	 * \param image non-owning read-only view over the image to copy into the
 	 *        existing texture data storage.
@@ -529,30 +404,7 @@ public:
 	 *          to fit at the given position. Otherwise, the behavior is
 	 *          undefined.
 	 */
-	void pasteImage2DArray(const ImageLDRView& image, std::size_t x, std::size_t y, std::size_t z);
-
-	/**
-	 * Copy an HDR 2D image into the 2D array texture at a specific position.
-	 *
-	 * \param image non-owning read-only view over the image to copy into the
-	 *        existing texture data storage.
-	 * \param x the horizontal offset, in texels, from the left edge of the
-	 *        texture at which to paste the image, where the left edge of the
-	 *        pasted image will begin.
-	 * \param y the vertical offset, in texels, from the bottom edge of the
-	 *        texture at which to paste the image, where the bottom edge of the
-	 *        pasted image will begin.
-	 * \param z the depth offset, in texels, from the first layer of the
-	 *        texture at which to paste the image.
-	 *
-	 * \warning This function must only be called on textures that are set up to
-	 *          store arrays of layers of 2D image data. Otherwise, the behavior
-	 *          is undefined.
-	 * \warning Enough space must be allocated in the texture for the full image
-	 *          to fit at the given position. Otherwise, the behavior is
-	 *          undefined.
-	 */
-	void pasteImage2DArray(const ImageHDRView& image, std::size_t x, std::size_t y, std::size_t z);
+	void pasteImage2DArray(const ImageView& image, std::size_t x, std::size_t y, std::size_t z);
 
 	/**
 	 * Fill the entire allocated 2D texture data with pixels of the given color.
@@ -634,10 +486,10 @@ public:
 	/**
 	 * Get the internal texel format of this texture.
 	 *
-	 * \return the internal texel format, or TextureInternalFormat::NONE if the
-	 *         texture does not have a value.
+	 * \return the internal texel format, or TextureFormat::R8_UNORM if the texture
+	 *         does not have a value.
 	 */
-	[[nodiscard]] TextureInternalFormat getInternalFormat() const noexcept {
+	[[nodiscard]] TextureFormat getInternalFormat() const noexcept {
 		return internalFormat;
 	}
 
@@ -708,9 +560,9 @@ private:
 	};
 
 	Resource<Handle, TextureDeleter> texture{};
-	TextureInternalFormat internalFormat = TextureInternalFormat::NONE;
 	std::size_t width = 0;
 	std::size_t height = 0;
+	TextureFormat internalFormat = TextureFormat::R8_UNORM;
 	TextureOptions options{};
 };
 

@@ -1,7 +1,6 @@
 #include <donut/graphics/Error.hpp>
 #include <donut/graphics/Handle.hpp>
-#include <donut/graphics/ImageHDR.hpp>
-#include <donut/graphics/ImageLDR.hpp>
+#include <donut/graphics/Image.hpp>
 #include <donut/graphics/RenderPass.hpp>
 #include <donut/graphics/Renderer.hpp>
 #include <donut/graphics/Texture.hpp>
@@ -29,31 +28,28 @@ alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedNormalTextureStora
 
 } // namespace
 
-const Texture* const Texture::whiteR8G8B8A8Srgb1x1 = reinterpret_cast<Texture*>(sharedWhiteTextureStorage.data());
-const Texture* const Texture::grayR8G8B8A8Unorm1x1 = reinterpret_cast<Texture*>(sharedGrayTextureStorage.data());
-const Texture* const Texture::normalR8G8B8Unorm1x1 = reinterpret_cast<Texture*>(sharedNormalTextureStorage.data());
+const Texture* const Texture::defaultWhite = reinterpret_cast<Texture*>(sharedWhiteTextureStorage.data());
+const Texture* const Texture::defaultGray = reinterpret_cast<Texture*>(sharedGrayTextureStorage.data());
+const Texture* const Texture::defaultNormal = reinterpret_cast<Texture*>(sharedNormalTextureStorage.data());
 
 void Texture::createSharedTextures() {
 	if (sharedTextureReferenceCount == 0) {
-		constexpr std::array<std::byte, 4> WHITE_PIXEL_R8G8B8A8_SRGB{std::byte{255}, std::byte{255}, std::byte{255}, std::byte{255}};
-		constexpr std::array<std::byte, 4> GRAY_PIXEL_R8G8B8A8_UNORM{std::byte{128}, std::byte{128}, std::byte{128}, std::byte{255}};
-		constexpr std::array<std::byte, 3> NORMAL_PIXEL_R8G8B8_UNORM{std::byte{128}, std::byte{128}, std::byte{255}};
+		constexpr std::array<std::byte, 4> WHITE_PIXEL{std::byte{255}, std::byte{255}, std::byte{255}, std::byte{255}};
+		constexpr std::array<std::byte, 4> GRAY_PIXEL{std::byte{128}, std::byte{128}, std::byte{128}, std::byte{255}};
+		constexpr std::array<std::byte, 3> NORMAL_PIXEL{std::byte{128}, std::byte{128}, std::byte{255}};
 		constexpr TextureOptions PIXEL_TEXTURE_OPTIONS{.repeat = true, .useLinearFiltering = false, .useMipmap = false};
-		std::construct_at(whiteR8G8B8A8Srgb1x1, TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, WHITE_PIXEL_R8G8B8A8_SRGB.data(),
-			PIXEL_TEXTURE_OPTIONS);
+		std::construct_at(defaultWhite, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, WHITE_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
 		try {
-			std::construct_at(grayR8G8B8A8Unorm1x1, TextureInternalFormat::RGBA8, 1, 1, TextureFormat::RGBA, TextureComponentType::U8, GRAY_PIXEL_R8G8B8A8_UNORM.data(),
-				PIXEL_TEXTURE_OPTIONS);
+			std::construct_at(defaultGray, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, GRAY_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
 		} catch (...) {
-			std::destroy_at(whiteR8G8B8A8Srgb1x1);
+			std::destroy_at(defaultWhite);
 			throw;
 		}
 		try {
-			std::construct_at(normalR8G8B8Unorm1x1, TextureInternalFormat::RGB8, 1, 1, TextureFormat::RGB, TextureComponentType::U8, NORMAL_PIXEL_R8G8B8_UNORM.data(),
-				PIXEL_TEXTURE_OPTIONS);
+			std::construct_at(defaultNormal, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGB, PixelComponentType::U8, NORMAL_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
 		} catch (...) {
-			std::destroy_at(grayR8G8B8A8Unorm1x1);
-			std::destroy_at(whiteR8G8B8A8Srgb1x1);
+			std::destroy_at(defaultGray);
+			std::destroy_at(defaultWhite);
 			throw;
 		}
 	}
@@ -62,110 +58,105 @@ void Texture::createSharedTextures() {
 
 void Texture::destroySharedTextures() noexcept {
 	if (sharedTextureReferenceCount-- == 1) {
-		std::destroy_at(normalR8G8B8Unorm1x1);
-		std::destroy_at(grayR8G8B8A8Unorm1x1);
-		std::destroy_at(whiteR8G8B8A8Srgb1x1);
+		std::destroy_at(defaultNormal);
+		std::destroy_at(defaultGray);
+		std::destroy_at(defaultWhite);
 	}
 }
 
-std::size_t Texture::getChannelCount(TextureFormat format) noexcept {
-	switch (format) {
-		case TextureFormat::NONE: return 0;
-		case TextureFormat::R: return 1;
-		case TextureFormat::RG: return 2;
-		case TextureFormat::RGB: return 3;
-		case TextureFormat::RGBA: return 4;
+std::size_t Texture::getChannelCount(TextureFormat internalFormat) noexcept {
+	switch (internalFormat) {
+		case TextureFormat::R8_UNORM: [[fallthrough]];
+		case TextureFormat::R16_FLOAT: [[fallthrough]];
+		case TextureFormat::R32_FLOAT: return 1;
+		case TextureFormat::R8G8_UNORM: [[fallthrough]];
+		case TextureFormat::R16G16_FLOAT: [[fallthrough]];
+		case TextureFormat::R32G32_FLOAT: return 2;
+		case TextureFormat::R8G8B8_UNORM: [[fallthrough]];
+		case TextureFormat::R16G16B16_FLOAT: [[fallthrough]];
+		case TextureFormat::R32G32B32_FLOAT: return 3;
+		case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
+		case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
+		case TextureFormat::R32G32B32A32_FLOAT: return 4;
 	}
 	return 0;
 }
 
-std::size_t Texture::getInternalChannelCount(TextureInternalFormat internalFormat) noexcept {
+PixelFormat Texture::getPixelFormat(TextureFormat internalFormat) noexcept {
 	switch (internalFormat) {
-		case TextureInternalFormat::NONE: return 0;
-		case TextureInternalFormat::R8: [[fallthrough]];
-		case TextureInternalFormat::R16F: [[fallthrough]];
-		case TextureInternalFormat::R32F: return 1;
-		case TextureInternalFormat::RG8: [[fallthrough]];
-		case TextureInternalFormat::RG16F: [[fallthrough]];
-		case TextureInternalFormat::RG32F: return 2;
-		case TextureInternalFormat::RGB8: [[fallthrough]];
-		case TextureInternalFormat::RGB16F: [[fallthrough]];
-		case TextureInternalFormat::RGB32F: return 3;
-		case TextureInternalFormat::RGBA8: [[fallthrough]];
-		case TextureInternalFormat::RGBA16F: [[fallthrough]];
-		case TextureInternalFormat::RGBA32F: return 4;
+		case TextureFormat::R8_UNORM: [[fallthrough]];
+		case TextureFormat::R16_FLOAT: [[fallthrough]];
+		case TextureFormat::R32_FLOAT: return PixelFormat::R;
+		case TextureFormat::R8G8_UNORM: [[fallthrough]];
+		case TextureFormat::R16G16_FLOAT: [[fallthrough]];
+		case TextureFormat::R32G32_FLOAT: return PixelFormat::RG;
+		case TextureFormat::R8G8B8_UNORM: [[fallthrough]];
+		case TextureFormat::R16G16B16_FLOAT: [[fallthrough]];
+		case TextureFormat::R32G32B32_FLOAT: return PixelFormat::RGB;
+		case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
+		case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
+		case TextureFormat::R32G32B32A32_FLOAT: return PixelFormat::RGBA;
 	}
-	return 0;
+	return PixelFormat::R;
 }
 
-TextureComponentType Texture::getInternalComponentType(TextureInternalFormat internalFormat) noexcept {
+PixelComponentType Texture::getPixelComponentType(TextureFormat internalFormat) noexcept {
 	switch (internalFormat) {
-		case TextureInternalFormat::NONE: return TextureComponentType::U8;
-		case TextureInternalFormat::R8: [[fallthrough]];
-		case TextureInternalFormat::RG8: [[fallthrough]];
-		case TextureInternalFormat::RGB8: [[fallthrough]];
-		case TextureInternalFormat::RGBA8: return TextureComponentType::U8;
-		case TextureInternalFormat::R16F: [[fallthrough]];
-		case TextureInternalFormat::RG16F: [[fallthrough]];
-		case TextureInternalFormat::RGB16F: [[fallthrough]];
-		case TextureInternalFormat::RGBA16F: return TextureComponentType::F16;
-		case TextureInternalFormat::R32F: [[fallthrough]];
-		case TextureInternalFormat::RG32F: [[fallthrough]];
-		case TextureInternalFormat::RGB32F: [[fallthrough]];
-		case TextureInternalFormat::RGBA32F: return TextureComponentType::F32;
+		case TextureFormat::R8_UNORM: [[fallthrough]];
+		case TextureFormat::R8G8_UNORM: [[fallthrough]];
+		case TextureFormat::R8G8B8_UNORM: [[fallthrough]];
+		case TextureFormat::R8G8B8A8_UNORM: return PixelComponentType::U8;
+		case TextureFormat::R16_FLOAT: [[fallthrough]];
+		case TextureFormat::R16G16_FLOAT: [[fallthrough]];
+		case TextureFormat::R16G16B16_FLOAT: [[fallthrough]];
+		case TextureFormat::R16G16B16A16_FLOAT: return PixelComponentType::F16;
+		case TextureFormat::R32_FLOAT: [[fallthrough]];
+		case TextureFormat::R32G32_FLOAT: [[fallthrough]];
+		case TextureFormat::R32G32B32_FLOAT: [[fallthrough]];
+		case TextureFormat::R32G32B32A32_FLOAT: return PixelComponentType::F32;
 	}
-	return TextureComponentType::U8;
+	return PixelComponentType::U8;
 }
 
-TextureFormat Texture::getPixelFormat(std::size_t channelCount) {
-	switch (channelCount) {
-		case 1: return TextureFormat::R;
-		case 2: return TextureFormat::RG;
-		case 3: return TextureFormat::RGB;
-		case 4: return TextureFormat::RGBA;
-		default: break;
+TextureFormat Texture::getInternalFormat(PixelFormat pixelFormat, PixelComponentType pixelComponentType) noexcept {
+	switch (pixelFormat) {
+		case PixelFormat::R:
+			switch (pixelComponentType) {
+				case PixelComponentType::U8: return TextureFormat::R8_UNORM;
+				case PixelComponentType::F16: return TextureFormat::R16_FLOAT;
+				case PixelComponentType::F32: return TextureFormat::R32_FLOAT;
+			}
+			break;
+		case PixelFormat::RG:
+			switch (pixelComponentType) {
+				case PixelComponentType::U8: return TextureFormat::R8G8_UNORM;
+				case PixelComponentType::F16: return TextureFormat::R16G16_FLOAT;
+				case PixelComponentType::F32: return TextureFormat::R32G32_FLOAT;
+			}
+			break;
+		case PixelFormat::RGB:
+			switch (pixelComponentType) {
+				case PixelComponentType::U8: return TextureFormat::R8G8B8_UNORM;
+				case PixelComponentType::F16: return TextureFormat::R16G16B16_FLOAT;
+				case PixelComponentType::F32: return TextureFormat::R32G32B32_FLOAT;
+			}
+			break;
+		case PixelFormat::RGBA:
+			switch (pixelComponentType) {
+				case PixelComponentType::U8: return TextureFormat::R8G8B8A8_UNORM;
+				case PixelComponentType::F16: return TextureFormat::R16G16B16A16_FLOAT;
+				case PixelComponentType::F32: return TextureFormat::R32G32B32A32_FLOAT;
+			}
+			break;
 	}
-	throw Error{fmt::format("Invalid texture channel count \"{}\"!", channelCount)};
+	return TextureFormat::R8_UNORM;
 }
 
-TextureInternalFormat Texture::getTexelFormatU8(std::size_t channelCount) {
-	switch (channelCount) {
-		case 1: return TextureInternalFormat::R8;
-		case 2: return TextureInternalFormat::RG8;
-		case 3: return TextureInternalFormat::RGB8;
-		case 4: return TextureInternalFormat::RGBA8;
-		default: break;
-	}
-	throw Error{fmt::format("Invalid texture channel count \"{}\"!", channelCount)};
-}
-
-TextureInternalFormat Texture::getTexelFormatF16(std::size_t channelCount) {
-	switch (channelCount) {
-		case 1: return TextureInternalFormat::R16F;
-		case 2: return TextureInternalFormat::RG16F;
-		case 3: return TextureInternalFormat::RGB16F;
-		case 4: return TextureInternalFormat::RGBA16F;
-		default: break;
-	}
-	throw Error{fmt::format("Invalid texture channel count \"{}\"!", channelCount)};
-}
-
-TextureInternalFormat Texture::getTexelFormatF32(std::size_t channelCount) {
-	switch (channelCount) {
-		case 1: return TextureInternalFormat::R32F;
-		case 2: return TextureInternalFormat::RG32F;
-		case 3: return TextureInternalFormat::RGB32F;
-		case 4: return TextureInternalFormat::RGBA32F;
-		default: break;
-	}
-	throw Error{fmt::format("Invalid texture channel count \"{}\"!", channelCount)};
-}
-
-Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, TextureFormat format, TextureComponentType type, const void* pixels,
+Texture::Texture(TextureFormat internalFormat, std::size_t width, std::size_t height, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels,
 	const TextureOptions& options)
-	: internalFormat(internalFormat)
-	, width(width)
-	, height(height) {
+	: width(width)
+	, height(height)
+	, internalFormat(internalFormat) {
 	Handle handle{};
 	glGenTextures(1, &handle);
 	if (!handle) {
@@ -180,8 +171,8 @@ Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::s
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D, texture.get());
-	glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(internalFormat), static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, static_cast<GLenum>(format),
-		static_cast<GLenum>(type), pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(internalFormat), static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, static_cast<GLenum>(pixelFormat),
+		static_cast<GLenum>(pixelComponentType), pixels);
 
 	setOptions2D(options);
 
@@ -189,11 +180,11 @@ Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::s
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
 }
 
-Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, std::size_t depth, TextureFormat format, TextureComponentType type,
+Texture::Texture(TextureFormat internalFormat, std::size_t width, std::size_t height, std::size_t depth, PixelFormat pixelFormat, PixelComponentType pixelComponentType,
 	const void* pixels, const TextureOptions& options)
-	: internalFormat(internalFormat)
-	, width(width)
-	, height(height) {
+	: width(width)
+	, height(height)
+	, internalFormat(internalFormat) {
 	Handle handle{};
 	glGenTextures(1, &handle);
 	if (!handle) {
@@ -209,7 +200,7 @@ Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::s
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, texture.get());
 	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, static_cast<GLint>(internalFormat), static_cast<GLsizei>(width), static_cast<GLsizei>(height), static_cast<GLsizei>(depth), 0,
-		static_cast<GLenum>(format), static_cast<GLenum>(type), pixels);
+		static_cast<GLenum>(pixelFormat), static_cast<GLenum>(pixelComponentType), pixels);
 
 	setOptions2DArray(options);
 
@@ -217,24 +208,15 @@ Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::s
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
 }
 
-Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, const TextureOptions& options)
-	: Texture(internalFormat, width, height, getPixelFormat(getInternalChannelCount(internalFormat)), getInternalComponentType(internalFormat), nullptr, options) {}
+Texture::Texture(TextureFormat internalFormat, std::size_t width, std::size_t height, const TextureOptions& options)
+	: Texture(internalFormat, width, height, getPixelFormat(internalFormat), getPixelComponentType(internalFormat), nullptr, options) {}
 
-Texture::Texture(TextureInternalFormat internalFormat, std::size_t width, std::size_t height, std::size_t depth, const TextureOptions& options)
-	: Texture(internalFormat, width, height, depth, getPixelFormat(getInternalChannelCount(internalFormat)), getInternalComponentType(internalFormat), nullptr, options) {}
+Texture::Texture(TextureFormat internalFormat, std::size_t width, std::size_t height, std::size_t depth, const TextureOptions& options)
+	: Texture(internalFormat, width, height, depth, getPixelFormat(internalFormat), getPixelComponentType(internalFormat), nullptr, options) {}
 
-Texture::Texture(const ImageLDRView& image, const TextureOptions& options)
-	: Texture(getTexelFormatU8(image.getChannelCount()), image.getWidth(), image.getHeight(), getPixelFormat(image.getChannelCount()), TextureComponentType::U8, image.getPixels(),
-		  options) {}
-
-Texture::Texture(const ImageHDRView& image, const TextureOptions& options)
-	: Texture(getTexelFormatF16(image.getChannelCount()), image.getWidth(), image.getHeight(), getPixelFormat(image.getChannelCount()), TextureComponentType::F32,
-		  image.getPixels(),
-		  {
-			  .repeat = options.repeat,
-			  .useLinearFiltering = options.useLinearFiltering,
-			  .useMipmap = false,
-		  }) {}
+Texture::Texture(const ImageView& image, const TextureOptions& options)
+	: Texture(getInternalFormat(image.getPixelFormat(), image.getPixelComponentType()), image.getWidth(), image.getHeight(), image.getPixelFormat(), image.getPixelComponentType(),
+		  image.getPixels(), options) {}
 
 void Texture::setOptions2D(const TextureOptions& newOptions) {
 	options = newOptions;
@@ -278,7 +260,8 @@ void Texture::setOptions2DArray(const TextureOptions& newOptions) {
 	glBindTexture(GL_TEXTURE_2D_ARRAY, static_cast<GLuint>(oldTextureBinding2DArray));
 }
 
-void Texture::pasteImage2D(std::size_t width, std::size_t height, TextureFormat format, TextureComponentType type, const void* pixels, std::size_t x, std::size_t y) {
+void Texture::pasteImage2D(std::size_t width, std::size_t height, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels, std::size_t x,
+	std::size_t y) {
 	GLint oldUnpackAlignment = 0;
 	GLint oldTextureBinding2D = 0;
 	glGetIntegerv(GL_UNPACK_ALIGNMENT, &oldUnpackAlignment);
@@ -286,23 +269,19 @@ void Texture::pasteImage2D(std::size_t width, std::size_t height, TextureFormat 
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D, texture.get());
-	glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(x), static_cast<GLint>(y), static_cast<GLsizei>(width), static_cast<GLsizei>(height), static_cast<GLenum>(format),
-		static_cast<GLenum>(type), pixels);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(x), static_cast<GLint>(y), static_cast<GLsizei>(width), static_cast<GLsizei>(height), static_cast<GLenum>(pixelFormat),
+		static_cast<GLenum>(pixelComponentType), pixels);
 
 	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(oldTextureBinding2D));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
 }
 
-void Texture::pasteImage2D(const ImageLDRView& image, std::size_t x, std::size_t y) {
-	pasteImage2D(image.getWidth(), image.getHeight(), getPixelFormat(image.getChannelCount()), TextureComponentType::U8, image.getPixels(), x, y);
+void Texture::pasteImage2D(const ImageView& image, std::size_t x, std::size_t y) {
+	pasteImage2D(image.getWidth(), image.getHeight(), image.getPixelFormat(), image.getPixelComponentType(), image.getPixels(), x, y);
 }
 
-void Texture::pasteImage2D(const ImageHDRView& image, std::size_t x, std::size_t y) {
-	pasteImage2D(image.getWidth(), image.getHeight(), getPixelFormat(image.getChannelCount()), TextureComponentType::F32, image.getPixels(), x, y);
-}
-
-void Texture::pasteImage2DArray(std::size_t width, std::size_t height, std::size_t depth, TextureFormat format, TextureComponentType type, const void* pixels, std::size_t x,
-	std::size_t y, std::size_t z) {
+void Texture::pasteImage2DArray(std::size_t width, std::size_t height, std::size_t depth, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels,
+	std::size_t x, std::size_t y, std::size_t z) {
 	GLint oldUnpackAlignment = 0;
 	GLint oldTextureBinding2DArray = 0;
 	glGetIntegerv(GL_UNPACK_ALIGNMENT, &oldUnpackAlignment);
@@ -311,18 +290,14 @@ void Texture::pasteImage2DArray(std::size_t width, std::size_t height, std::size
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, texture.get());
 	glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, static_cast<GLint>(x), static_cast<GLint>(y), static_cast<GLint>(z), static_cast<GLsizei>(width), static_cast<GLsizei>(height),
-		static_cast<GLsizei>(depth), static_cast<GLenum>(format), static_cast<GLenum>(type), pixels);
+		static_cast<GLsizei>(depth), static_cast<GLenum>(pixelFormat), static_cast<GLenum>(pixelComponentType), pixels);
 
 	glBindTexture(GL_TEXTURE_2D_ARRAY, static_cast<GLuint>(oldTextureBinding2DArray));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
 }
 
-void Texture::pasteImage2DArray(const ImageLDRView& image, std::size_t x, std::size_t y, std::size_t z) {
-	pasteImage2DArray(image.getWidth(), image.getHeight(), 1, getPixelFormat(image.getChannelCount()), TextureComponentType::U8, image.getPixels(), x, y, z);
-}
-
-void Texture::pasteImage2DArray(const ImageHDRView& image, std::size_t x, std::size_t y, std::size_t z) {
-	pasteImage2DArray(image.getWidth(), image.getHeight(), 1, getPixelFormat(image.getChannelCount()), TextureComponentType::F32, image.getPixels(), x, y, z);
+void Texture::pasteImage2DArray(const ImageView& image, std::size_t x, std::size_t y, std::size_t z) {
+	pasteImage2DArray(image.getWidth(), image.getHeight(), 1, image.getPixelFormat(), image.getPixelComponentType(), image.getPixels(), x, y, z);
 }
 
 void Texture::fill2D(Renderer& renderer, Color color) {

@@ -7,8 +7,6 @@
 #include <donut/graphics/Framebuffer.hpp>
 #include <donut/graphics/Handle.hpp>
 #include <donut/graphics/Image.hpp>
-#include <donut/graphics/ImageHDR.hpp>
-#include <donut/graphics/ImageLDR.hpp>
 #include <donut/graphics/Mesh.hpp>
 #include <donut/graphics/Model.hpp>
 #include <donut/graphics/RenderPass.hpp>

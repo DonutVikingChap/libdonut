@@ -118,8 +118,8 @@ struct Model {
 	 * \note The file format is determined entirely from the file contents; the
 	 *       filename extension is not taken into account.
 	 * \note Any material libraries and texture image files required by the
-	 *       model are also loaded as needed. See the documentation of ImageLDR
-	 *       and ImageHDR for a description of the supported image file formats.
+	 *       model are also loaded as needed. See the documentation of Image for
+	 *       a description of the supported image file formats.
 	 */
 	explicit Model(const char* filepath);
 

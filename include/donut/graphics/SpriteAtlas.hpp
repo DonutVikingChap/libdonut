@@ -3,7 +3,7 @@
 
 #include <donut/AtlasPacker.hpp>
 #include <donut/Color.hpp>
-#include <donut/graphics/ImageLDR.hpp>
+#include <donut/graphics/Image.hpp>
 #include <donut/graphics/Texture.hpp>
 
 #include <cassert>     // assert
@@ -18,7 +18,7 @@ namespace graphics {
 class Renderer; // Forward declaration, to avoid including Renderer.hpp.
 
 /**
- * Expandable texture atlas for packing LDR 2D images into a spritesheet to
+ * Expandable texture atlas for packing 2D images into a spritesheet to
  * enable batch rendering.
  */
 class SpriteAtlas {
@@ -78,7 +78,7 @@ public:
 	 *
 	 * \sa createSubSprite()
 	 */
-	[[nodiscard]] SpriteId insert(Renderer& renderer, const ImageLDRView& image, Flip flip = NO_FLIP) {
+	[[nodiscard]] SpriteId insert(Renderer& renderer, const ImageView& image, Flip flip = NO_FLIP) {
 		const auto [x, y, resized] = atlasPacker.insertRectangle(image.getWidth(), image.getHeight());
 		prepareAtlasTexture(renderer, resized);
 
@@ -235,7 +235,7 @@ private:
 			}
 		} else {
 			atlasTexture = {
-				TextureInternalFormat::RGBA8,
+				TextureFormat::R8G8B8A8_UNORM,
 				atlasPacker.getResolution(),
 				atlasPacker.getResolution(),
 				{.repeat = false, .useLinearFiltering = false, .useMipmap = false},

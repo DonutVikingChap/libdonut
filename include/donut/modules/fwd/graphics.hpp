@@ -18,22 +18,16 @@ class Framebuffer;
 
 using Handle = std::uint32_t;
 
+enum class PixelFormat : std::uint32_t;
+enum class PixelComponentType : std::uint32_t;
 class ImageView;
+struct ImageSavePNGOptions;
+struct ImageSaveBMPOptions;
+struct ImageSaveTGAOptions;
+struct ImageSaveJPGOptions;
+struct ImageSaveHDROptions;
 struct ImageOptions;
 class Image;
-
-class ImageHDRView;
-struct ImageHDRSaveHDROptions;
-struct ImageHDROptions;
-class ImageHDR;
-
-class ImageLDRView;
-struct ImageLDRSavePNGOptions;
-struct ImageLDRSaveBMPOptions;
-struct ImageLDRSaveTGAOptions;
-struct ImageLDRSaveJPGOptions;
-struct ImageLDROptions;
-class ImageLDR;
 
 enum class MeshBufferUsage : std::uint32_t;
 enum class MeshPrimitiveType : std::uint32_t;
@@ -76,9 +70,7 @@ class Shader3D;
 
 class SpriteAtlas;
 
-enum class TextureFormat : std::uint32_t;
-enum class TextureInternalFormat : std::int32_t;
-enum class TextureComponentType : std::uint32_t;
+enum class TextureFormat : std::int32_t;
 struct TextureOptions;
 class Texture;
 

@@ -153,7 +153,7 @@ void Font::prepareAtlasTexture(Renderer& renderer, bool resized) {
 		}
 	} else {
 		atlasTexture = {
-			TextureInternalFormat::R8,
+			TextureFormat::R8_UNORM,
 			atlasPacker.getResolution(),
 			atlasPacker.getResolution(),
 			{.repeat = false, .useLinearFiltering = options.useLinearFiltering, .useMipmap = false},
@@ -190,7 +190,7 @@ Font::Glyph Font::renderGlyph(Renderer& renderer, std::uint32_t characterSize, c
 		if (sft_render(&sft, glyph, SFT_Image{.pixels = pixels.data(), .width = static_cast<int>(width), .height = static_cast<int>(height)}) != 0) {
 			throw Error{fmt::format("Failed to render font glyph for code point U+{:04X}", static_cast<std::uint32_t>(codePoint))};
 		}
-		atlasTexture.pasteImage2D(width, height, TextureFormat::R, TextureComponentType::U8, pixels.data(), x, y);
+		atlasTexture.pasteImage2D(width, height, PixelFormat::R, PixelComponentType::U8, pixels.data(), x, y);
 	}
 
 	const glm::vec2 textureSize = atlasTexture.getSize2D();

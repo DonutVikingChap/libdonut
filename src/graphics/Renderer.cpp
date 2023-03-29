@@ -119,13 +119,13 @@ void renderModelInstances(Shader3D& shader, std::span<const Model::Object> objec
 		glBindBuffer(GL_ARRAY_BUFFER, object.mesh.getInstanceBuffer());
 
 		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_DIFFUSE);
-		glBindTexture(GL_TEXTURE_2D, (object.material.diffuseMap) ? object.material.diffuseMap.get() : Texture::whiteR8G8B8A8Srgb1x1->get());
+		glBindTexture(GL_TEXTURE_2D, (object.material.diffuseMap) ? object.material.diffuseMap.get() : Texture::defaultWhite->get());
 
 		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_SPECULAR);
-		glBindTexture(GL_TEXTURE_2D, (object.material.specularMap) ? object.material.specularMap.get() : Texture::grayR8G8B8A8Unorm1x1->get());
+		glBindTexture(GL_TEXTURE_2D, (object.material.specularMap) ? object.material.specularMap.get() : Texture::defaultGray->get());
 
 		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_NORMAL);
-		glBindTexture(GL_TEXTURE_2D, (object.material.normalMap) ? object.material.normalMap.get() : Texture::normalR8G8B8Unorm1x1->get());
+		glBindTexture(GL_TEXTURE_2D, (object.material.normalMap) ? object.material.normalMap.get() : Texture::defaultNormal->get());
 
 		glUniform1f(shader.specularExponent.getLocation(), object.material.specularExponent);
 

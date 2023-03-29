@@ -27,7 +27,7 @@ Note: This library is currently a **work in progress** and makes no guarantees r
         - Text rendering and [Font](include/donut/graphics/Font.hpp) loading using [libschrift](https://github.com/tomolt/libschrift).
     - [Renderer](include/donut/graphics/Renderer.hpp) supporting arbitrary [Framebuffer](include/donut/graphics/Framebuffer.hpp) targets and [Viewport](include/donut/graphics/Viewport.hpp) areas with optional integer scaling.
     - [Model](include/donut/graphics/Model.hpp) loading from OBJ files.
-    - [Image](include/donut/graphics/Image.hpp) loading/saving in both 8-bit [LDR](include/donut/graphics/ImageLDR.hpp) and floating-point [HDR](include/donut/graphics/ImageHDR.hpp) using [stbi](https://github.com/nothings/stb).
+    - [Image](include/donut/graphics/Image.hpp) loading/saving using [stbi](https://github.com/nothings/stb).
 - Utilities:
     - [AtlasPacker](include/donut/AtlasPacker.hpp) for packing rectangles into expandable square texture atlases.
     - Floating-point RGBA [Color](include/donut/Color.hpp) type that includes predefined constants for common web colors.
