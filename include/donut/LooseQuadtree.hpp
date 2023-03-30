@@ -96,31 +96,31 @@ public:
 	using difference_type = typename std::iterator_traits<iterator>::difference_type;
 
 	/**
-     * Construct an empty tree.
-     *
-     * \param worldBoundingBox bounding box of the world, or the full region
-     *        that contains all other possible axis-aligned boxes that may be
-     *        inserted into the tree.
-     * \param typicalBoxSize minimum threshold for the size of a leaf quadrant.
-     *        This should correspond roughly to the typical size of the boxes
-     *        that will be inserted into the tree.
-     */
+	 * Construct an empty tree.
+	 *
+	 * \param worldBoundingBox bounding box of the world, or the full region
+	 *        that contains all other possible axis-aligned boxes that may be
+	 *        inserted into the tree.
+	 * \param typicalBoxSize minimum threshold for the size of a leaf quadrant.
+	 *        This should correspond roughly to the typical size of the boxes
+	 *        that will be inserted into the tree.
+	 */
 	LooseQuadtree(const AxisAlignedBox<2, float>& worldBoundingBox, glm::vec2 typicalBoxSize) noexcept {
 		reset(worldBoundingBox, typicalBoxSize);
 	}
 
 	/**
-     * Reset the tree to an empty state with new world parameters.
-     *
-     * \param worldBoundingBox bounding box of the world, or the full region
-     *        that contains all other possible axis-aligned boxes that may be
-     *        inserted into the tree.
-     * \param typicalBoxSize minimum threshold for the size of a leaf quadrant.
-     *        This should correspond roughly to the typical size of the boxes
-     *        that will be inserted into the tree.
-     *
-     * \sa clear()
-     */
+	 * Reset the tree to an empty state with new world parameters.
+	 *
+	 * \param worldBoundingBox bounding box of the world, or the full region
+	 *        that contains all other possible axis-aligned boxes that may be
+	 *        inserted into the tree.
+	 * \param typicalBoxSize minimum threshold for the size of a leaf quadrant.
+	 *        This should correspond roughly to the typical size of the boxes
+	 *        that will be inserted into the tree.
+	 *
+	 * \sa clear()
+	 */
 	void reset(const AxisAlignedBox<2, float>& worldBoundingBox, glm::vec2 typicalBoxSize) noexcept {
 		clear();
 		minimumQuadrantSize = glm::max(typicalBoxSize.x, typicalBoxSize.y);
@@ -135,40 +135,40 @@ public:
 	}
 
 	/**
-     * Erase all inserted elements from the tree.
-     *
-     * \sa reset()
-     * \sa erase()
-     */
+	 * Erase all inserted elements from the tree.
+	 *
+	 * \sa reset()
+	 * \sa erase()
+	 */
 	void clear() noexcept {
 		tree.clear();
 		firstFreeIndex = 0;
 	}
 
 	/**
-     * Try to construct a new element in the tree.
-     *
-     * \param elementBoundingBox axis-aligned bounding box of the element.
-     * \param args constructor arguments for the new element.
-     *
-     * \return a pair where:
-     *         - the first element contains an iterator to the newly inserted
-     *           element, or to the existing element if one was already
-     *           occupying the corresponding tree node, and
-     *         - the second element contains a bool that is true if an
-     *           element was successfully inserted, or false if an existing
-     *           element was already occupying the corresponding tree node.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the element constructor.
-     *
-     * \note To store multiple values in the same node of the tree, use a
-     *       list-like type for the element type T, such as std::vector,
-     *       std::forward_list or some intrusive linked list between the values.
-     *
-     * \sa insert()
-     * \sa operator[]()
-     */
+	 * Try to construct a new element in the tree.
+	 *
+	 * \param elementBoundingBox axis-aligned bounding box of the element.
+	 * \param args constructor arguments for the new element.
+	 *
+	 * \return a pair where:
+	 *         - the first element contains an iterator to the newly inserted
+	 *           element, or to the existing element if one was already
+	 *           occupying the corresponding tree node, and
+	 *         - the second element contains a bool that is true if an
+	 *           element was successfully inserted, or false if an existing
+	 *           element was already occupying the corresponding tree node.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the element constructor.
+	 *
+	 * \note To store multiple values in the same node of the tree, use a
+	 *       list-like type for the element type T, such as std::vector,
+	 *       std::forward_list or some intrusive linked list between the values.
+	 *
+	 * \sa insert()
+	 * \sa operator[]()
+	 */
 	template <typename... Args>
 	std::pair<iterator, bool> emplace(const AxisAlignedBox<2, float>& elementBoundingBox, Args&&... args) {
 		// Make sure the tree has a root.
@@ -247,91 +247,91 @@ public:
 	}
 
 	/**
-     * Try to copy an element into the tree.
-     *
-     * \param elementBoundingBox axis-aligned bounding box of the element.
-     * \param value value to be copied into the tree.
-     *
-     * \return a pair where:
-     *         - the first element contains an iterator to the newly inserted
-     *           element, or to the existing element if one was already
-     *           occupying the corresponding tree node, and
-     *         - the second element contains a bool that is true if an
-     *           element was successfully inserted, or false if an existing
-     *           element was already occupying the corresponding tree node.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the element copy constructor.
-     *
-     * \note To store multiple values in the same node of the tree, use a
-     *       list-like type for the element type T, such as std::vector,
-     *       std::forward_list or some intrusive linked list between the values.
-     *
-     * \sa emplace()
-     * \sa operator[]()
-     */
+	 * Try to copy an element into the tree.
+	 *
+	 * \param elementBoundingBox axis-aligned bounding box of the element.
+	 * \param value value to be copied into the tree.
+	 *
+	 * \return a pair where:
+	 *         - the first element contains an iterator to the newly inserted
+	 *           element, or to the existing element if one was already
+	 *           occupying the corresponding tree node, and
+	 *         - the second element contains a bool that is true if an
+	 *           element was successfully inserted, or false if an existing
+	 *           element was already occupying the corresponding tree node.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the element copy constructor.
+	 *
+	 * \note To store multiple values in the same node of the tree, use a
+	 *       list-like type for the element type T, such as std::vector,
+	 *       std::forward_list or some intrusive linked list between the values.
+	 *
+	 * \sa emplace()
+	 * \sa operator[]()
+	 */
 	iterator insert(const AxisAlignedBox<2, float>& elementBoundingBox, const T& value) {
 		return emplace(elementBoundingBox, value);
 	}
 
 	/**
-     * Try to move an element into the tree.
-     *
-     * \param elementBoundingBox axis-aligned bounding box of the element.
-     * \param value value to be moved into the tree.
-     *
-     * \return a pair where:
-     *         - the first element contains an iterator to the newly inserted
-     *           element, or to the existing element if one was already
-     *           occupying the corresponding tree node, and
-     *         - the second element contains a bool that is true if an
-     *           element was successfully inserted, or false if an existing
-     *           element was already occupying the corresponding tree node.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the element move constructor.
-     *
-     * \note To store multiple values in the same node of the tree, use a
-     *       list-like type for the element type T, such as std::vector,
-     *       std::forward_list or some intrusive linked list between the values.
-     *
-     * \sa emplace()
-     * \sa operator[]()
-     */
+	 * Try to move an element into the tree.
+	 *
+	 * \param elementBoundingBox axis-aligned bounding box of the element.
+	 * \param value value to be moved into the tree.
+	 *
+	 * \return a pair where:
+	 *         - the first element contains an iterator to the newly inserted
+	 *           element, or to the existing element if one was already
+	 *           occupying the corresponding tree node, and
+	 *         - the second element contains a bool that is true if an
+	 *           element was successfully inserted, or false if an existing
+	 *           element was already occupying the corresponding tree node.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the element move constructor.
+	 *
+	 * \note To store multiple values in the same node of the tree, use a
+	 *       list-like type for the element type T, such as std::vector,
+	 *       std::forward_list or some intrusive linked list between the values.
+	 *
+	 * \sa emplace()
+	 * \sa operator[]()
+	 */
 	iterator insert(const AxisAlignedBox<2, float>& elementBoundingBox, T&& value) {
 		return emplace(elementBoundingBox, std::move(value));
 	}
 
 	/**
-     * Try to default-construct a new element in the tree and get a reference to
-     * it.
-     *
-     * \param elementBoundingBox axis-aligned bounding box of the element.
-     *
-     * \return a reference to the newly inserted element, or to the existing
-     *         element if one was already occupying the corresponding tree node.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the element default constructor.
-     *
-     * \note To store multiple values in the same node of the tree, use a
-     *       list-like type for the element type T, such as std::vector,
-     *       std::forward_list or some intrusive linked list between the values.
-     *
-     * \sa emplace()
-     * \sa insert()
-     */
+	 * Try to default-construct a new element in the tree and get a reference to
+	 * it.
+	 *
+	 * \param elementBoundingBox axis-aligned bounding box of the element.
+	 *
+	 * \return a reference to the newly inserted element, or to the existing
+	 *         element if one was already occupying the corresponding tree node.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the element default constructor.
+	 *
+	 * \note To store multiple values in the same node of the tree, use a
+	 *       list-like type for the element type T, such as std::vector,
+	 *       std::forward_list or some intrusive linked list between the values.
+	 *
+	 * \sa emplace()
+	 * \sa insert()
+	 */
 	[[nodiscard]] T& operator[](const AxisAlignedBox<2, float>& elementBoundingBox) {
 		return *emplace(elementBoundingBox).first;
 	}
 
 	/**
-     * Remove an element from the tree.
-     *
-     * \param pos iterator to the element to remove. Must be valid.
-     *
-     * \sa clear()
-     */
+	 * Remove an element from the tree.
+	 *
+	 * \param pos iterator to the element to remove. Must be valid.
+	 *
+	 * \sa clear()
+	 */
 	void erase(const_iterator pos) noexcept {
 		assert(pos.element);
 		pos.element->reset();
@@ -339,53 +339,53 @@ public:
 	}
 
 	/**
-     * Execute a callback function for each active node of the tree, including
-     * empty branch nodes without an element.
-     *
-     * \param callback function to execute, which should accept the following
-     *        parameters (though they don't need to be used):
-     *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-     *          axis-aligned box that defines the region that an element's
-     *          bounding box must be fully contained within in order to belong
-     *          to the node.
-     *        - `const T* element`: a non-owning read-only pointer to the
-     *          element occupying the node, or nullptr if it does not have one.
-     *        .
-     *        The callback function should return either void or a bool that
-     *        specifies whether to stop the traversal or not. A value of true
-     *        means to stop and return early, while a value of false means to
-     *        continue traversing.
-     * \param predicate condition that must be met in order to traverse deeper
-     *        into the tree. Should accept the following parameter:
-     *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-     *          axis-aligned box that defines the region that an element's
-     *          bounding box must be fully contained within in order to belong
-     *          to the next node.
-     *        .
-     *        The predicate function should return a bool that is true if the
-     *        next node should be traversed, or false if the branch should be
-     *        ignored.
-     *
-     * \return void if the callback function returns void, true if the callback
-     *         returns bool and exited early, false if the callback function
-     *         returns bool but didn't exit early.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the callback function or predicate
-     *         function.
-     *
-     * \note The order of traversal is unspecified, though it is guaranteed that
-     *       outer nodes will be visited before their own inner nodes that they
-     *       contain.
-     *
-     * \warning Although it is const, this function is not thread-safe since it
-     *          mutates an internal memory cache. Exclusive access is therefore
-     *          required for safety.
-     *
-     * \sa traverseElementNodes()
-     * \sa traverseElements()
-     * \sa test()
-     */
+	 * Execute a callback function for each active node of the tree, including
+	 * empty branch nodes without an element.
+	 *
+	 * \param callback function to execute, which should accept the following
+	 *        parameters (though they don't need to be used):
+	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
+	 *          axis-aligned box that defines the region that an element's
+	 *          bounding box must be fully contained within in order to belong
+	 *          to the node.
+	 *        - `const T* element`: a non-owning read-only pointer to the
+	 *          element occupying the node, or nullptr if it does not have one.
+	 *        .
+	 *        The callback function should return either void or a bool that
+	 *        specifies whether to stop the traversal or not. A value of true
+	 *        means to stop and return early, while a value of false means to
+	 *        continue traversing.
+	 * \param predicate condition that must be met in order to traverse deeper
+	 *        into the tree. Should accept the following parameter:
+	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
+	 *          axis-aligned box that defines the region that an element's
+	 *          bounding box must be fully contained within in order to belong
+	 *          to the next node.
+	 *        .
+	 *        The predicate function should return a bool that is true if the
+	 *        next node should be traversed, or false if the branch should be
+	 *        ignored.
+	 *
+	 * \return void if the callback function returns void, true if the callback
+	 *         returns bool and exited early, false if the callback function
+	 *         returns bool but didn't exit early.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the callback function or predicate
+	 *         function.
+	 *
+	 * \note The order of traversal is unspecified, though it is guaranteed that
+	 *       outer nodes will be visited before their own inner nodes that they
+	 *       contain.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal memory cache. Exclusive access is therefore
+	 *          required for safety.
+	 *
+	 * \sa traverseElementNodes()
+	 * \sa traverseElements()
+	 * \sa test()
+	 */
 	template <typename Callback, typename Predicate>
 	constexpr auto traverseActiveNodes(Callback&& callback, Predicate&& predicate) const {
 		return traverseNodesImpl(
@@ -402,95 +402,95 @@ public:
 	}
 
 	/**
-     * Execute a callback function for each active node of the tree, including
-     * empty branch nodes without an element.
-     *
-     * \param callback function to execute, which should accept the following
-     *        parameters (though they don't need to be used):
-     *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-     *          axis-aligned box that defines the region that an element's
-     *          bounding box must be fully contained within in order to belong
-     *          to the node.
-     *        - `const T* element`: a non-owning read-only pointer to the
-     *          element occupying the node, or nullptr if it does not have one.
-     *        .
-     *        The callback function should return either void or a bool that
-     *        specifies whether to stop the traversal or not. A value of true
-     *        means to stop and return early, while a value of false means to
-     *        continue traversing.
-     *
-     * \return void if the callback function returns void, true if the callback
-     *         returns bool and exited early, false if the callback function
-     *         returns bool but didn't exit early.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the callback function.
-     *
-     * \note The order of traversal is unspecified, though it is guaranteed that
-     *       outer nodes will be visited before their own inner nodes that they
-     *       contain.
-     *
-     * \warning Although it is const, this function is not thread-safe since it
-     *          mutates an internal memory cache. Exclusive access is therefore
-     *          required for safety.
-     *
-     * \sa traverseElementNodes()
-     * \sa traverseElements()
-     * \sa test()
-     */
+	 * Execute a callback function for each active node of the tree, including
+	 * empty branch nodes without an element.
+	 *
+	 * \param callback function to execute, which should accept the following
+	 *        parameters (though they don't need to be used):
+	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
+	 *          axis-aligned box that defines the region that an element's
+	 *          bounding box must be fully contained within in order to belong
+	 *          to the node.
+	 *        - `const T* element`: a non-owning read-only pointer to the
+	 *          element occupying the node, or nullptr if it does not have one.
+	 *        .
+	 *        The callback function should return either void or a bool that
+	 *        specifies whether to stop the traversal or not. A value of true
+	 *        means to stop and return early, while a value of false means to
+	 *        continue traversing.
+	 *
+	 * \return void if the callback function returns void, true if the callback
+	 *         returns bool and exited early, false if the callback function
+	 *         returns bool but didn't exit early.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the callback function.
+	 *
+	 * \note The order of traversal is unspecified, though it is guaranteed that
+	 *       outer nodes will be visited before their own inner nodes that they
+	 *       contain.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal memory cache. Exclusive access is therefore
+	 *          required for safety.
+	 *
+	 * \sa traverseElementNodes()
+	 * \sa traverseElements()
+	 * \sa test()
+	 */
 	template <typename Callback>
 	constexpr auto traverseActiveNodes(Callback&& callback) const {
 		return traverseActiveNodes(std::forward<Callback>(callback), [](const AxisAlignedBox<2, float>&) -> bool { return true; });
 	}
 
 	/**
-     * Execute a callback function for each active node of the tree that has an
-     * element.
-     *
-     * \param callback function to execute, which should accept the following
-     *        parameters (though they don't need to be used):
-     *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-     *          axis-aligned box that defines the region that an element's
-     *          bounding box must be fully contained within in order to belong
-     *          to the node.
-     *        - `const T& element`: a read-only reference to the element
-     *          occupying the node.
-     *        .
-     *        The callback function should return either void or a bool that
-     *        specifies whether to stop the traversal or not. A value of true
-     *        means to stop and return early, while a value of false means to
-     *        continue traversing.
-     * \param predicate condition that must be met in order to traverse deeper
-     *        into the tree. Should accept the following parameter:
-     *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-     *          axis-aligned box that defines the region that an element's
-     *          bounding box must be fully contained within in order to belong
-     *          to the next node.
-     *        .
-     *        The predicate function should return a bool that is true if the
-     *        next node should be traversed, or false if the branch should be
-     *        ignored.
-     *
-     * \return void if the callback function returns void, true if the callback
-     *         returns bool and exited early, false if the callback function
-     *         returns bool but didn't exit early.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the callback function or predicate
-     *         function.
-     *
-     * \note The order of traversal is unspecified, though it is guaranteed that
-     *       outer nodes will be visited before their own inner nodes that they
-     *       contain.
-     *
-     * \warning Although it is const, this function is not thread-safe since it
-     *          mutates an internal memory cache. Exclusive access is therefore
-     *          required for safety.
-     *
-     * \sa traverseActiveNodes()
-     * \sa traverseElements()
-     * \sa test()
-     */
+	 * Execute a callback function for each active node of the tree that has an
+	 * element.
+	 *
+	 * \param callback function to execute, which should accept the following
+	 *        parameters (though they don't need to be used):
+	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
+	 *          axis-aligned box that defines the region that an element's
+	 *          bounding box must be fully contained within in order to belong
+	 *          to the node.
+	 *        - `const T& element`: a read-only reference to the element
+	 *          occupying the node.
+	 *        .
+	 *        The callback function should return either void or a bool that
+	 *        specifies whether to stop the traversal or not. A value of true
+	 *        means to stop and return early, while a value of false means to
+	 *        continue traversing.
+	 * \param predicate condition that must be met in order to traverse deeper
+	 *        into the tree. Should accept the following parameter:
+	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
+	 *          axis-aligned box that defines the region that an element's
+	 *          bounding box must be fully contained within in order to belong
+	 *          to the next node.
+	 *        .
+	 *        The predicate function should return a bool that is true if the
+	 *        next node should be traversed, or false if the branch should be
+	 *        ignored.
+	 *
+	 * \return void if the callback function returns void, true if the callback
+	 *         returns bool and exited early, false if the callback function
+	 *         returns bool but didn't exit early.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the callback function or predicate
+	 *         function.
+	 *
+	 * \note The order of traversal is unspecified, though it is guaranteed that
+	 *       outer nodes will be visited before their own inner nodes that they
+	 *       contain.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal memory cache. Exclusive access is therefore
+	 *          required for safety.
+	 *
+	 * \sa traverseActiveNodes()
+	 * \sa traverseElements()
+	 * \sa test()
+	 */
 	template <typename Callback, typename Predicate>
 	constexpr auto traverseElementNodes(Callback&& callback, Predicate&& predicate) const {
 		return traverseNodesImpl(
@@ -513,89 +513,89 @@ public:
 	}
 
 	/**
-     * Execute a callback function for each active node of the tree that has an
-     * element.
-     *
-     * \param callback function to execute, which should accept the following
-     *        parameters (though they don't need to be used):
-     *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-     *          axis-aligned box that defines the region that an element's
-     *          bounding box must be fully contained within in order to belong
-     *          to the node.
-     *        - `const T& element`: a read-only reference to the element
-     *          occupying the node.
-     *        .
-     *        The callback function should return either void or a bool that
-     *        specifies whether to stop the traversal or not. A value of true
-     *        means to stop and return early, while a value of false means to
-     *        continue traversing.
-     *
-     * \return void if the callback function returns void, true if the callback
-     *         returns bool and exited early, false if the callback function
-     *         returns bool but didn't exit early.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the callback function.
-     *
-     * \note The order of traversal is unspecified, though it is guaranteed that
-     *       outer nodes will be visited before their own inner nodes that they
-     *       contain.
-     *
-     * \warning Although it is const, this function is not thread-safe since it
-     *          mutates an internal memory cache. Exclusive access is therefore
-     *          required for safety.
-     *
-     * \sa traverseActiveNodes()
-     * \sa traverseElements()
-     * \sa test()
-     */
+	 * Execute a callback function for each active node of the tree that has an
+	 * element.
+	 *
+	 * \param callback function to execute, which should accept the following
+	 *        parameters (though they don't need to be used):
+	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
+	 *          axis-aligned box that defines the region that an element's
+	 *          bounding box must be fully contained within in order to belong
+	 *          to the node.
+	 *        - `const T& element`: a read-only reference to the element
+	 *          occupying the node.
+	 *        .
+	 *        The callback function should return either void or a bool that
+	 *        specifies whether to stop the traversal or not. A value of true
+	 *        means to stop and return early, while a value of false means to
+	 *        continue traversing.
+	 *
+	 * \return void if the callback function returns void, true if the callback
+	 *         returns bool and exited early, false if the callback function
+	 *         returns bool but didn't exit early.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the callback function.
+	 *
+	 * \note The order of traversal is unspecified, though it is guaranteed that
+	 *       outer nodes will be visited before their own inner nodes that they
+	 *       contain.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal memory cache. Exclusive access is therefore
+	 *          required for safety.
+	 *
+	 * \sa traverseActiveNodes()
+	 * \sa traverseElements()
+	 * \sa test()
+	 */
 	template <typename Callback>
 	constexpr auto traverseElementNodes(Callback&& callback) const {
 		return traverseElementNodes(std::forward<Callback>(callback), [](const AxisAlignedBox<2, float>&) -> bool { return true; });
 	}
 
 	/**
-     * Execute a callback function for each element in the tree.
-     *
-     * \param callback function to execute, which should accept the following
-     *        parameter:
-     *        - `const T& element`: a read-only reference to the element.
-     *        .
-     *        The callback function should return either void or a bool that
-     *        specifies whether to stop the traversal or not. A value of true
-     *        means to stop and return early, while a value of false means to
-     *        continue traversing.
-     * \param predicate condition that must be met in order to traverse deeper
-     *        into the tree. Should accept the following parameter:
-     *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-     *          axis-aligned box that defines the region that an element's
-     *          bounding box must be fully contained within in order to belong
-     *          to the next node.
-     *        .
-     *        The predicate function should return a bool that is true if the
-     *        next node should be traversed, or false if the branch should be
-     *        ignored.
-     *
-     * \return void if the callback function returns void, true if the callback
-     *         returns bool and exited early, false if the callback function
-     *         returns bool but didn't exit early.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the callback function or predicate
-     *         function.
-     *
-     * \note The order of traversal is unspecified, though it is guaranteed that
-     *       outer nodes will be visited before their own inner nodes that they
-     *       contain.
-     *
-     * \warning Although it is const, this function is not thread-safe since it
-     *          mutates an internal memory cache. Exclusive access is therefore
-     *          required for safety.
-     *
-     * \sa traverseActiveNodes()
-     * \sa traverseElementNodes()
-     * \sa test()
-     */
+	 * Execute a callback function for each element in the tree.
+	 *
+	 * \param callback function to execute, which should accept the following
+	 *        parameter:
+	 *        - `const T& element`: a read-only reference to the element.
+	 *        .
+	 *        The callback function should return either void or a bool that
+	 *        specifies whether to stop the traversal or not. A value of true
+	 *        means to stop and return early, while a value of false means to
+	 *        continue traversing.
+	 * \param predicate condition that must be met in order to traverse deeper
+	 *        into the tree. Should accept the following parameter:
+	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
+	 *          axis-aligned box that defines the region that an element's
+	 *          bounding box must be fully contained within in order to belong
+	 *          to the next node.
+	 *        .
+	 *        The predicate function should return a bool that is true if the
+	 *        next node should be traversed, or false if the branch should be
+	 *        ignored.
+	 *
+	 * \return void if the callback function returns void, true if the callback
+	 *         returns bool and exited early, false if the callback function
+	 *         returns bool but didn't exit early.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the callback function or predicate
+	 *         function.
+	 *
+	 * \note The order of traversal is unspecified, though it is guaranteed that
+	 *       outer nodes will be visited before their own inner nodes that they
+	 *       contain.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal memory cache. Exclusive access is therefore
+	 *          required for safety.
+	 *
+	 * \sa traverseActiveNodes()
+	 * \sa traverseElementNodes()
+	 * \sa test()
+	 */
 	template <typename Callback, typename Predicate>
 	constexpr auto traverseElements(Callback&& callback, Predicate&& predicate) const {
 		return traverseNodesImpl(
@@ -618,158 +618,158 @@ public:
 	}
 
 	/**
-     * Execute a callback function for each element in the tree.
-     *
-     * \param callback function to execute, which should accept the following
-     *        parameter:
-     *        - `const T& element`: a read-only reference to the element.
-     *        .
-     *        The callback function should return either void or a bool that
-     *        specifies whether to stop the traversal or not. A value of true
-     *        means to stop and return early, while a value of false means to
-     *        continue traversing.
-     *
-     * \return void if the callback function returns void, true if the callback
-     *         returns bool and exited early, false if the callback function
-     *         returns bool but didn't exit early.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the callback function.
-     *
-     * \note The order of traversal is unspecified, though it is guaranteed that
-     *       outer nodes will be visited before their own inner nodes that they
-     *       contain.
-     *
-     * \warning Although it is const, this function is not thread-safe since it
-     *          mutates an internal memory cache. Exclusive access is therefore
-     *          required for safety.
-     *
-     * \sa traverseActiveNodes()
-     * \sa traverseElementNodes()
-     * \sa test()
-     */
+	 * Execute a callback function for each element in the tree.
+	 *
+	 * \param callback function to execute, which should accept the following
+	 *        parameter:
+	 *        - `const T& element`: a read-only reference to the element.
+	 *        .
+	 *        The callback function should return either void or a bool that
+	 *        specifies whether to stop the traversal or not. A value of true
+	 *        means to stop and return early, while a value of false means to
+	 *        continue traversing.
+	 *
+	 * \return void if the callback function returns void, true if the callback
+	 *         returns bool and exited early, false if the callback function
+	 *         returns bool but didn't exit early.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the callback function.
+	 *
+	 * \note The order of traversal is unspecified, though it is guaranteed that
+	 *       outer nodes will be visited before their own inner nodes that they
+	 *       contain.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal memory cache. Exclusive access is therefore
+	 *          required for safety.
+	 *
+	 * \sa traverseActiveNodes()
+	 * \sa traverseElementNodes()
+	 * \sa test()
+	 */
 	template <typename Callback>
 	constexpr auto traverseElements(Callback&& callback) const {
 		return traverseElements(std::forward<Callback>(callback), [](const AxisAlignedBox<2, float>&) -> bool { return true; });
 	}
 
 	/**
-     * Execute a callback function for each element in the tree that might
-     * contain a given point.
-     *
-     * \param point point to test.
-     * \param callback function to execute, which should accept the following
-     *        parameter:
-     *        - `const T& element`: a read-only reference to the element.
-     *        .
-     *        The callback function should return either void or a bool that
-     *        specifies whether to stop the traversal or not. A value of true
-     *        means to stop and return early, while a value of false means to
-     *        continue traversing.
-     *
-     * \return void if the callback function returns void, true if the callback
-     *         returns bool and exited early, false if the callback function
-     *         returns bool but didn't exit early.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the callback function.
-     *
-     * \note The order of traversal is unspecified, though it is guaranteed that
-     *       outer nodes will be visited before their own inner nodes that they
-     *       contain.
-     *
-     * \warning Although it is const, this function is not thread-safe since it
-     *          mutates an internal memory cache. Exclusive access is therefore
-     *          required for safety.
-     *
-     * \sa traverseActiveNodes()
-     * \sa traverseElementNodes()
-     * \sa traverseElements()
-     */
+	 * Execute a callback function for each element in the tree that might
+	 * contain a given point.
+	 *
+	 * \param point point to test.
+	 * \param callback function to execute, which should accept the following
+	 *        parameter:
+	 *        - `const T& element`: a read-only reference to the element.
+	 *        .
+	 *        The callback function should return either void or a bool that
+	 *        specifies whether to stop the traversal or not. A value of true
+	 *        means to stop and return early, while a value of false means to
+	 *        continue traversing.
+	 *
+	 * \return void if the callback function returns void, true if the callback
+	 *         returns bool and exited early, false if the callback function
+	 *         returns bool but didn't exit early.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the callback function.
+	 *
+	 * \note The order of traversal is unspecified, though it is guaranteed that
+	 *       outer nodes will be visited before their own inner nodes that they
+	 *       contain.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal memory cache. Exclusive access is therefore
+	 *          required for safety.
+	 *
+	 * \sa traverseActiveNodes()
+	 * \sa traverseElementNodes()
+	 * \sa traverseElements()
+	 */
 	template <typename Callback>
 	auto test(glm::vec2 point, Callback&& callback) const {
 		return traverseElements(std::forward<Callback>(callback), [&point](const AxisAlignedBox<2, float>& looseBounds) -> bool { return looseBounds.contains(point); });
 	}
 
 	/**
-     * Check if it is possible that some element in the tree contains a given
-     * point.
-     *
-     * \param point point to test.
-     *
-     * \return true if some element might contain the point, false otherwise.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     *
-     * \warning Although it is const, this function is not thread-safe since it
-     *          mutates an internal memory cache. Exclusive access is therefore
-     *          required for safety.
-     *
-     * \sa traverseActiveNodes()
-     * \sa traverseElementNodes()
-     * \sa traverseElements()
-     */
+	 * Check if it is possible that some element in the tree contains a given
+	 * point.
+	 *
+	 * \param point point to test.
+	 *
+	 * \return true if some element might contain the point, false otherwise.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal memory cache. Exclusive access is therefore
+	 *          required for safety.
+	 *
+	 * \sa traverseActiveNodes()
+	 * \sa traverseElementNodes()
+	 * \sa traverseElements()
+	 */
 	[[nodiscard]] bool test(glm::vec2 point) const noexcept {
 		return traverseElements([](const T&) -> bool { return true; }, [&point](const AxisAlignedBox<2, float>& looseBounds) -> bool { return looseBounds.contains(point); });
 	}
 
 	/**
-     * Execute a callback function for each element in the tree that might be
-     * intersecting with a given axis-aligned box.
-     *
-     * \param box box to test.
-     * \param callback function to execute, which should accept the following
-     *        parameter:
-     *        - `const T& element`: a read-only reference to the element.
-     *        .
-     *        The callback function should return either void or a bool that
-     *        specifies whether to stop the traversal or not. A value of true
-     *        means to stop and return early, while a value of false means to
-     *        continue traversing.
-     *
-     * \return void if the callback function returns void, true if the callback
-     *         returns bool and exited early, false if the callback function
-     *         returns bool but didn't exit early.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     * \throws any exception thrown by the callback function.
-     *
-     * \note The order of traversal is unspecified, though it is guaranteed that
-     *       outer nodes will be visited before their own inner nodes that they
-     *       contain.
-     *
-     * \warning Although it is const, this function is not thread-safe since it
-     *          mutates an internal memory cache. Exclusive access is therefore
-     *          required for safety.
-     *
-     * \sa traverseActiveNodes()
-     * \sa traverseElementNodes()
-     * \sa traverseElements()
-     */
+	 * Execute a callback function for each element in the tree that might be
+	 * intersecting with a given axis-aligned box.
+	 *
+	 * \param box box to test.
+	 * \param callback function to execute, which should accept the following
+	 *        parameter:
+	 *        - `const T& element`: a read-only reference to the element.
+	 *        .
+	 *        The callback function should return either void or a bool that
+	 *        specifies whether to stop the traversal or not. A value of true
+	 *        means to stop and return early, while a value of false means to
+	 *        continue traversing.
+	 *
+	 * \return void if the callback function returns void, true if the callback
+	 *         returns bool and exited early, false if the callback function
+	 *         returns bool but didn't exit early.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the callback function.
+	 *
+	 * \note The order of traversal is unspecified, though it is guaranteed that
+	 *       outer nodes will be visited before their own inner nodes that they
+	 *       contain.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal memory cache. Exclusive access is therefore
+	 *          required for safety.
+	 *
+	 * \sa traverseActiveNodes()
+	 * \sa traverseElementNodes()
+	 * \sa traverseElements()
+	 */
 	template <typename Callback>
 	auto test(const AxisAlignedBox<2, float>& box, Callback&& callback) const {
 		return traverseElements(std::forward<Callback>(callback), [&box](const AxisAlignedBox<2, float>& looseBounds) -> bool { return intersects(looseBounds, box); });
 	}
 
 	/**
-     * Check if it is possible that some element in the tree is intersecting
-     * with a given axis-aligned box.
-     *
-     * \param box box to test.
-     *
-     * \return true if some element might be intersecting with the box, false
-     *         otherwise.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     *
-     * \warning Although it is const, this function is not thread-safe since it
-     *          mutates an internal memory cache. Exclusive access is therefore
-     *          required for safety.
-     *
-     * \sa traverseActiveNodes()
-     * \sa traverseElementNodes()
-     * \sa traverseElements()
-     */
+	 * Check if it is possible that some element in the tree is intersecting
+	 * with a given axis-aligned box.
+	 *
+	 * \param box box to test.
+	 *
+	 * \return true if some element might be intersecting with the box, false
+	 *         otherwise.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal memory cache. Exclusive access is therefore
+	 *          required for safety.
+	 *
+	 * \sa traverseActiveNodes()
+	 * \sa traverseElementNodes()
+	 * \sa traverseElements()
+	 */
 	[[nodiscard]] bool test(const AxisAlignedBox<2, float>& box) const noexcept {
 		return traverseElements([](const T&) -> bool { return true; }, [&box](const AxisAlignedBox<2, float>& looseBounds) -> bool { return intersects(looseBounds, box); });
 	}

@@ -30,9 +30,9 @@ struct WindowOptions {
 
 	/**
 	 * The desired size of the window, in screen coordinates (typically pixels).
-     *
-     * The x component represents the width, and the y component represents the
-     * height.
+	 *
+	 * The x component represents the width, and the y component represents the
+	 * height.
 	 *
 	 * \warning Both the width and height must be positive.
 	 */
@@ -59,9 +59,9 @@ struct WindowOptions {
 	 * limiting the application's frame rate to the screen's refresh rate.
 	 *
 	 * \note Enabling VSync is not recommended for applications which are
-     *       sensitive to input delay, such as games, since it can significantly
-     *       increase the time before a rendered frame gets displayed to the
-     *       user compared to a regular frame rate limiter.
+	 *       sensitive to input delay, such as games, since it can significantly
+	 *       increase the time before a rendered frame gets displayed to the
+	 *       user compared to a regular frame rate limiter.
 	 */
 	bool vSync = false;
 
@@ -87,19 +87,19 @@ struct WindowOptions {
 class Window {
 public:
 	/**
-     * Create a new window.
-     *
+	 * Create a new window.
+	 *
 	 * \param options initial configuration of the window, see WindowOptions.
-     *
+	 *
 	 * \throws graphics::Error if context or window setup failed.
 	 * \throws std::bad_alloc on allocation failure.
-     */
+	 */
 	explicit Window(const WindowOptions& options);
 
 	/**
-     * Swap the window's front and back buffers, showing what has been rendered
-     * to the framebuffer since the last presentation.
-     */
+	 * Swap the window's front and back buffers, showing what has been rendered
+	 * to the framebuffer since the last presentation.
+	 */
 	void present();
 
 	/**
@@ -116,7 +116,7 @@ public:
 	 * Set the size of the window.
 	 *
 	 * \param size a 2D vector representing the desired size of the window, in
-     *        screen coordinates (typically pixels), where:
+	 *        screen coordinates (typically pixels), where:
 	 *        - the x component represents the width, and
 	 *        - the y component represents the height.
 	 *        Both the width and height must be positive.
@@ -172,7 +172,7 @@ public:
 	 * Get the size of the window.
 	 *
 	 * \return a 2D vector representing the current size of the window, in
-     *         screen coordinates (typically pixels), where:
+	 *         screen coordinates (typically pixels), where:
 	 *         - the x component represents the width, and
 	 *         - the y component represents the height.
 	 */
@@ -182,25 +182,25 @@ public:
 	 * Get the drawable size of the window.
 	 *
 	 * \return a 2D vector representing the current drawable size of the window,
-     *         in pixels, where:
+	 *         in pixels, where:
 	 *         - the x component represents the width, and
 	 *         - the y component represents the height.
 	 */
 	[[nodiscard]] glm::ivec2 getDrawableSize() const noexcept;
 
 	/**
-     * Get a unique identifier for this window.
-     *
-     * \return the identifier corresponding to this window.
-     */
+	 * Get a unique identifier for this window.
+	 *
+	 * \return the identifier corresponding to this window.
+	 */
 	[[nodiscard]] WindowId getId() const;
 
 	/**
-     * Get the Framebuffer for rendering to this window.
-     *
-     * \return a reference to the default framebuffer, with the GL context
-     *         associated with this window made current.
-     */
+	 * Get the Framebuffer for rendering to this window.
+	 *
+	 * \return a reference to the default framebuffer, with the GL context
+	 *         associated with this window made current.
+	 */
 	[[nodiscard]] Framebuffer& getFramebuffer();
 
 private:

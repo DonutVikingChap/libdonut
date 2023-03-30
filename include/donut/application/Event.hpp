@@ -85,8 +85,8 @@ struct ControllerEventBase : InputEventBase {
 /** Controller axis Event base. */
 struct ControllerAxisEventBase : ControllerEventBase {
 	/**
-     * Controller axis enumeration.
-     */
+	 * Controller axis enumeration.
+	 */
 	enum class ControllerAxis : std::uint8_t {
 		LEFT_STICK_X = 0,  ///< Horizontal movement of the left analog stick.
 		LEFT_STICK_Y = 1,  ///< Vertical movement of the left analog stick.
