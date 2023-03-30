@@ -24,6 +24,7 @@ The main API of libdonut is organized into the following modules, listed along w
     - [Sound](@ref donut::audio::Sound) - Sound wave loading
     - [SoundStage](@ref donut::audio::SoundStage) - Sound playback in 3D to the default audio device
 - [donut::graphics](@ref donut::graphics) - Graphics rendering module
+    - [Camera](@ref donut::graphics::Camera) - Perspective to render from
     - [Font](@ref donut::graphics::Font) - Text shaping facility
     - [Framebuffer](@ref donut::graphics::Framebuffer) - Render target on the GPU
     - [Image](@ref donut::graphics::Image) - Image loading/saving
