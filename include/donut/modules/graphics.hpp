@@ -2,6 +2,7 @@
 #define DONUT_MODULES_GRAPHICS_HPP
 
 #include <donut/graphics/Buffer.hpp>
+#include <donut/graphics/Camera.hpp>
 #include <donut/graphics/Error.hpp>
 #include <donut/graphics/Font.hpp>
 #include <donut/graphics/Framebuffer.hpp>
