@@ -355,22 +355,20 @@ public:
 	void setFrameRateParameters(float tickRate, float minFps, float maxFps);
 
 	/**
-	 * Set the input region for text input.
+	 * Set the input rectangle for text input.
 	 *
-	 * \param x Horizontal offset of the input region, in screen coordinates.
-	 * \param y Vertical offset of the input region, in screen coordinates.
-	 * \param width Width of the input region, in screen coordinates.
-	 * \param height Height of the input region, in screen coordinates.
+	 * \param offset offset of the input rectangle, in screen coordinates.
+	 * \param size size of the input rectangle, in screen coordinates.
 	 *
 	 * \sa startTextInput()
 	 * \sa stopTextInput()
 	 */
-	void setTextInputRegion(int x, int y, int width, int height);
+	void setTextInputRectangle(glm::ivec2 offset, glm::ivec2 size);
 
 	/**
-	 * Start accepting text input events in the current text input region.
+	 * Start accepting text input events in the current text input rectangle.
 	 *
-	 * \sa setTextInputRegion()
+	 * \sa setTextInputRectangle()
 	 * \sa stopTextInput()
 	 */
 	void startTextInput();
@@ -378,7 +376,7 @@ public:
 	/**
 	 * Stop accepting text input events.
 	 *
-	 * \sa setTextInputRegion()
+	 * \sa setTextInputRectangle()
 	 * \sa startTextInput()
 	 */
 	void stopTextInput();

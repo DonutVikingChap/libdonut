@@ -18,6 +18,7 @@
 #include <cstdio>       // stderr
 #include <exception>    // std::exception
 #include <fmt/format.h> // fmt::format, fmt::print
+#include <glm/glm.hpp>  // glm::...
 #include <limits>       // std::numeric_limits
 #include <optional>     // std::optional
 #include <physfs.h>     // PHYSFS_...
@@ -323,7 +324,6 @@ Application::Application(const char* programFilepath, const ApplicationOptions& 
 	, clockFrequency(SDL_GetPerformanceFrequency())
 	, clockInterval(1.0f / static_cast<float>(clockFrequency)) {
 	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
-
 	setFrameRateParameters(options.tickRate, options.minFps, options.maxFps);
 }
 
@@ -409,12 +409,12 @@ void Application::setFrameRateParameters(float tickRate, float minFps, float max
 	maxTicksPerFrame = (minFps <= 0.0f || tickRate <= minFps) ? 1 : static_cast<Uint64>(tickRate / minFps);
 }
 
-void Application::setTextInputRegion(int x, int y, int width, int height) {
+void Application::setTextInputRectangle(glm::ivec2 offset, glm::ivec2 size) {
 	const SDL_Rect rect{
-		.x = x,
-		.y = y,
-		.w = width,
-		.h = height,
+		.x = offset.x,
+		.y = offset.y,
+		.w = size.x,
+		.h = size.y,
 	};
 	SDL_SetTextInputRect(&rect);
 }
