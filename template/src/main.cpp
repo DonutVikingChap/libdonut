@@ -9,10 +9,6 @@ public:
 		: app::Application(programFilepath, {}) {}
 
 protected:
-	void resize(glm::ivec2 /*newWindowSize*/) override {
-		// TODO
-	}
-
 	void prepareForEvents(app::FrameInfo /*frameInfo*/) override {
 		// TODO
 	}
@@ -26,10 +22,6 @@ protected:
 	}
 
 	void tick(app::TickInfo /*tickInfo*/) override {
-		// TODO
-	}
-
-	void prepareForDisplay(app::FrameInfo /*frameInfo*/) override {
 		// TODO
 	}
 

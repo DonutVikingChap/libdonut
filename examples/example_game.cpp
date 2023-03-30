@@ -48,12 +48,13 @@ struct GameOptions {
 		.applicationName = "ExampleGame",
 		.dataDirectoryFilepath = "data",
 		.archiveFilenameExtension = "pak",
-		.windowTitle = "Example Game",
-		.windowWidth = 640,
-		.windowHeight = 480,
-		.windowResizable = true,
 		.tickRate = 60.0f,
 		.maxFps = 240.0f,
+	};
+	gfx::WindowOptions windowOptions{
+		.title = "Example Game",
+		.size{640, 480},
+		.resizable = true,
 	};
 	const char* mainMenuMusicFilepath = "sounds/music/donauwalzer.ogg";
 	float fieldOfView = 90.0f;
@@ -64,6 +65,7 @@ class Game final : public app::Application {
 public:
 	Game(const char* programFilepath, const GameOptions& options)
 		: app::Application(programFilepath, options.applicationOptions)
+		, window(options.windowOptions)
 		, verticalFieldOfView(2.0f * glm::atan((3.0f / 4.0f) * glm::tan(glm::radians(options.fieldOfView) * 0.5f))) {
 		constexpr Circle<float> CIRCLE_A{.center{60.0f, 80.0f}, .radius = 20.0f};
 		constexpr Circle<float> CIRCLE_B{.center{50.0f, 90.0f}, .radius = 20.0f};
@@ -81,28 +83,19 @@ public:
 		loadBindingsConfiguration("configuration/bindings.json");
 		initializeSoundStage();
 		playMainMenuMusic(options.mainMenuMusicFilepath);
+
+		resize(window.getDrawableSize());
 	}
 
 protected:
-	void resize(glm::ivec2 newWindowSize) override {
-		constexpr glm::ivec2 RENDER_RESOLUTION{640, 480};
-		constexpr glm::ivec2 WORLD_VIEWPORT_POSITION{15, 15};
-		constexpr glm::ivec2 WORLD_VIEWPORT_SIZE{380, 450};
-
-		const auto [viewport, scale] = gfx::Viewport::createIntegerScaled(newWindowSize, RENDER_RESOLUTION);
-		screenViewport = viewport;
-		screenProjectionViewMatrix = glm::ortho(0.0f, static_cast<float>(RENDER_RESOLUTION.x), 0.0f, static_cast<float>(RENDER_RESOLUTION.y));
-
-		worldViewport = {.position = screenViewport.position + WORLD_VIEWPORT_POSITION * scale, .size = WORLD_VIEWPORT_SIZE * scale};
-		const float aspectRatio = static_cast<float>(worldViewport.size.x) / static_cast<float>(worldViewport.size.y);
-		worldProjectionViewMatrix = glm::perspective(verticalFieldOfView, aspectRatio, 0.1f, 100.0f);
-	}
-
 	void prepareForEvents(app::FrameInfo /*frameInfo*/) override {
 		inputManager.prepareForEvents();
 	}
 
 	void handleEvent(app::FrameInfo /*frameInfo*/, const app::Event& event) override {
+		if (event.is<app::WindowSizeChangedEvent>()) {
+			resize(window.getDrawableSize());
+		}
 		inputManager.handleEvent(event);
 	}
 
@@ -117,7 +110,7 @@ protected:
 
 		if (inputManager.justPressed(app::Input::KEY_F11) ||
 			(inputManager.justPressed(app::Input::KEY_RETURN) && (inputManager.isPressed(app::Input::KEY_LALT) || inputManager.isPressed(app::Input::KEY_RALT)))) {
-			setWindowFullscreen(!isWindowFullscreen());
+			window.setFullscreen(!window.isFullscreen());
 		}
 
 		if (inputManager.justPressed(app::Input::KEY_F2)) {
@@ -156,7 +149,7 @@ protected:
 		carrotCakeCurrentPosition += carrotCakeVelocity * tickInfo.tickInterval;
 	}
 
-	void prepareForDisplay(app::FrameInfo frameInfo) override {
+	void display(app::FrameInfo frameInfo) override {
 		carrotCakeDisplayPosition = glm::mix(carrotCakePreviousPosition, carrotCakeCurrentPosition, frameInfo.tickInterpolationAlpha);
 
 		const TestShader3D::PointLight baseLight = {
@@ -186,9 +179,9 @@ protected:
 
 		testShader3D.setPointLights(pointLights);
 		testShader3D.setViewPosition(viewPosition);
-	}
 
-	void display(app::FrameInfo frameInfo) override {
+		gfx::Framebuffer& framebuffer = window.getFramebuffer();
+
 		renderer.clearFramebufferColorAndDepth(framebuffer, Color::PURPLE * 0.25f);
 
 		{
@@ -209,6 +202,8 @@ protected:
 			drawFpsCounter(renderPass);
 			renderer.render(framebuffer, renderPass, screenViewport, screenProjectionViewMatrix);
 		}
+
+		window.present();
 	}
 
 private:
@@ -359,6 +354,20 @@ private:
 		gfx::ShaderArray<PointLightUniform, POINT_LIGHT_COUNT> pointLights{program, "pointLights"};
 		gfx::ShaderUniform viewPosition{program, "viewPosition"};
 	};
+
+	void resize(glm::ivec2 newWindowSize) {
+		constexpr glm::ivec2 RENDER_RESOLUTION{640, 480};
+		constexpr glm::ivec2 WORLD_VIEWPORT_POSITION{15, 15};
+		constexpr glm::ivec2 WORLD_VIEWPORT_SIZE{380, 450};
+
+		const auto [viewport, scale] = gfx::Viewport::createIntegerScaled(newWindowSize, RENDER_RESOLUTION);
+		screenViewport = viewport;
+		screenProjectionViewMatrix = glm::ortho(0.0f, static_cast<float>(RENDER_RESOLUTION.x), 0.0f, static_cast<float>(RENDER_RESOLUTION.y));
+
+		worldViewport = {.position = screenViewport.position + WORLD_VIEWPORT_POSITION * scale, .size = WORLD_VIEWPORT_SIZE * scale};
+		const float aspectRatio = static_cast<float>(worldViewport.size.x) / static_cast<float>(worldViewport.size.y);
+		worldProjectionViewMatrix = glm::perspective(verticalFieldOfView, aspectRatio, 0.1f, 100.0f);
+	}
 
 	void loadBindingsConfiguration(const char* filepath) {
 		const std::unordered_map<std::string_view, Action> actionsByIdentifier{
@@ -671,7 +680,7 @@ private:
 		renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = fpsText, .position = fpsPosition, .color = fpsColor});
 	}
 
-	gfx::Framebuffer framebuffer = gfx::Framebuffer::getDefault();
+	gfx::Window window;
 	gfx::Renderer renderer{};
 	gfx::Viewport screenViewport{};
 	gfx::Viewport worldViewport{};
@@ -735,23 +744,23 @@ public:
 			}
 
 			if (argument == "-title") {
-				parseOptionValue("title", options.applicationOptions.windowTitle);
+				parseOptionValue("title", options.windowOptions.title);
 			} else if (argument == "-width") {
-				parseOptionValue("width", options.applicationOptions.windowWidth);
+				parseOptionValue("width", options.windowOptions.size.x);
 			} else if (argument == "-height") {
-				parseOptionValue("height", options.applicationOptions.windowHeight);
+				parseOptionValue("height", options.windowOptions.size.y);
 			} else if (argument == "-resizable") {
-				parseOptionValue("resizable", options.applicationOptions.windowResizable);
+				parseOptionValue("resizable", options.windowOptions.resizable);
 			} else if (argument == "-fullscreen") {
-				parseOptionValue("fullscreen", options.applicationOptions.windowFullscreen);
+				parseOptionValue("fullscreen", options.windowOptions.fullscreen);
 			} else if (argument == "-vsync") {
-				parseOptionValue("vsync", options.applicationOptions.windowVSync);
+				parseOptionValue("vsync", options.windowOptions.vSync);
 			} else if (argument == "-min-fps") {
 				parseOptionValue("min fps", options.applicationOptions.minFps);
 			} else if (argument == "-max-fps") {
 				parseOptionValue("max fps", options.applicationOptions.maxFps);
 			} else if (argument == "-msaa") {
-				parseOptionValue("msaa", options.applicationOptions.msaaLevel);
+				parseOptionValue("msaa", options.windowOptions.msaaLevel);
 			} else if (argument == "-main-menu-music") {
 				parseOptionValue("main menu music file", options.mainMenuMusicFilepath);
 			} else if (argument == "-fov") {

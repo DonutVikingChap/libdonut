@@ -1,14 +1,14 @@
 #ifndef DONUT_APPLICATION_APPLICATION_HPP
 #define DONUT_APPLICATION_APPLICATION_HPP
 
-#include <donut/Resource.hpp>
-#include <donut/application/Event.hpp>
-
 #include <cstdint>     // std::uint64_t
 #include <glm/glm.hpp> // glm::...
+#include <string>      // std::string
 
 namespace donut {
 namespace application {
+
+struct Event; // Forward declaration, to avoid including Event.hpp.
 
 /**
  * Transient information about the current tick of an Application.
@@ -41,8 +41,8 @@ struct TickInfo {
 	 *
 	 * To achieve a higher perceived update rate for the user, some form of
 	 * interpolation and/or extrapolation should be used in the variable-rate
-	 * Application::prepareForDisplay() callback in order to smooth out the
-	 * result of the fixed-rate ticks when applicable.
+	 * Application::display() callback in order to smooth out the result of the
+	 * fixed-rate ticks when applicable.
 	 */
 	float tickInterval;
 };
@@ -144,55 +144,6 @@ struct ApplicationOptions {
 	const char* archiveFilenameExtension = nullptr;
 
 	/**
-	 * Non-owning pointer to a null-terminated UTF-8 string of the displayed
-	 * title of the main window.
-	 *
-	 * \warning Must not be set to nullptr.
-	 */
-	const char* windowTitle = "Application";
-
-	/**
-	 * Width of the main window, in screen coordinates (typically pixels).
-	 *
-	 * \warning Must be positive.
-	 */
-	int windowWidth = 800;
-
-	/**
-	 * Height of the main window, in screen coordinates (typically pixels).
-	 *
-	 * \warning Must be positive.
-	 */
-	int windowHeight = 600;
-
-	/**
-	 * Whether the user should be allowed to resize the main window or not.
-	 */
-	bool windowResizable = true;
-
-	/**
-	 * Whether the main window should start in fullscreen mode or not.
-	 */
-	bool windowFullscreen = false;
-
-	/**
-	 * Whether the main window should use vertical synchronization or not.
-	 *
-	 * VSync introduces a pause each time an application frame is finished
-	 * rendering that causes the application to wait for the previously
-	 * displayed frame to finish being drawn to the screen. This eliminates any
-	 * tearing artifacts that may otherwise occur due to swapping the frame
-	 * buffers in the middle of a screen refresh, at the cost of effectively
-	 * limiting the application's frame rate to the screen's refresh rate.
-	 *
-	 * \note Enabling VSync is typically not recommended for applications which
-	 *       are sensitive to input delay, such as games, since it can
-	 *       significantly increase the time before a rendered frame gets
-	 *       displayed to the user compared to a regular frame rate limiter.
-	 */
-	bool windowVSync = false;
-
-	/**
 	 * The tick rate of the application, in hertz (ticks per second).
 	 *
 	 * This is the rate at which the application will try to trigger the
@@ -237,29 +188,13 @@ struct ApplicationOptions {
 	 * enough time has passed for the next frame to begin.
 	 */
 	float maxFps = 60.0f;
-
-	/**
-	 * Number of samples used for multisample anti-aliasing (MSAA) when
-	 * rendering a pixel to the main window via the default Framebuffer.
-	 *
-	 * This can be used to mitigate aliasing artifacts on the edges of 3D
-	 * objects, at the cost of some performance.
-	 *
-	 * If set to 0 or lower, MSAA will not be used.
-	 *
-	 * \remark Typical values are 0, 2 and 4.
-	 *
-	 * \note Current GPUs (as of 2022) rarely support values greater than 8.
-	 */
-	int msaaLevel = 0;
 };
 
 /**
  * Main application base class.
  *
- * The application handles context setup and window management and controls the
- * main loop, including Event pumping, frame pacing and fixed-interval frame
- * rate-independent tick updates.
+ * The application controls the main loop, including Event pumping, frame pacing
+ * and fixed-interval frame rate-independent tick updates.
  *
  * Concrete applications should derive from this class and implement the
  * associated virtual functions in order to receive all of the relevant
@@ -299,15 +234,15 @@ public:
 	static void showSimpleMessageBox(MessageBoxType type, const char* title, const char* message);
 
 	/**
-	 * Construct the base of the main application, initialize global systems and
-	 * contexts and create the main window.
+	 * Construct the base of the main application and initialize global systems.
 	 *
 	 * \param programFilepath the first string in the argument vector passed to
 	 *        the main function of the program, i.e. argv[0].
 	 *
-	 * \param options initial configuration of the application, see ApplicationOptions.
+	 * \param options initial configuration of the application, see
+	 *        ApplicationOptions.
 	 *
-	 * \throws application::Error if context or window setup failed.
+	 * \throws application::Error if system initialization failed.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
 	 * \warning The behavior of passing programFilepath a value other than the
@@ -367,13 +302,6 @@ public:
 	[[nodiscard]] bool isRunning() const noexcept;
 
 	/**
-	 * Check if the main window is currently in fullscreen mode.
-	 *
-	 * \return true if the main window is in fullscreen mode, false otherwise.
-	 */
-	[[nodiscard]] bool isWindowFullscreen() const noexcept;
-
-	/**
 	 * Get the latest measurement of the average frame rate.
 	 *
 	 * The average frame rate is automatically measured for every second that
@@ -393,65 +321,22 @@ public:
 	[[nodiscard]] unsigned getLatestMeasuredFps() const noexcept;
 
 	/**
-	 * Get the size of the main window.
+	 * Get the current text contained in the clipboard.
 	 *
-	 * \return a 2D vector representing the current size of the main window, in
-	 *         screen coordinates (typically pixels), where:
-	 *         - the x component represents the width, and
-	 *         - the y component represents the height.
+	 * \return The text in the clipboard.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
 	 */
-	[[nodiscard]] glm::ivec2 getWindowSize() const noexcept;
+	[[nodiscard]] std::string getClipboardText() const;
 
 	/**
-	 * Set the displayed title of the main window.
+	 * Check if the application supports a screen keyboard.
 	 *
-	 * \param title non-owning pointer to a null-terminated UTF-8 string
-	 *        containing the title. Must not be nullptr.
+	 * \return true if a screen keyboard is supported, false otherwise.
 	 *
-	 * \sa ApplicationOptions::windowTitle
+	 * \sa graphics::Window::isScreenKeyboardShown()
 	 */
-	void setWindowTitle(const char* title);
-
-	/**
-	 * Set the size of the main window.
-	 *
-	 * \param size a 2D vector representing the desired size of the main window,
-	 *        in screen coordinates (typically pixels), where:
-	 *        - the x component represents the width, and
-	 *        - the y component represents the height.
-	 *        Both the width and height must be positive.
-	 *
-	 * \sa ApplicationOptions::windowWidth
-	 * \sa ApplicationOptions::windowHeight
-	 */
-	void setWindowSize(glm::ivec2 size);
-
-	/**
-	 * Set whether to allow the main window to be resized by the user or not.
-	 *
-	 * \param resizable true to allow resizing, false to disallow.
-	 *
-	 * \sa ApplicationOptions::windowResizable
-	 */
-	void setWindowResizable(bool resizable);
-
-	/**
-	 * Set the fullscreen state of the main window.
-	 *
-	 * \param fullscreen true for fullscreen mode, false for windowed mode.
-	 *
-	 * \sa ApplicationOptions::windowFullscreen
-	 */
-	void setWindowFullscreen(bool fullscreen);
-
-	/**
-	 * Enable or disable vertical synchronization of the main window.
-	 *
-	 * \param vSync true to enable VSync, false to disable.
-	 *
-	 * \sa ApplicationOptions::windowVSync
-	 */
-	void setWindowVSync(bool vSync);
+	[[nodiscard]] bool hasScreenKeyboardSupport() const noexcept;
 
 	/**
 	 * Set the frame rate parameters of the application.
@@ -469,29 +354,36 @@ public:
 	 */
 	void setFrameRateParameters(float tickRate, float minFps, float maxFps);
 
-protected:
 	/**
-	 * Window resize callback, called in the main loop 0 or more times during
-	 * event processing whenever the size of the main window has changed.
+	 * Set the input region for text input.
 	 *
-	 * This is also called with the initial window size just before the main
-	 * loop starts, allowing the application to reuse its window resizing code
-	 * for any initial setup that depends on the window size.
+	 * \param x Horizontal offset of the input region, in screen coordinates.
+	 * \param y Vertical offset of the input region, in screen coordinates.
+	 * \param width Width of the input region, in screen coordinates.
+	 * \param height Height of the input region, in screen coordinates.
 	 *
-	 * \param newWindowSize a 2D vector representing the new window size, in
-	 *        screen coordinates (typically pixels), where:
-	 *        - the x component represents the width, and
-	 *        - the y component represents the height.
-	 *
-	 * \note Any exception that is thrown out of this function will percolate up
-	 *       to run() and cause the main loop to stop.
-	 *
-	 * \warning The behavior of calling this function manually is undefined.
-	 *
-	 * \sa handleEvent()
+	 * \sa startTextInput()
+	 * \sa stopTextInput()
 	 */
-	virtual void resize(glm::ivec2 newWindowSize) = 0;
+	void setTextInputRegion(int x, int y, int width, int height);
 
+	/**
+	 * Start accepting text input events in the current text input region.
+	 *
+	 * \sa setTextInputRegion()
+	 * \sa stopTextInput()
+	 */
+	void startTextInput();
+
+	/**
+	 * Stop accepting text input events.
+	 *
+	 * \sa setTextInputRegion()
+	 * \sa startTextInput()
+	 */
+	void stopTextInput();
+
+protected:
 	/**
 	 * Initial frame callback, called in the main loop once at the beginning of
 	 * each frame, before event processing.
@@ -506,7 +398,7 @@ protected:
 	 * \sa handleEvent()
 	 * \sa update()
 	 * \sa tick()
-	 * \sa prepareForDisplay()
+	 * \sa display()
 	 */
 	virtual void prepareForEvents(FrameInfo frameInfo) = 0;
 
@@ -525,11 +417,9 @@ protected:
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *
-	 * \sa resize()
 	 * \sa prepareForEvents()
 	 * \sa update()
 	 * \sa tick()
-	 * \sa prepareForDisplay()
 	 */
 	virtual void handleEvent(FrameInfo frameInfo, const Event& event) = 0;
 
@@ -551,14 +441,13 @@ protected:
 	 *
 	 * \sa prepareForEvents()
 	 * \sa tick()
-	 * \sa prepareForDisplay()
 	 */
 	virtual void update(FrameInfo frameInfo) = 0;
 
 	/**
 	 * Fixed-interval tick callback, called in the main loop 0 or more times
 	 * during tick processing, which happens on each frame after calling
-	 * update() and before calling prepareForDisplay().
+	 * update() and before calling display().
 	 *
 	 * See the documentation of TickInfo::tickInterval for an explanation of
 	 * what this function may be useful for.
@@ -572,17 +461,18 @@ protected:
 	 *
 	 * \sa prepareForEvents()
 	 * \sa update()
-	 * \sa prepareForDisplay()
+	 * \sa display()
 	 */
 	virtual void tick(TickInfo tickInfo) = 0;
 
 	/**
-	 * Final frame update callback, called in the main loop once on each frame
-	 * after processing ticks and before calling display().
+	 * Frame rendering callback, called in the main loop once at the end of each
+	 * frame after processing ticks, in order to render the latest state of the
+	 * application.
 	 *
-	 * This is the best time to apply any final cosmetic changes to the state of
-	 * the application that is about to be displayed, such as interpolation of
-	 * data that is updated in tick().
+	 * Before rendering, this is also the best time to apply any final cosmetic
+	 * changes to the state of the application that is about to be presented,
+	 * such as interpolation of data that is updated in tick().
 	 *
 	 * \param frameInfo information about the current frame, see FrameInfo.
 	 *
@@ -594,24 +484,6 @@ protected:
 	 * \sa prepareForEvents()
 	 * \sa update()
 	 * \sa tick()
-	 * \sa display()
-	 */
-	virtual void prepareForDisplay(FrameInfo frameInfo) = 0;
-
-	/**
-	 * Frame rendering callback, called in the main loop once at the end of each
-	 * frame after calling prepareForDisplay() and before swapping the front and
-	 * back buffers, in order to render the latest state of the application to
-	 * the default Framebuffer, which will be shown in the main window.
-	 *
-	 * \param frameInfo information about the current frame, see FrameInfo.
-	 *
-	 * \note Any exception that is thrown out of this function will percolate up
-	 *       to run() and cause the main loop to stop.
-	 *
-	 * \warning The behavior of calling this function manually is undefined.
-	 *
-	 * \sa prepareForDisplay()
 	 */
 	virtual void display(FrameInfo frameInfo) = 0;
 
@@ -627,22 +499,8 @@ private:
 		SDLManager();
 	};
 
-	struct WindowDeleter {
-		void operator()(void* handle) const noexcept;
-	};
-
-	using Window = Resource<void*, WindowDeleter, nullptr>;
-
-	struct GLContextDeleter {
-		void operator()(void* handle) const noexcept;
-	};
-
-	using GLContext = Resource<void*, GLContextDeleter, nullptr>;
-
 	[[no_unique_address]] PhysFSManager physFSManager;
 	[[no_unique_address]] SDLManager sdlManager{};
-	Window window{};
-	GLContext glContext{};
 	std::uint64_t clockFrequency = 0;
 	std::uint64_t tickClockInterval = 0;
 	std::uint64_t minFrameClockInterval = 0;

@@ -80,6 +80,10 @@ class VertexArray;
 
 struct Viewport;
 
+using WindowId = std::uint32_t;
+struct WindowOptions;
+class Window;
+
 } // namespace graphics
 } // namespace donut
 

@@ -8,10 +8,10 @@ namespace donut {
 namespace graphics {
 
 class Texture; // Forward declaration, to avoid including Texture.hpp.
+class Window;  // Forward declaration, to avoid a circular include of Window.hpp.
 
 /**
- * Handle that is either a non-owning handle to the default framebuffer or a
- * unique handle with exclusive ownership of a GPU framebuffer resource.
+ * Unique resource handle with exclusive ownership of a GPU framebuffer.
  */
 class Framebuffer {
 public:
@@ -35,16 +35,6 @@ public:
 
 		Framebuffer& framebuffer;
 	};
-
-	/**
-	 * Get a handle to the default framebuffer, which is usually the user's
-	 * screen.
-	 *
-	 * \return a non-owning handle to the default framebuffer.
-	 */
-	[[nodiscard]] static Framebuffer getDefault() noexcept {
-		return Framebuffer{Handle{}};
-	}
 
 	/**
 	 * Create a new GPU framebuffer resource.
@@ -83,6 +73,8 @@ public:
 	}
 
 private:
+	friend Window;
+
 	explicit Framebuffer(Handle handle) noexcept
 		: fbo(handle) {}
 

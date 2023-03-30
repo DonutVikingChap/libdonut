@@ -8,7 +8,6 @@ Note: This library is currently a **work in progress** and makes no guarantees r
 
 - Application framework:
     - [Application](include/donut/application/Application.hpp) base class:
-        - Handles context setup and window management using [SDL](https://www.libsdl.org/).
         - Controls the main game loop, including [Event](include/donut/application/Event.hpp) pumping, frame pacing and fixed-interval frame rate-independent tick updates.
         - Supports both native Windows/Linux compilation as well as the [emscripten](https://emscripten.org/) WebAssembly runtime.
     - [InputManager](include/donut/application/InputManager.hpp):
@@ -20,6 +19,8 @@ Note: This library is currently a **work in progress** and makes no guarantees r
     - [SoundStage](include/donut/audio/SoundStage.hpp):
         - Plays 3D positional audio, background sounds and music.
 - Graphics rendering through [OpenGL](https://www.khronos.org/opengl/):
+    - [Window](include/donut/graphics/Window.hpp) abstraction:
+        - Handles GL context setup and window management using [SDL](https://www.libsdl.org/).
     - [RenderPass](include/donut/graphics/RenderPass.hpp) interface for simple batch rendering:
         - 3D Model rendering with built-in Blinn-Phong lighting or custom shaders through [Shader3D](include/donut/graphics/Shader3D.hpp).
         - 2D Textured quad rendering with built-in or custom shaders through [Shader2D](include/donut/graphics/Shader2D.hpp).

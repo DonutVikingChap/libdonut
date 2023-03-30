@@ -12,6 +12,7 @@ namespace application {
 // clang-format off
 //  X(name,                                 id,                                     str                     )
 #define DONUT_ENUM_INPUTS(X) \
+	X(UNKNOWN,                              "unknown",                              "Unknown"               ) /**< Unknown input. */ \
 	X(KEY_A,                                "key_a",                                "A"                     ) /**< Keyboard A key. */ \
 	X(KEY_B,                                "key_b",                                "B"                     ) /**< Keyboard B key. */ \
 	X(KEY_C,                                "key_c",                                "C"                     ) /**< Keyboard C key. */ \
@@ -156,7 +157,12 @@ namespace application {
 	X(CONTROLLER_AXIS_RIGHT_STICK_LEFT,     "controller_axis_right_stick_left",     "Right Stick Left"      ) /**< Controller right analog stick leftward movement. */ \
 	X(CONTROLLER_AXIS_RIGHT_STICK_RIGHT,    "controller_axis_right_stick_right",    "Right Stick Right"     ) /**< Controller right analog stick rightward movement. */ \
 	X(CONTROLLER_AXIS_LEFT_TRIGGER,         "controller_axis_left_trigger",         "Left Trigger"          ) /**< Controller left trigger movement. */ \
-	X(CONTROLLER_AXIS_RIGHT_TRIGGER,        "controller_axis_right_trigger",        "Right Trigger"         ) /**< Controller right trigger movement. */
+	X(CONTROLLER_AXIS_RIGHT_TRIGGER,        "controller_axis_right_trigger",        "Right Trigger"         ) /**< Controller right trigger movement. */ \
+	X(TOUCH_FINGER_PRESS,                   "touch_finger_press",                   "Touch Finger Press"    ) /**< Finger press. */ \
+	X(TOUCH_FINGER_MOTION_UP,               "touch_finger_motion_up",               "Touch Finger Up"       ) /**< Finger up movement. */ \
+	X(TOUCH_FINGER_MOTION_DOWN,             "touch_finger_motion_down",             "Touch Finger Down"     ) /**< Finger down movement. */ \
+	X(TOUCH_FINGER_MOTION_LEFT,             "touch_finger_motion_left",             "Touch Finger Left"     ) /**< Finger left movement. */ \
+	X(TOUCH_FINGER_MOTION_RIGHT,            "touch_finger_motion_right",            "Touch Finger Right"    ) /**< Finger right movement. */
 // clang-format on
 
 /**

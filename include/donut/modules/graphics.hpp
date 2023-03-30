@@ -22,6 +22,7 @@
 #include <donut/graphics/TexturedQuad.hpp>
 #include <donut/graphics/VertexArray.hpp>
 #include <donut/graphics/Viewport.hpp>
+#include <donut/graphics/Window.hpp>
 #include <donut/graphics/opengl.hpp>
 
 #endif

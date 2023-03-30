@@ -46,6 +46,7 @@ if(DONUT_ENABLE_LIBRARY)
 		"include/donut/graphics/TexturedQuad.hpp"
 		"include/donut/graphics/VertexArray.hpp"
 		"include/donut/graphics/Viewport.hpp"
+		"include/donut/graphics/Window.hpp"
 
 		"include/donut/modules/fwd/application.hpp"
 		"include/donut/modules/fwd/audio.hpp"
@@ -100,6 +101,7 @@ if(DONUT_ENABLE_LIBRARY)
 		"src/graphics/ShaderUniform.cpp"
 		"src/graphics/Texture.cpp"
 		"src/graphics/VertexArray.cpp"
+		"src/graphics/Window.cpp"
 
 		"src/base64.cpp"
 		"src/File.cpp"

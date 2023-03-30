@@ -35,6 +35,7 @@ The main API of libdonut is organized into the following modules, listed along w
     - [SpriteAtlas](@ref donut::graphics::SpriteAtlas) - Packing of sprites into an expandable spritesheet
     - [Texture](@ref donut::graphics::Texture) - Texture data stored on the GPU
     - [Viewport](@ref donut::graphics::Viewport) - Rectangular region of a framebuffer
+    - [Window](@ref donut::graphics::Window) - Graphical window that can be rendered to
 
 ## Utility modules
 

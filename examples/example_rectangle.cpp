@@ -16,22 +16,28 @@ namespace {
 class RectangleApplication final : public app::Application {
 public:
 	explicit RectangleApplication(const char* programFilepath)
-		: app::Application(programFilepath, {.windowTitle = "Rectangle"}) {}
-
-protected:
-	void resize(glm::ivec2 newWindowSize) override {
-		viewport = {.position{0, 0}, .size = newWindowSize};
-		projectionViewMatrix = glm::ortho(0.0f, static_cast<float>(newWindowSize.x), 0.0f, static_cast<float>(newWindowSize.y));
+		: app::Application(programFilepath, {})
+		, window({.title = "Rectangle"}) {
+		resize(window.getDrawableSize());
 	}
 
+protected:
 	void prepareForEvents(app::FrameInfo /*frameInfo*/) override {}
-	void handleEvent(app::FrameInfo /*frameInfo*/, const app::Event& /*event*/) override {}
+
+	void handleEvent(app::FrameInfo /*frameInfo*/, const app::Event& event) override {
+		if (event.is<app::WindowSizeChangedEvent>()) {
+			resize(window.getDrawableSize());
+		}
+	}
+
 	void update(app::FrameInfo /*frameInfo*/) override {}
+
 	void tick(app::TickInfo /*tickInfo*/) override {}
-	void prepareForDisplay(app::FrameInfo /*frameInfo*/) override {}
 
 	void display(app::FrameInfo /*frameInfo*/) override {
 		constexpr glm::vec2 RECTANGLE_SIZE{100.0f, 60.0f};
+
+		gfx::Framebuffer& framebuffer = window.getFramebuffer();
 
 		renderer.clearFramebufferColor(framebuffer, Color::BLACK);
 
@@ -43,10 +49,17 @@ protected:
 		});
 
 		renderer.render(framebuffer, renderPass, viewport, projectionViewMatrix);
+
+		window.present();
 	}
 
 private:
-	gfx::Framebuffer framebuffer = gfx::Framebuffer::getDefault();
+	void resize(glm::ivec2 newWindowSize) {
+		viewport = {.position{0, 0}, .size = newWindowSize};
+		projectionViewMatrix = glm::ortho(0.0f, static_cast<float>(newWindowSize.x), 0.0f, static_cast<float>(newWindowSize.y));
+	}
+
+	gfx::Window window;
 	gfx::Viewport viewport{};
 	glm::mat4 projectionViewMatrix{};
 	gfx::Renderer renderer{};

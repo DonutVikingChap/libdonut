@@ -145,21 +145,6 @@ public:
 	 */
 	InputManager(const InputManagerOptions& options = {});
 
-	/** Destructor. */
-	~InputManager();
-
-	/** Copying an input manager is not allowed. */
-	InputManager(const InputManager&) = delete;
-
-	/** Moving an input manager is not allowed. */
-	InputManager(InputManager&&) = delete;
-
-	/** Copying an input manager is not allowed. */
-	InputManager& operator=(const InputManager&) = delete;
-
-	/** Moving an input manager is not allowed. */
-	InputManager& operator=(InputManager&&) = delete;
-
 	/**
 	 * Update the internal state to prepare for the input events of the current
 	 * frame to be handled.
