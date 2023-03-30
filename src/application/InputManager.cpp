@@ -1,14 +1,12 @@
 #include <donut/Variant.hpp>
-#include <donut/application/Error.hpp>
 #include <donut/application/Input.hpp>
 #include <donut/application/InputManager.hpp>
 
-#include <SDL.h>        // SDL...
-#include <cstddef>      // std::size_t
-#include <fmt/format.h> // fmt::format
-#include <glm/glm.hpp>  // glm::...
-#include <optional>     // std::optional
-#include <vector>       // std::vector
+#include <SDL.h>       // SDL...
+#include <cstddef>     // std::size_t
+#include <glm/glm.hpp> // glm::...
+#include <optional>    // std::optional
+#include <vector>      // std::vector
 
 namespace donut {
 namespace application {
