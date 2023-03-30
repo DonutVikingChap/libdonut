@@ -8,8 +8,7 @@
 #include <donut/aliases.hpp>
 #include <donut/donut.hpp>
 
-#include <glm/ext/matrix_clip_space.hpp> // glm::ortho
-#include <glm/glm.hpp>                   // glm::...
+#include <glm/glm.hpp> // glm::...
 
 namespace {
 
