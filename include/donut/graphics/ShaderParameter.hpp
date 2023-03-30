@@ -1,5 +1,5 @@
-#ifndef DONUT_GRAPHICS_SHADER_UNIFORM_HPP
-#define DONUT_GRAPHICS_SHADER_UNIFORM_HPP
+#ifndef DONUT_GRAPHICS_SHADER_PARAMETER_HPP
+#define DONUT_GRAPHICS_SHADER_PARAMETER_HPP
 
 #include <array>   // std::array
 #include <cstddef> // std::size_t
@@ -15,7 +15,7 @@ class ShaderProgram; // Forward declaration, to avoid a circular include of Shad
 /**
  * Identifier for a uniform shader variable inside a ShaderProgram.
  */
-class ShaderUniform {
+class ShaderParameter {
 public:
 	/**
 	 * Construct an identifier for a specific uniform shader variable.
@@ -26,7 +26,7 @@ public:
 	 * \note If the variable is not found, the resulting identifier will be
 	 *       invalid.
 	 */
-	ShaderUniform(const ShaderProgram& program, const char* name);
+	ShaderParameter(const ShaderProgram& program, const char* name);
 
 	/**
 	 * Get the location of the variable in the shader program.

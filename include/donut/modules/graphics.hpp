@@ -14,9 +14,9 @@
 #include <donut/graphics/Shader2D.hpp>
 #include <donut/graphics/Shader3D.hpp>
 #include <donut/graphics/ShaderConfiguration.hpp>
+#include <donut/graphics/ShaderParameter.hpp>
 #include <donut/graphics/ShaderProgram.hpp>
 #include <donut/graphics/ShaderStage.hpp>
-#include <donut/graphics/ShaderUniform.hpp>
 #include <donut/graphics/SpriteAtlas.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>

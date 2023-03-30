@@ -2,8 +2,8 @@
 #define DONUT_GRAPHICS_SHADER_2D_HPP
 
 #include <donut/graphics/ShaderConfiguration.hpp>
+#include <donut/graphics/ShaderParameter.hpp>
 #include <donut/graphics/ShaderProgram.hpp>
-#include <donut/graphics/ShaderUniform.hpp>
 
 namespace donut {
 namespace graphics {
@@ -82,12 +82,12 @@ public:
 	 * Identifier for the uniform shader variable for the projection-view
 	 * matrix.
 	 */
-	ShaderUniform projectionViewMatrix{program, "projectionViewMatrix"};
+	ShaderParameter projectionViewMatrix{program, "projectionViewMatrix"};
 
 	/**
 	 * Identifier for the uniform shader variable for the main texture unit.
 	 */
-	ShaderUniform textureUnit{program, "textureUnit"};
+	ShaderParameter textureUnit{program, "textureUnit"};
 
 	/**
 	 * Compile and link a 2D shader program.

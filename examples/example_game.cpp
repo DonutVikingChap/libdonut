@@ -235,8 +235,8 @@ private:
 			float quadraticFalloff;
 		};
 
-		struct PointLightUniform {
-			PointLightUniform(const gfx::ShaderProgram& program, const char* name)
+		struct PointLightParameters {
+			PointLightParameters(const gfx::ShaderProgram& program, const char* name)
 				: position(program, fmt::format("{}.position", name).c_str())
 				, ambient(program, fmt::format("{}.ambient", name).c_str())
 				, diffuse(program, fmt::format("{}.diffuse", name).c_str())
@@ -245,13 +245,13 @@ private:
 				, linearFalloff(program, fmt::format("{}.linearFalloff", name).c_str())
 				, quadraticFalloff(program, fmt::format("{}.quadraticFalloff", name).c_str()) {}
 
-			gfx::ShaderUniform position;
-			gfx::ShaderUniform ambient;
-			gfx::ShaderUniform diffuse;
-			gfx::ShaderUniform specular;
-			gfx::ShaderUniform constantFalloff;
-			gfx::ShaderUniform linearFalloff;
-			gfx::ShaderUniform quadraticFalloff;
+			gfx::ShaderParameter position;
+			gfx::ShaderParameter ambient;
+			gfx::ShaderParameter diffuse;
+			gfx::ShaderParameter specular;
+			gfx::ShaderParameter constantFalloff;
+			gfx::ShaderParameter linearFalloff;
+			gfx::ShaderParameter quadraticFalloff;
 		};
 
 		static constexpr std::size_t POINT_LIGHT_COUNT = 4;
@@ -351,8 +351,8 @@ private:
 		}
 
 	private:
-		gfx::ShaderArray<PointLightUniform, POINT_LIGHT_COUNT> pointLights{program, "pointLights"};
-		gfx::ShaderUniform viewPosition{program, "viewPosition"};
+		gfx::ShaderArray<PointLightParameters, POINT_LIGHT_COUNT> pointLights{program, "pointLights"};
+		gfx::ShaderParameter viewPosition{program, "viewPosition"};
 	};
 
 	void resize(glm::ivec2 newWindowSize) {

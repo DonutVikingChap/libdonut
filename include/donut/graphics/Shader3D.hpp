@@ -2,8 +2,8 @@
 #define DONUT_GRAPHICS_SHADER_3D_HPP
 
 #include <donut/graphics/ShaderConfiguration.hpp>
+#include <donut/graphics/ShaderParameter.hpp>
 #include <donut/graphics/ShaderProgram.hpp>
-#include <donut/graphics/ShaderUniform.hpp>
 
 namespace donut {
 namespace graphics {
@@ -76,31 +76,31 @@ public:
 	 * Identifier for the uniform shader variable for the projection-view
 	 * matrix.
 	 */
-	ShaderUniform projectionViewMatrix{program, "projectionViewMatrix"};
+	ShaderParameter projectionViewMatrix{program, "projectionViewMatrix"};
 
 	/**
 	 * Identifier for the uniform shader variable for the texture unit of the
 	 * active material's diffuse map.
 	 */
-	ShaderUniform diffuseMap{program, "diffuseMap"};
+	ShaderParameter diffuseMap{program, "diffuseMap"};
 
 	/**
 	 * Identifier for the uniform shader variable for the texture unit of the
 	 * active material's specular map.
 	 */
-	ShaderUniform specularMap{program, "specularMap"};
+	ShaderParameter specularMap{program, "specularMap"};
 
 	/**
 	 * Identifier for the uniform shader variable for the texture unit of the
 	 * active material's normal map.
 	 */
-	ShaderUniform normalMap{program, "normalMap"};
+	ShaderParameter normalMap{program, "normalMap"};
 
 	/**
 	 * Identifier for the uniform shader variable for the active material's
 	 * specular exponent.
 	 */
-	ShaderUniform specularExponent{program, "specularExponent"};
+	ShaderParameter specularExponent{program, "specularExponent"};
 
 	/**
 	 * Compile and link a 3D shader program.

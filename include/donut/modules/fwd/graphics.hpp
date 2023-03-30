@@ -52,15 +52,15 @@ class RenderPass;
 
 struct ShaderConfiguration;
 
+class ShaderParameter;
+template <typename T, std::size_t N>
+class ShaderArray;
+
 struct ShaderProgramOptions;
 class ShaderProgram;
 
 enum class ShaderStageType : unsigned;
 class ShaderStage;
-
-class ShaderUniform;
-template <typename T, std::size_t N>
-class ShaderArray;
 
 struct Shader2DOptions;
 class Shader2D;
