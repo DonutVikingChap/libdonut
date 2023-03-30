@@ -383,7 +383,7 @@ unsigned Application::getLatestMeasuredFps() const noexcept {
 	return latestMeasuredFps;
 }
 
-[[nodiscard]] std::string Application::getClipboardText() const {
+std::string Application::getClipboardText() const {
 	std::string result{};
 	char* const text = SDL_GetClipboardText();
 	if (text) {
@@ -398,7 +398,7 @@ unsigned Application::getLatestMeasuredFps() const noexcept {
 	return result;
 }
 
-[[nodiscard]] bool Application::hasScreenKeyboardSupport() const noexcept {
+bool Application::hasScreenKeyboardSupport() const noexcept {
 	return SDL_HasScreenKeyboardSupport() == SDL_TRUE;
 }
 
