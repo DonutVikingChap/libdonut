@@ -21,6 +21,7 @@ if(DONUT_ENABLE_LIBRARY)
 		"include/donut/application/InputManager.hpp"
 
 		"include/donut/audio/Error.hpp"
+		"include/donut/audio/Listener.hpp"
 		"include/donut/audio/Sound.hpp"
 		"include/donut/audio/SoundStage.hpp"
 

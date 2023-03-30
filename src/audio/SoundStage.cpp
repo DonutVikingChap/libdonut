@@ -1,4 +1,5 @@
 #include <donut/audio/Error.hpp>
+#include <donut/audio/Listener.hpp>
 #include <donut/audio/Sound.hpp>
 #include <donut/audio/SoundStage.hpp>
 
@@ -20,7 +21,7 @@ SoundStage::SoundStage(const SoundStageOptions& options)
 	setMaxSimultaneousSounds(options.maxSimultaneousSounds);
 }
 
-void SoundStage::update(float deltaTime, const SoundListener& listener) {
+void SoundStage::update(float deltaTime, const Listener& listener) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 
 	time += deltaTime;

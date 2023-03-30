@@ -101,7 +101,7 @@ protected:
 
 	void update(app::FrameInfo frameInfo) override {
 		if (soundStage) {
-			soundStage->update(frameInfo.deltaTime, {.position = soundListenerPosition});
+			soundStage->update(frameInfo.deltaTime, listener);
 		}
 
 		if (inputManager.justPressed(app::Input::KEY_F10)) {
@@ -686,6 +686,7 @@ private:
 	gfx::Viewport worldViewport{};
 	glm::mat4 screenProjectionViewMatrix{};
 	glm::mat4 worldProjectionViewMatrix{};
+	audio::Listener listener{};
 	gfx::Texture testTexture{gfx::Image{"textures/test.png"}};
 	gfx::Texture circleTexture{gfx::Image{"textures/circle.png"}, {.useLinearFiltering = false, .useMipmap = false}};
 	gfx::Model carrotCakeModel{"models/carrot_cake.obj"};
@@ -698,7 +699,6 @@ private:
 	std::optional<audio::SoundStage> soundStage{};
 	std::optional<audio::Sound> music{};
 	audio::SoundStage::SoundInstanceId musicId{};
-	glm::vec3 soundListenerPosition{0.0f, 0.0f, 0.0f};
 	float verticalFieldOfView;
 	glm::vec3 carrotCakeCurrentPosition{0.0f, 0.0f, 0.0f};
 	glm::vec3 carrotCakePreviousPosition{0.0f, 0.0f, 0.0f};

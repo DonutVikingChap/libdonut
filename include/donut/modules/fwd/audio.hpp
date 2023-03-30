@@ -6,11 +6,12 @@ namespace audio {
 
 struct Error;
 
+struct Listener;
+
 enum class SoundAttenuationModel : unsigned;
 struct SoundOptions;
 class Sound;
 
-struct SoundListener;
 struct SoundStageOptions;
 class SoundStage;
 

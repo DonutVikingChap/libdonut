@@ -8,44 +8,8 @@
 namespace donut {
 namespace audio {
 
-class Sound; // Forward declaration, to avoid including Sound.hpp.
-
-/**
- * Current state of the sound listener, i.e. the user perceiving the audio,
- * within a SoundStage.
- *
- * This information is used in the calculations for various 3D sound effect
- * simulations such as distance attenuation, sound delay and the doppler effect.
- */
-struct SoundListener {
-	/**
-	 * Position of the listener in the sound stage.
-	 *
-	 * Used for distance attenuation and sound delay, if enabled.
-	 */
-	glm::vec3 position{0.0f, 0.0f, 0.0f};
-
-	/**
-	 * Linear velocity of the listener.
-	 *
-	 * Used in doppler effect calculations.
-	 */
-	glm::vec3 velocity{0.0f, 0.0f, 0.0f};
-
-	/**
-	 * The direction the listener is facing.
-	 *
-	 * Does not need to be normalized.
-	 */
-	glm::vec3 aimDirection{0.0f, 0.0f, -1.0f};
-
-	/**
-	 * The direction upwards from the listener.
-	 *
-	 * Does not need to be normalized.
-	 */
-	glm::vec3 up{0.0f, 1.0f, 0.0f};
-};
+class Sound;     // Forward declaration, to avoid including Sound.hpp.
+struct Listener; // Forward declaration, to avoid including Listener.hpp.
 
 /**
  * Configuration options for a SoundStage.
@@ -125,7 +89,7 @@ public:
 	 * \note This function should typically be called once every frame during
 	 *       the application::Application::update() callback.
 	 */
-	void update(float deltaTime, const SoundListener& listener);
+	void update(float deltaTime, const Listener& listener);
 
 	/**
 	 * Create a new 3D sound instance and start playing it.
