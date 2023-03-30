@@ -26,6 +26,7 @@ if(DONUT_ENABLE_LIBRARY)
 		"include/donut/audio/SoundStage.hpp"
 
 		"include/donut/graphics/Buffer.hpp"
+		"include/donut/graphics/Camera.hpp"
 		"include/donut/graphics/Error.hpp"
 		"include/donut/graphics/Font.hpp"
 		"include/donut/graphics/Framebuffer.hpp"

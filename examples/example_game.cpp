@@ -18,27 +18,26 @@
 #include <donut/aliases.hpp>
 #include <donut/donut.hpp>
 
-#include <array>                         // std::array
-#include <charconv>                      // std::from_chars_result, std::from_chars
-#include <cmath>                         // std::atan2
-#include <concepts>                      // std::integral
-#include <cstddef>                       // std::size_t
-#include <cstdio>                        // stderr, std::sscanf
-#include <cstdlib>                       // EXIT_SUCCESS, EXIT_FAILURE
-#include <exception>                     // std::exception
-#include <fmt/format.h>                  // fmt::format, fmt::print
-#include <forward_list>                  // std::forward_list
-#include <glm/ext/matrix_clip_space.hpp> // glm::ortho, glm::perspective
-#include <glm/ext/matrix_transform.hpp>  // glm::identity, glm::translate, glm::rotate, glm::scale
-#include <glm/glm.hpp>                   // glm::...
-#include <glm/gtx/norm.hpp>              // glm::length2
-#include <optional>                      // std::optional
-#include <span>                          // std::span
-#include <stdexcept>                     // std::runtime_error
-#include <string>                        // std::string
-#include <string_view>                   // std::string_view
-#include <system_error>                  // std::errc
-#include <unordered_map>                 // std::unordered_map
+#include <array>                        // std::array
+#include <charconv>                     // std::from_chars_result, std::from_chars
+#include <cmath>                        // std::atan2
+#include <concepts>                     // std::integral
+#include <cstddef>                      // std::size_t
+#include <cstdio>                       // stderr, std::sscanf
+#include <cstdlib>                      // EXIT_SUCCESS, EXIT_FAILURE
+#include <exception>                    // std::exception
+#include <fmt/format.h>                 // fmt::format, fmt::print
+#include <forward_list>                 // std::forward_list
+#include <glm/ext/matrix_transform.hpp> // glm::identity, glm::translate, glm::rotate, glm::scale
+#include <glm/glm.hpp>                  // glm::...
+#include <glm/gtx/norm.hpp>             // glm::length2
+#include <optional>                     // std::optional
+#include <span>                         // std::span
+#include <stdexcept>                    // std::runtime_error
+#include <string>                       // std::string
+#include <string_view>                  // std::string_view
+#include <system_error>                 // std::errc
+#include <unordered_map>                // std::unordered_map
 
 namespace {
 
@@ -187,20 +186,20 @@ protected:
 		{
 			gfx::RenderPass renderPass{};
 			drawBackground(renderPass, frameInfo);
-			renderer.render(framebuffer, renderPass, worldViewport, worldProjectionViewMatrix);
+			renderer.render(framebuffer, renderPass, worldViewport, worldCamera);
 		}
 
 		{
 			gfx::RenderPass renderPass{};
 			drawWorld(renderPass, frameInfo);
-			renderer.render(framebuffer, renderPass, worldViewport, worldProjectionViewMatrix);
+			renderer.render(framebuffer, renderPass, worldViewport, worldCamera);
 		}
 
 		{
 			gfx::RenderPass renderPass{};
 			drawUserInterface(renderPass, frameInfo);
 			drawFpsCounter(renderPass);
-			renderer.render(framebuffer, renderPass, screenViewport, screenProjectionViewMatrix);
+			renderer.render(framebuffer, renderPass, screenViewport, screenCamera);
 		}
 
 		window.present();
@@ -362,11 +361,21 @@ private:
 
 		const auto [viewport, scale] = gfx::Viewport::createIntegerScaled(newWindowSize, RENDER_RESOLUTION);
 		screenViewport = viewport;
-		screenProjectionViewMatrix = glm::ortho(0.0f, static_cast<float>(RENDER_RESOLUTION.x), 0.0f, static_cast<float>(RENDER_RESOLUTION.y));
+		screenCamera = gfx::Camera::createOrthographic({
+			.offset{0.0f, 0.0f},
+			.size{static_cast<float>(RENDER_RESOLUTION.x), static_cast<float>(RENDER_RESOLUTION.y)},
+		});
 
-		worldViewport = {.position = screenViewport.position + WORLD_VIEWPORT_POSITION * scale, .size = WORLD_VIEWPORT_SIZE * scale};
-		const float aspectRatio = static_cast<float>(worldViewport.size.x) / static_cast<float>(worldViewport.size.y);
-		worldProjectionViewMatrix = glm::perspective(verticalFieldOfView, aspectRatio, 0.1f, 100.0f);
+		worldViewport = {
+			.position = screenViewport.position + WORLD_VIEWPORT_POSITION * scale,
+			.size = WORLD_VIEWPORT_SIZE * scale,
+		};
+		worldCamera = gfx::Camera::createPerspective({
+			.verticalFieldOfView = verticalFieldOfView,
+			.aspectRatio = static_cast<float>(worldViewport.size.x) / static_cast<float>(worldViewport.size.y),
+			.nearZ = 0.1f,
+			.farZ = 100.0f,
+		});
 	}
 
 	void loadBindingsConfiguration(const char* filepath) {
@@ -684,8 +693,8 @@ private:
 	gfx::Renderer renderer{};
 	gfx::Viewport screenViewport{};
 	gfx::Viewport worldViewport{};
-	glm::mat4 screenProjectionViewMatrix{};
-	glm::mat4 worldProjectionViewMatrix{};
+	gfx::Camera screenCamera{};
+	gfx::Camera worldCamera{};
 	audio::Listener listener{};
 	gfx::Texture testTexture{gfx::Image{"textures/test.png"}};
 	gfx::Texture circleTexture{gfx::Image{"textures/circle.png"}, {.useLinearFiltering = false, .useMipmap = false}};

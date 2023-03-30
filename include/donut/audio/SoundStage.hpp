@@ -2,14 +2,14 @@
 #define DONUT_AUDIO_SOUND_STAGE_HPP
 
 #include <donut/Resource.hpp>
+#include <donut/audio/Listener.hpp>
 
 #include <glm/glm.hpp> // glm::...
 
 namespace donut {
 namespace audio {
 
-class Sound;     // Forward declaration, to avoid including Sound.hpp.
-struct Listener; // Forward declaration, to avoid including Listener.hpp.
+class Sound; // Forward declaration, to avoid including Sound.hpp.
 
 /**
  * Configuration options for a SoundStage.

@@ -72,7 +72,7 @@ void applyShaderConfiguration(const ShaderConfiguration& configuration) {
 	}
 }
 
-void uploadShaderUniforms(ShaderProgram& program) {
+void uploadEnqueuedShaderUniformValues(ShaderProgram& program) {
 	for (const auto& [location, value] : program.getUniformUploadQueue()) {
 		const GLint loc = location;
 		match(value)(                                                                                       //
@@ -95,22 +95,26 @@ void uploadShaderUniforms(ShaderProgram& program) {
 	program.clearUniformUploadQueue();
 }
 
-void useShader(Shader3D& shader, const glm::mat4& projectionViewMatrix) {
+void useShader(Shader3D& shader) {
 	glUseProgram(shader.program.get());
 	applyShaderConfiguration(shader.options.configuration);
-	uploadShaderUniforms(shader.program);
-	glUniformMatrix4fv(shader.projectionViewMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(projectionViewMatrix));
+	uploadEnqueuedShaderUniformValues(shader.program);
 	glUniform1i(shader.diffuseMap.getLocation(), Model::Object::TEXTURE_UNIT_DIFFUSE);
 	glUniform1i(shader.specularMap.getLocation(), Model::Object::TEXTURE_UNIT_SPECULAR);
 	glUniform1i(shader.normalMap.getLocation(), Model::Object::TEXTURE_UNIT_NORMAL);
 }
 
-void useShader(Shader2D& shader, const glm::mat4& projectionViewMatrix) {
+void useShader(Shader2D& shader) {
 	glUseProgram(shader.program.get());
 	applyShaderConfiguration(shader.options.configuration);
-	uploadShaderUniforms(shader.program);
-	glUniformMatrix4fv(shader.projectionViewMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(projectionViewMatrix));
+	uploadEnqueuedShaderUniformValues(shader.program);
 	glUniform1i(shader.textureUnit.getLocation(), TexturedQuad::TEXTURE_UNIT);
+}
+
+void uploadCameraToShader(auto& shader, const Camera& camera) {
+	glUniformMatrix4fv(shader.projectionMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(camera.getProjectionMatrix()));
+	glUniformMatrix4fv(shader.viewMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(camera.getViewMatrix()));
+	glUniformMatrix4fv(shader.viewProjectionMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(camera.getProjectionMatrix() * camera.getViewMatrix()));
 }
 
 void renderModelInstances(Shader3D& shader, std::span<const Model::Object> objects, std::span<const Model::Object::Instance> instances) {
@@ -184,7 +188,7 @@ void Renderer::clearFramebufferColorAndDepth(Framebuffer& framebuffer, Color col
 }
 
 void Renderer::render( // NOLINT(readability-make-member-function-const)
-	Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const glm::mat4& projectionViewMatrix) {
+	Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const Camera& camera) {
 	// Bind framebuffer.
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
 
@@ -198,7 +202,8 @@ void Renderer::render( // NOLINT(readability-make-member-function-const)
 		for (const auto& [key, model] : renderPass.models) {
 			if (shader != key.shader) {
 				shader = key.shader;
-				useShader(*shader, projectionViewMatrix);
+				useShader(*shader);
+				uploadCameraToShader(*shader, camera);
 			}
 
 			renderModelInstances(*shader, key.model->objects, model.instances);
@@ -218,7 +223,8 @@ void Renderer::render( // NOLINT(readability-make-member-function-const)
 		for (const RenderPass::TexturedQuadInstances& quad : renderPass.quads) {
 			if (shader != quad.shader) {
 				shader = quad.shader;
-				useShader(*shader, projectionViewMatrix);
+				useShader(*shader);
+				uploadCameraToShader(*shader, camera);
 			}
 
 			if (texture != quad.texture) {

@@ -31,7 +31,9 @@ const char* const Shader3D::vertexShaderSourceCodeInstancedModel = R"GLSL(
     out vec2 fragmentTextureCoordinates;
     out vec4 fragmentTintColor;
 
-    uniform mat4 projectionViewMatrix;
+    uniform mat4 projectionMatrix;
+    uniform mat4 viewMatrix;
+    uniform mat4 viewProjectionMatrix;
 
     void main() {
         fragmentPosition = vec3(instanceTransformation * vec4(vertexPosition, 1.0));
@@ -40,7 +42,7 @@ const char* const Shader3D::vertexShaderSourceCodeInstancedModel = R"GLSL(
         fragmentBitangent = instanceNormalMatrix * vertexBitangent;
         fragmentTextureCoordinates = vertexTextureCoordinates;
         fragmentTintColor = instanceTintColor;
-        gl_Position = projectionViewMatrix * vec4(fragmentPosition, 1.0);
+        gl_Position = viewProjectionMatrix * vec4(fragmentPosition, 1.0);
     }
 )GLSL";
 

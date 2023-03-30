@@ -25,12 +25,14 @@ const char* const Shader2D::vertexShaderSourceCodeInstancedTexturedQuad = R"GLSL
     out vec2 fragmentTextureCoordinates;
     out vec4 fragmentTintColor;
 
-    uniform mat4 projectionViewMatrix;
+    uniform mat4 projectionMatrix;
+    uniform mat4 viewMatrix;
+    uniform mat4 viewProjectionMatrix;
 
     void main() {
         fragmentTextureCoordinates = instanceTextureOffset + vertexCoordinates * instanceTextureScale;
         fragmentTintColor = instanceTintColor;
-        gl_Position = projectionViewMatrix * instanceTransformation * vec4(vertexCoordinates, 0.0, 1.0);
+        gl_Position = viewProjectionMatrix * instanceTransformation * vec4(vertexCoordinates, 0.0, 1.0);
     }
 )GLSL";
 

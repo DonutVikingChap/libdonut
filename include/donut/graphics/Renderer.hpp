@@ -1,6 +1,7 @@
 #ifndef DONUT_GRAPHICS_RENDERER_HPP
 #define DONUT_GRAPHICS_RENDERER_HPP
 
+#include <donut/graphics/Camera.hpp>
 #include <donut/graphics/Framebuffer.hpp>
 #include <donut/graphics/RenderPass.hpp>
 #include <donut/graphics/Shader2D.hpp>
@@ -8,10 +9,6 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
 #include <donut/graphics/Viewport.hpp>
-
-#include <array>       // std::array
-#include <cstddef>     // std::byte
-#include <glm/glm.hpp> // glm::...
 
 namespace donut {
 namespace graphics {
@@ -66,7 +63,7 @@ public:
 	/**
 	 * Clear the depth buffer contents of a Framebuffer.
 	 *
-	 * \param framebuffer the framebuffer to clear the depth of.
+	 * \param framebuffer framebuffer to clear the depth of.
 	 *
 	 * \sa clearFramebufferColor()
 	 * \sa clearFramebufferColorAndDepth()
@@ -76,7 +73,7 @@ public:
 	/**
 	 * Clear the color contents of a Framebuffer.
 	 *
-	 * \param framebuffer the framebuffer to clear the color of.
+	 * \param framebuffer framebuffer to clear the color of.
 	 * \param color color to clear the framebuffer to.
 	 *
 	 * \sa clearFramebufferDepth()
@@ -87,7 +84,7 @@ public:
 	/**
 	 * Clear the color and depth buffer contents of a Framebuffer.
 	 *
-	 * \param framebuffer the framebuffer to clear the color and depth of.
+	 * \param framebuffer framebuffer to clear the color and depth of.
 	 * \param color color to clear the framebuffer to.
 	 *
 	 * \sa clearFramebufferDepth()
@@ -98,17 +95,16 @@ public:
 	/**
 	 * Render the contents of a RenderPass to a Framebuffer.
 	 *
-	 * \param framebuffer the framebuffer to render to.
-	 * \param renderPass the render pass to render from.
-	 * \param viewport the rectangular region of the framebuffer to render
-	 *        inside of.
-	 * \param projectionViewMatrix combined projection/view matrix to transform
-	 *        all rendered vertices by.
+	 * \param framebuffer framebuffer to render to.
+	 * \param renderPass render pass to render from.
+	 * \param viewport rectangular region of the framebuffer to render inside
+	 *        of.
+	 * \param camera camera to render from.
 	 *
 	 * \note This function should typically be called at least once every frame
 	 *       during the Application::display() callback.
 	 */
-	void render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const glm::mat4& projectionViewMatrix);
+	void render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const Camera& camera);
 
 private:
 	TexturedQuad texturedQuad{};

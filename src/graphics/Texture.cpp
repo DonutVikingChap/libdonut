@@ -1,3 +1,4 @@
+#include <donut/graphics/Camera.hpp>
 #include <donut/graphics/Error.hpp>
 #include <donut/graphics/Handle.hpp>
 #include <donut/graphics/Image.hpp>
@@ -318,7 +319,7 @@ void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHe
 			renderer.clearFramebufferColor(framebuffer, *backgroundColor);
 		}
 		renderer.render(framebuffer, RenderPass{}.draw(TextureInstance{.texture = this}), Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
-			glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
+			Camera::createOrthographic({.offset{0.0f, 0.0f}, .size{static_cast<float>(width), static_cast<float>(height)}}));
 	}
 	newTexture.setOptions2D(options);
 	*this = std::move(newTexture);
@@ -330,7 +331,7 @@ Texture Texture::copy2D(Renderer& renderer) const {
 		Framebuffer framebuffer{};
 		const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(newTexture);
 		renderer.render(framebuffer, RenderPass{}.draw(TextureInstance{.texture = this}), Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
-			glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
+			Camera::createOrthographic({.offset{0.0f, 0.0f}, .size{static_cast<float>(width), static_cast<float>(height)}}));
 	}
 	newTexture.setOptions2D(options);
 	return newTexture;

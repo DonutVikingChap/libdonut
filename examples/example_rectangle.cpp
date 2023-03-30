@@ -48,7 +48,7 @@ protected:
 			.tintColor = Color::LIME,
 		});
 
-		renderer.render(framebuffer, renderPass, viewport, projectionViewMatrix);
+		renderer.render(framebuffer, renderPass, viewport, camera);
 
 		window.present();
 	}
@@ -56,12 +56,12 @@ protected:
 private:
 	void resize(glm::ivec2 newWindowSize) {
 		viewport = {.position{0, 0}, .size = newWindowSize};
-		projectionViewMatrix = glm::ortho(0.0f, static_cast<float>(newWindowSize.x), 0.0f, static_cast<float>(newWindowSize.y));
+		camera = gfx::Camera::createOrthographic({.offset{0.0f, 0.0f}, .size{static_cast<float>(newWindowSize.x), static_cast<float>(newWindowSize.y)}});
 	}
 
 	gfx::Window window;
 	gfx::Viewport viewport{};
-	glm::mat4 projectionViewMatrix{};
+	gfx::Camera camera{};
 	gfx::Renderer renderer{};
 };
 

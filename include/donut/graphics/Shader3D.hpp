@@ -73,10 +73,20 @@ public:
 	ShaderProgram program;
 
 	/**
-	 * Identifier for the uniform shader variable for the projection-view
-	 * matrix.
+	 * Identifier for the uniform shader variable for the projection matrix.
 	 */
-	ShaderParameter projectionViewMatrix{program, "projectionViewMatrix"};
+	ShaderParameter projectionMatrix{program, "projectionMatrix"};
+
+	/**
+	 * Identifier for the uniform shader variable for the view matrix.
+	 */
+	ShaderParameter viewMatrix{program, "viewMatrix"};
+
+	/**
+	 * Identifier for the uniform shader variable for the combined
+	 * view-projection matrix.
+	 */
+	ShaderParameter viewProjectionMatrix{program, "viewProjectionMatrix"};
 
 	/**
 	 * Identifier for the uniform shader variable for the texture unit of the

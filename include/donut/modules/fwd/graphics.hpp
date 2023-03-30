@@ -9,6 +9,8 @@ namespace graphics {
 
 class Buffer;
 
+class Camera;
+
 struct Error;
 
 struct FontOptions;
