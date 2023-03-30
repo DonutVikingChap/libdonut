@@ -61,7 +61,7 @@ struct KeyEventBase : InputEventBase {
 
 /** Text input Event base. */
 struct TextInputEventBase : InputEventBase {
-	std::string text; ///< The text being edited.
+	std::string inputText; ///< Input text.
 };
 
 /** Mouse Event base. */
@@ -189,7 +189,7 @@ struct WindowCloseRequestedEvent : WindowEventBase {};
 
 /** Window was moved to a new display. */
 struct WindowDisplayChangedEvent : WindowEventBase {
-	int newDisplayIndex; ///< New display index.
+	int displayIndex; ///< Current display index.
 };
 
 /** Keyboard key was pressed. */
