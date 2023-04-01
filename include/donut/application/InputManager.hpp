@@ -87,6 +87,23 @@ struct InputManagerOptions {
 	 * inputs when the trigger is at rest.
 	 */
 	float controllerRightTriggerDeadzone = 0.2f;
+
+	/**
+	 * Touch finger motion sensitivity coefficient.
+	 *
+	 * The influence of finger movement on its bound output values will be
+	 * multiplied by this value before being applied.
+	 */
+	float touchMotionSensitivity = 1.0f;
+
+	/**
+	 * Touch finger pressure deadzone fraction.
+	 *
+	 * When the pressure amount is less than or equal to this value, the actual
+	 * position will be ignored and treated as if it was 0 in order to avoid
+	 * fluctuations and accidental inputs when the finger is at rest.
+	 */
+	float touchPressureDeadzone = 0.2f;
 };
 
 /**
@@ -380,6 +397,24 @@ public:
 	void setControllerRightTriggerDeadzone(float deadzone) noexcept;
 
 	/**
+	 * Set the touch finger motion sensitivity coefficient.
+	 *
+	 * \param sensitivity new touch finger motion sensitivity.
+	 *
+	 * \sa InputManagerOptions::touchMotionSensitivity
+	 */
+	void setTouchMotionSensitivity(float sensitivity) noexcept;
+
+	/**
+	 * Set the touch finger pressure deadzone fraction.
+	 *
+	 * \param deadzone new touch finger deadzone.
+	 *
+	 * \sa InputManagerOptions::touchPressureDeadzone
+	 */
+	void setTouchPressureDeadzone(float deadzone) noexcept;
+
+	/**
 	 * Check if this input manager has any active bindings for any input.
 	 *
 	 * \return true if there exists some input that is currently mapped to a set
@@ -631,6 +666,81 @@ public:
 	 * \sa getControllerRightTriggerPosition()
 	 */
 	[[nodiscard]] bool controllerRightTriggerJustMoved() const noexcept;
+
+	/**
+	 * Get the latest known touch finger position processed by the input
+	 * manager.
+	 *
+	 * \return if the finger has a known position, returns a 2D vector, in
+	 *         normalized coordinates [0, 1], that represents it. Otherwise,
+	 *         returns an empty optional.
+	 *
+	 * \note Instead of reading the state of the finger directly, prefer to use
+	 *       the getAbsoluteVector() or getRelativeVector() functions with an
+	 *       abstract output number whenever possible, since this can allow the
+	 *       user to bind a different form of input, such as a joystick, to the
+	 *       control instead, according to their preferences.
+	 *
+	 * \sa getTouchPressure()
+	 * \sa touchJustMoved()
+	 * \sa touchJustChangedPressure()
+	 */
+	[[nodiscard]] std::optional<glm::vec2> getTouchPosition() const noexcept;
+
+	/**
+	 * Get the latest known touch finger pressure processed by the input
+	 * manager.
+	 *
+	 * \return if the finger has a known pressure, returns a float in the range
+	 *         [0, 1], that represents it. Otherwise, returns an empty optional.
+	 *
+	 * \note Instead of reading the state of the finger directly, prefer to use
+	 *       the getAbsoluteVector() or getRelativeVector() functions with an
+	 *       abstract output number whenever possible, since this can allow the
+	 *       user to bind a different form of input, such as a trigger, to the
+	 *       control instead, according to their preferences.
+	 *
+	 * \sa getTouchPosition()
+	 * \sa touchJustMoved()
+	 * \sa touchJustChangedPressure()
+	 */
+	[[nodiscard]] std::optional<float> getTouchPressure() const noexcept;
+
+	/**
+	 * Check if the touch finger just moved on the current frame.
+	 *
+	 * \return true if any finger motion was processed in the current frame,
+	 *         false otherwise.
+	 *
+	 * \note Instead of reading the state of the finger directly, prefer to use
+	 *       the isPressed(), justPressed() and justReleased() functions with an
+	 *       abstract output number whenever possible, since this can allow the
+	 *       user to bind a different form of input, such as a button, to the
+	 *       control instead, according to their preferences.
+	 *
+	 * \sa getTouchPosition()
+	 * \sa getTouchPressure()
+	 * \sa touchJustChangedPressure()
+	 */
+	[[nodiscard]] bool touchJustMoved() const noexcept;
+
+	/**
+	 * Check if the touch finger just changed pressure on the current frame.
+	 *
+	 * \return true if any finger pressure change was processed in the current
+	 *         frame, false otherwise.
+	 *
+	 * \note Instead of reading the state of the finger directly, prefer to use
+	 *       the isPressed(), justPressed() and justReleased() functions with an
+	 *       abstract output number whenever possible, since this can allow the
+	 *       user to bind a different form of input, such as a button, to the
+	 *       control instead, according to their preferences.
+	 *
+	 * \sa getTouchPosition()
+	 * \sa getTouchPressure()
+	 * \sa touchJustMoved()
+	 */
+	[[nodiscard]] bool touchJustChangedPressure() const noexcept;
 
 	/**
 	 * Get all output numbers for which at least one bound input is currently in
@@ -1200,20 +1310,19 @@ private:
 	void setControllerLeftTriggerPosition(float position) noexcept;
 	void setControllerRightTriggerPosition(float position) noexcept;
 
+	void setTouchPosition(glm::vec2 position) noexcept;
+	void setTouchPressure(float pressure) noexcept;
+
+	InputManagerOptions options;
 	std::unordered_map<Input, Outputs> bindings{};
-	float mouseSensitivity;
-	float controllerLeftStickSensitivity;
-	float controllerRightStickSensitivity;
-	float controllerLeftStickDeadzone;
-	float controllerRightStickDeadzone;
-	float controllerLeftTriggerDeadzone;
-	float controllerRightTriggerDeadzone;
 	std::optional<glm::vec2> mousePosition{};
 	Controller controller{};
 	std::optional<glm::vec2> controllerLeftStickPosition{};
 	std::optional<glm::vec2> controllerRightStickPosition{};
 	std::optional<float> controllerLeftTriggerPosition{};
 	std::optional<float> controllerRightTriggerPosition{};
+	std::optional<glm::vec2> touchPosition{};
+	std::optional<float> touchPressure{};
 	Outputs currentPersistentOutputs{};
 	Outputs previousPersistentOutputs{};
 	Outputs transientOutputs{};
@@ -1230,6 +1339,8 @@ private:
 	bool controllerRightStickTransientMotion = false;
 	bool controllerLeftTriggerTransientMotion = false;
 	bool controllerRightTriggerTransientMotion = false;
+	bool touchTransientMotion = false;
+	bool touchTransientPressure = false;
 };
 
 } // namespace application

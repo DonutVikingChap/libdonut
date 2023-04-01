@@ -158,7 +158,8 @@ namespace application {
 	X(CONTROLLER_AXIS_RIGHT_STICK_RIGHT,    "controller_axis_right_stick_right",    "Right Stick Right"     ) /**< Controller right analog stick rightward movement. */ \
 	X(CONTROLLER_AXIS_LEFT_TRIGGER,         "controller_axis_left_trigger",         "Left Trigger"          ) /**< Controller left trigger movement. */ \
 	X(CONTROLLER_AXIS_RIGHT_TRIGGER,        "controller_axis_right_trigger",        "Right Trigger"         ) /**< Controller right trigger movement. */ \
-	X(TOUCH_FINGER_PRESS,                   "touch_finger_press",                   "Touch Finger Press"    ) /**< Finger press. */ \
+	X(TOUCH_FINGER_TAP,                     "touch_finger_tap",                     "Touch Finger Tap"      ) /**< Finger tap. */ \
+	X(TOUCH_FINGER_PRESSURE,                "touch_finger_pressure",                "Touch Finger Pressure" ) /**< Finger pressure. */ \
 	X(TOUCH_FINGER_MOTION_UP,               "touch_finger_motion_up",               "Touch Finger Up"       ) /**< Finger up movement. */ \
 	X(TOUCH_FINGER_MOTION_DOWN,             "touch_finger_motion_down",             "Touch Finger Down"     ) /**< Finger down movement. */ \
 	X(TOUCH_FINGER_MOTION_LEFT,             "touch_finger_motion_left",             "Touch Finger Left"     ) /**< Finger left movement. */ \
