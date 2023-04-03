@@ -540,6 +540,42 @@ public:
 	}
 
 	/**
+	 * Set the value of the red component of this color.
+	 *
+	 * \param newValue new value to set the red color component to.
+	 */
+	constexpr void setRedComponent(float newValue) noexcept {
+		rgba.x = newValue;
+	}
+
+	/**
+	 * Set the value of the green component of this color.
+	 *
+	 * \param newValue new value to set the green color component to.
+	 */
+	constexpr void setGreenComponent(float newValue) noexcept {
+		rgba.y = newValue;
+	}
+
+	/**
+	 * Set the value of the blue component of this color.
+	 *
+	 * \param newValue new value to set the blue color component to.
+	 */
+	constexpr void setBlueComponent(float newValue) noexcept {
+		rgba.z = newValue;
+	}
+
+	/**
+	 * Set the value of the alpha component of this color.
+	 *
+	 * \param newValue new value to set the alpha component to.
+	 */
+	constexpr void setAlphaComponent(float newValue) noexcept {
+		rgba.w = newValue;
+	}
+
+	/**
 	 * Get the value of the red component of this color.
 	 *
 	 * \return the value of the red color component.
