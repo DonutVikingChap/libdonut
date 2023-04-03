@@ -77,7 +77,7 @@ public:
 	 * \sa countUp()
 	 * \sa countDownLoop()
 	 */
-	constexpr bool countDown(Duration deltaTime, Duration targetTime) noexcept {
+	constexpr bool countDown(Duration deltaTime, Duration targetTime = {}) noexcept {
 		time -= deltaTime;
 		if (time <= targetTime) {
 			time = targetTime;
