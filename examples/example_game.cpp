@@ -678,6 +678,10 @@ private:
 				.color = Color::BURLY_WOOD,
 			});
 		}
+
+		if (inputManager.justReleased(app::Input::KEY_SPACE)) {
+			inputManager.resetAllInputs();
+		}
 	}
 
 	void drawFpsCounter(gfx::RenderPass& renderPass) {

@@ -153,8 +153,8 @@ void InputManager::press(Input input, glm::i32 offset) noexcept {
 		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
 			if (outputs.test(i)) {
 				outputRelativeValues[i] += offset;
-				outputAbsoluteValues[i] += offset;
 				if (wasReleased) {
+					outputAbsoluteValues[i] += offset;
 					++outputPersistentPresses[i];
 				}
 			}
@@ -171,8 +171,8 @@ void InputManager::release(Input input, glm::i32 offset) noexcept {
 		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
 			if (outputs.test(i)) {
 				outputRelativeValues[i] += offset;
-				outputAbsoluteValues[i] += offset;
 				if (wasPressed) {
+					outputAbsoluteValues[i] += offset;
 					if (outputPersistentPresses[i] > 1) {
 						--outputPersistentPresses[i];
 					} else {
