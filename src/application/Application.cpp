@@ -175,13 +175,15 @@ constexpr std::array<Input, SDL_CONTROLLER_BUTTON_MAX> CONTROLLER_BUTTON_MAP = [
 
 [[nodiscard]] std::string consumeText(char* text) {
 	std::string result{};
-	try {
-		result = text;
-	} catch (...) {
+	if (text) {
+		try {
+			result = text;
+		} catch (...) {
+			SDL_free(text);
+			throw;
+		}
 		SDL_free(text);
-		throw;
 	}
-	SDL_free(text);
 	return result;
 }
 
@@ -384,18 +386,7 @@ unsigned Application::getLatestMeasuredFps() const noexcept {
 }
 
 std::string Application::getClipboardText() const {
-	std::string result{};
-	char* const text = SDL_GetClipboardText();
-	if (text) {
-		try {
-			result = text;
-		} catch (...) {
-			SDL_free(text);
-			throw;
-		}
-		SDL_free(text);
-	}
-	return result;
+	return consumeText(SDL_GetClipboardText());
 }
 
 bool Application::hasScreenKeyboardSupport() const noexcept {
