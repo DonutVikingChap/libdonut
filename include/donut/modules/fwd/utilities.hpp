@@ -93,7 +93,7 @@ template <glm::length_t L, typename T>
 struct Capsule;
 
 template <glm::length_t L, typename T>
-struct AxisAlignedBox;
+struct Box;
 
 template <typename T>
 struct Rectangle;

@@ -623,7 +623,7 @@ private:
 				.tintColor = movingCircleColor,
 			});
 
-			const auto drawBorder = [&](const AxisAlignedBox<2, float>& box, float lineThickness, Color color) -> void {
+			const auto drawBorder = [&](const Box<2, float>& box, float lineThickness, Color color) -> void {
 				const glm::vec2 extent = box.max - box.min;
 				renderPass.draw(gfx::RectangleInstance{.position = box.min, .size{extent.x, lineThickness}, .origin{0.0f, 0.0f}, .tintColor = color});
 				renderPass.draw(gfx::RectangleInstance{.position{box.min.x, box.max.y}, .size{extent.x, lineThickness}, .origin{0.0f, 1.0f}, .tintColor = color});
@@ -631,7 +631,7 @@ private:
 				renderPass.draw(gfx::RectangleInstance{.position{box.max.x, box.min.y}, .size{lineThickness, extent.y}, .origin{1.0f, 0.0f}, .tintColor = color});
 			};
 
-			quadtree.traverseActiveNodes([&](const AxisAlignedBox<2, float>& looseBounds, const std::forward_list<Circle<float>>* circles) -> void {
+			quadtree.traverseActiveNodes([&](const Box<2, float>& looseBounds, const std::forward_list<Circle<float>>* circles) -> void {
 				drawBorder(looseBounds, 2.0f, Color::BLANCHED_ALMOND);
 				if (circles) {
 					for (const Circle<float>& circle : *circles) {
@@ -645,11 +645,11 @@ private:
 					}
 				}
 			});
-			const AxisAlignedBox<2, float> movingCircleAabb = getAabbOf(movingCircle);
+			const Box<2, float> movingCircleAabb = getAabbOf(movingCircle);
 			std::size_t aabbTestCount = 0;
 			std::size_t circleTestCount = 0;
 			quadtree.traverseActiveNodes(
-				[&](const AxisAlignedBox<2, float>& looseBounds, const std::forward_list<Circle<float>>* circles) -> void {
+				[&](const Box<2, float>& looseBounds, const std::forward_list<Circle<float>>* circles) -> void {
 					drawBorder(looseBounds, 2.0f, Color::DARK_BLUE);
 					if (circles) {
 						for (const Circle<float>& circle : *circles) {
@@ -666,7 +666,7 @@ private:
 						}
 					}
 				},
-				[&](const AxisAlignedBox<2, float>& looseBounds) -> bool {
+				[&](const Box<2, float>& looseBounds) -> bool {
 					++aabbTestCount;
 					return intersects(movingCircleAabb, looseBounds);
 				});
@@ -719,7 +719,7 @@ private:
 	unsigned counterA = 0u;
 	unsigned counterB = 0u;
 	LooseQuadtree<std::forward_list<Circle<float>>> quadtree{
-		AxisAlignedBox<2, float>{.min{15.0f, 15.0f}, .max{15.0f + 380.0f, 15.0f + 450.0f}},
+		Box<2, float>{.min{15.0f, 15.0f}, .max{15.0f + 380.0f, 15.0f + 450.0f}},
 		glm::vec2{32.0f, 32.0f},
 	};
 };

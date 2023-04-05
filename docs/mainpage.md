@@ -59,7 +59,7 @@ Libdonut also includes the following utility APIs which encompass all of the mai
     - [donut::Sphere](@ref donut::Sphere) - Generic sphere shape with a center and radius
     - [donut::Circle](@ref donut::Circle) - Flat 2D circle shape with a center and radius
     - [donut::Capsule](@ref donut::Capsule) - Generic capsule shape with a center line segment and radius
-    - [donut::AxisAlignedBox](@ref donut::AxisAlignedBox) - Generic AAB shape with min and max extents
+    - [donut::Box](@ref donut::Box) - Generic AAB shape with min and max extents
     - [donut::Rectangle](@ref donut::Rectangle) - Flat 2D rectangle shape with a position and size
 - Data types:
     - [donut::Color](@ref donut::Color) - Floating-point RGBA color type

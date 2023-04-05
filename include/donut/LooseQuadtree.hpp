@@ -105,7 +105,7 @@ public:
 	 *        This should correspond roughly to the typical size of the boxes
 	 *        that will be inserted into the tree.
 	 */
-	LooseQuadtree(const AxisAlignedBox<2, float>& worldBoundingBox, glm::vec2 typicalBoxSize) noexcept {
+	LooseQuadtree(const Box<2, float>& worldBoundingBox, glm::vec2 typicalBoxSize) noexcept {
 		reset(worldBoundingBox, typicalBoxSize);
 	}
 
@@ -121,7 +121,7 @@ public:
 	 *
 	 * \sa clear()
 	 */
-	void reset(const AxisAlignedBox<2, float>& worldBoundingBox, glm::vec2 typicalBoxSize) noexcept {
+	void reset(const Box<2, float>& worldBoundingBox, glm::vec2 typicalBoxSize) noexcept {
 		clear();
 		minimumQuadrantSize = glm::max(typicalBoxSize.x, typicalBoxSize.y);
 		rootCenter = (worldBoundingBox.min + worldBoundingBox.max) * 0.5f;
@@ -170,7 +170,7 @@ public:
 	 * \sa operator[]()
 	 */
 	template <typename... Args>
-	std::pair<iterator, bool> emplace(const AxisAlignedBox<2, float>& elementBoundingBox, Args&&... args) {
+	std::pair<iterator, bool> emplace(const Box<2, float>& elementBoundingBox, Args&&... args) {
 		// Make sure the tree has a root.
 		if (tree.empty()) {
 			tree.emplace_back();
@@ -270,7 +270,7 @@ public:
 	 * \sa emplace()
 	 * \sa operator[]()
 	 */
-	iterator insert(const AxisAlignedBox<2, float>& elementBoundingBox, const T& value) {
+	iterator insert(const Box<2, float>& elementBoundingBox, const T& value) {
 		return emplace(elementBoundingBox, value);
 	}
 
@@ -298,7 +298,7 @@ public:
 	 * \sa emplace()
 	 * \sa operator[]()
 	 */
-	iterator insert(const AxisAlignedBox<2, float>& elementBoundingBox, T&& value) {
+	iterator insert(const Box<2, float>& elementBoundingBox, T&& value) {
 		return emplace(elementBoundingBox, std::move(value));
 	}
 
@@ -321,7 +321,7 @@ public:
 	 * \sa emplace()
 	 * \sa insert()
 	 */
-	[[nodiscard]] T& operator[](const AxisAlignedBox<2, float>& elementBoundingBox) {
+	[[nodiscard]] T& operator[](const Box<2, float>& elementBoundingBox) {
 		return *emplace(elementBoundingBox).first;
 	}
 
@@ -344,10 +344,9 @@ public:
 	 *
 	 * \param callback function to execute, which should accept the following
 	 *        parameters (though they don't need to be used):
-	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-	 *          axis-aligned box that defines the region that an element's
-	 *          bounding box must be fully contained within in order to belong
-	 *          to the node.
+	 *        - `const donut::Box<2, float>& looseBounds`: an axis-aligned box
+	 *          that defines the region that an element's bounding box must be
+	 *          fully contained within in order to belong to the node.
 	 *        - `const T* element`: a non-owning read-only pointer to the
 	 *          element occupying the node, or nullptr if it does not have one.
 	 *        .
@@ -357,7 +356,7 @@ public:
 	 *        continue traversing.
 	 * \param predicate condition that must be met in order to traverse deeper
 	 *        into the tree. Should accept the following parameter:
-	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
+	 *        - `const donut::Box<2, float>& looseBounds`: an
 	 *          axis-aligned box that defines the region that an element's
 	 *          bounding box must be fully contained within in order to belong
 	 *          to the next node.
@@ -389,8 +388,8 @@ public:
 	template <typename Callback, typename Predicate>
 	constexpr auto traverseActiveNodes(Callback&& callback, Predicate&& predicate) const {
 		return traverseNodesImpl(
-			[callback = std::forward<Callback>(callback)](const AxisAlignedBox<2, float>& looseBounds, const Quadrant& node) mutable {
-				constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const AxisAlignedBox<2, float>&, const T* const&>, bool>;
+			[callback = std::forward<Callback>(callback)](const Box<2, float>& looseBounds, const Quadrant& node) mutable {
+				constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const Box<2, float>&, const T* const&>, bool>;
 				const T* const element = (node.element) ? &*node.element : nullptr;
 				if constexpr (CALLBACK_RETURNS_BOOL) {
 					return callback(looseBounds, element);
@@ -407,10 +406,9 @@ public:
 	 *
 	 * \param callback function to execute, which should accept the following
 	 *        parameters (though they don't need to be used):
-	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-	 *          axis-aligned box that defines the region that an element's
-	 *          bounding box must be fully contained within in order to belong
-	 *          to the node.
+	 *        - `const donut::Box<2, float>& looseBounds`: an axis-aligned box
+	 *          that defines the region that an element's bounding box must be
+	 *          fully contained within in order to belong to the node.
 	 *        - `const T* element`: a non-owning read-only pointer to the
 	 *          element occupying the node, or nullptr if it does not have one.
 	 *        .
@@ -440,7 +438,7 @@ public:
 	 */
 	template <typename Callback>
 	constexpr auto traverseActiveNodes(Callback&& callback) const {
-		return traverseActiveNodes(std::forward<Callback>(callback), [](const AxisAlignedBox<2, float>&) -> bool { return true; });
+		return traverseActiveNodes(std::forward<Callback>(callback), [](const Box<2, float>&) -> bool { return true; });
 	}
 
 	/**
@@ -449,10 +447,9 @@ public:
 	 *
 	 * \param callback function to execute, which should accept the following
 	 *        parameters (though they don't need to be used):
-	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-	 *          axis-aligned box that defines the region that an element's
-	 *          bounding box must be fully contained within in order to belong
-	 *          to the node.
+	 *        - `const donut::Box<2, float>& looseBounds`: an axis-aligned box
+	 *          that defines the region that an element's bounding box must be
+	 *          fully contained within in order to belong to the node.
 	 *        - `const T& element`: a read-only reference to the element
 	 *          occupying the node.
 	 *        .
@@ -462,7 +459,7 @@ public:
 	 *        continue traversing.
 	 * \param predicate condition that must be met in order to traverse deeper
 	 *        into the tree. Should accept the following parameter:
-	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
+	 *        - `const donut::Box<2, float>& looseBounds`: an
 	 *          axis-aligned box that defines the region that an element's
 	 *          bounding box must be fully contained within in order to belong
 	 *          to the next node.
@@ -494,8 +491,8 @@ public:
 	template <typename Callback, typename Predicate>
 	constexpr auto traverseElementNodes(Callback&& callback, Predicate&& predicate) const {
 		return traverseNodesImpl(
-			[callback = std::forward<Callback>(callback)](const AxisAlignedBox<2, float>& looseBounds, const Quadrant& node) mutable {
-				constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const AxisAlignedBox<2, float>&, const T&>, bool>;
+			[callback = std::forward<Callback>(callback)](const Box<2, float>& looseBounds, const Quadrant& node) mutable {
+				constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const Box<2, float>&, const T&>, bool>;
 				if (node.element) {
 					if constexpr (CALLBACK_RETURNS_BOOL) {
 						if (callback(looseBounds, *node.element)) {
@@ -518,10 +515,9 @@ public:
 	 *
 	 * \param callback function to execute, which should accept the following
 	 *        parameters (though they don't need to be used):
-	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-	 *          axis-aligned box that defines the region that an element's
-	 *          bounding box must be fully contained within in order to belong
-	 *          to the node.
+	 *        - `const donut::Box<2, float>& looseBounds`: an axis-aligned box
+	 *          that defines the region that an element's bounding box must be
+	 *          fully contained within in order to belong to the node.
 	 *        - `const T& element`: a read-only reference to the element
 	 *          occupying the node.
 	 *        .
@@ -551,7 +547,7 @@ public:
 	 */
 	template <typename Callback>
 	constexpr auto traverseElementNodes(Callback&& callback) const {
-		return traverseElementNodes(std::forward<Callback>(callback), [](const AxisAlignedBox<2, float>&) -> bool { return true; });
+		return traverseElementNodes(std::forward<Callback>(callback), [](const Box<2, float>&) -> bool { return true; });
 	}
 
 	/**
@@ -567,10 +563,9 @@ public:
 	 *        continue traversing.
 	 * \param predicate condition that must be met in order to traverse deeper
 	 *        into the tree. Should accept the following parameter:
-	 *        - `const donut::AxisAlignedBox<2, float>& looseBounds`: an
-	 *          axis-aligned box that defines the region that an element's
-	 *          bounding box must be fully contained within in order to belong
-	 *          to the next node.
+	 *        - `const donut::Box<2, float>& looseBounds`: an axis-aligned box
+	 *          that defines the region that an element's bounding box must be
+	 *          fully contained within in order to belong to the next node.
 	 *        .
 	 *        The predicate function should return a bool that is true if the
 	 *        next node should be traversed, or false if the branch should be
@@ -599,7 +594,7 @@ public:
 	template <typename Callback, typename Predicate>
 	constexpr auto traverseElements(Callback&& callback, Predicate&& predicate) const {
 		return traverseNodesImpl(
-			[callback = std::forward<Callback>(callback)](const AxisAlignedBox<2, float>&, const Quadrant& node) mutable {
+			[callback = std::forward<Callback>(callback)](const Box<2, float>&, const Quadrant& node) mutable {
 				constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const T&>, bool>;
 				if (node.element) {
 					if constexpr (CALLBACK_RETURNS_BOOL) {
@@ -650,7 +645,7 @@ public:
 	 */
 	template <typename Callback>
 	constexpr auto traverseElements(Callback&& callback) const {
-		return traverseElements(std::forward<Callback>(callback), [](const AxisAlignedBox<2, float>&) -> bool { return true; });
+		return traverseElements(std::forward<Callback>(callback), [](const Box<2, float>&) -> bool { return true; });
 	}
 
 	/**
@@ -688,7 +683,7 @@ public:
 	 */
 	template <typename Callback>
 	auto test(glm::vec2 point, Callback&& callback) const {
-		return traverseElements(std::forward<Callback>(callback), [&point](const AxisAlignedBox<2, float>& looseBounds) -> bool { return looseBounds.contains(point); });
+		return traverseElements(std::forward<Callback>(callback), [&point](const Box<2, float>& looseBounds) -> bool { return looseBounds.contains(point); });
 	}
 
 	/**
@@ -710,7 +705,7 @@ public:
 	 * \sa traverseElements()
 	 */
 	[[nodiscard]] bool test(glm::vec2 point) const noexcept {
-		return traverseElements([](const T&) -> bool { return true; }, [&point](const AxisAlignedBox<2, float>& looseBounds) -> bool { return looseBounds.contains(point); });
+		return traverseElements([](const T&) -> bool { return true; }, [&point](const Box<2, float>& looseBounds) -> bool { return looseBounds.contains(point); });
 	}
 
 	/**
@@ -747,8 +742,8 @@ public:
 	 * \sa traverseElements()
 	 */
 	template <typename Callback>
-	auto test(const AxisAlignedBox<2, float>& box, Callback&& callback) const {
-		return traverseElements(std::forward<Callback>(callback), [&box](const AxisAlignedBox<2, float>& looseBounds) -> bool { return intersects(looseBounds, box); });
+	auto test(const Box<2, float>& box, Callback&& callback) const {
+		return traverseElements(std::forward<Callback>(callback), [&box](const Box<2, float>& looseBounds) -> bool { return intersects(looseBounds, box); });
 	}
 
 	/**
@@ -770,8 +765,8 @@ public:
 	 * \sa traverseElementNodes()
 	 * \sa traverseElements()
 	 */
-	[[nodiscard]] bool test(const AxisAlignedBox<2, float>& box) const noexcept {
-		return traverseElements([](const T&) -> bool { return true; }, [&box](const AxisAlignedBox<2, float>& looseBounds) -> bool { return intersects(looseBounds, box); });
+	[[nodiscard]] bool test(const Box<2, float>& box) const noexcept {
+		return traverseElements([](const T&) -> bool { return true; }, [&box](const Box<2, float>& looseBounds) -> bool { return intersects(looseBounds, box); });
 	}
 
 private:
@@ -823,7 +818,7 @@ private:
 
 	template <typename Callback, typename Predicate>
 	constexpr auto traverseNodesImpl(Callback&& callback, Predicate&& predicate) const {
-		constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const AxisAlignedBox<2, float>&, const Quadrant&>, bool>;
+		constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const Box<2, float>&, const Quadrant&>, bool>;
 		if (!tree.empty()) {
 			iterationStack.clear();
 			iterationStack.push_back(IterationState{
@@ -836,7 +831,7 @@ private:
 				iterationStack.pop_back();
 
 				const float size = quadrantSize * 2.0f;
-				const AxisAlignedBox<2, float> looseBounds{center - glm::vec2{size, size}, center + glm::vec2{size, size}};
+				const Box<2, float> looseBounds{center - glm::vec2{size, size}, center + glm::vec2{size, size}};
 				const Quadrant& node = tree[treeIndex];
 				if constexpr (CALLBACK_RETURNS_BOOL) {
 					if (callback(looseBounds, node)) {
@@ -849,7 +844,7 @@ private:
 				const float halfQuadrantSize = quadrantSize * 0.5f;
 				forEachActiveQuadrant(node.subQuadrantIndices, center, halfQuadrantSize,
 					[this, &predicate, quadrantSize = quadrantSize, halfQuadrantSize](TreeIndex quadrantIndex, glm::vec2 quadrantCenter) {
-						const AxisAlignedBox<2, float> looseBounds{quadrantCenter - glm::vec2{quadrantSize, quadrantSize}, quadrantCenter + glm::vec2{quadrantSize, quadrantSize}};
+						const Box<2, float> looseBounds{quadrantCenter - glm::vec2{quadrantSize, quadrantSize}, quadrantCenter + glm::vec2{quadrantSize, quadrantSize}};
 						if (predicate(looseBounds)) {
 							iterationStack.push_back(IterationState{
 								.center = quadrantCenter,

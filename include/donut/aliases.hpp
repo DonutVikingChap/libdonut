@@ -51,7 +51,7 @@ using donut::Circle; // NOLINT(misc-unused-using-decls)
 
 using donut::Capsule; // NOLINT(misc-unused-using-decls)
 
-using donut::AxisAlignedBox; // NOLINT(misc-unused-using-decls)
+using donut::Box; // NOLINT(misc-unused-using-decls)
 
 using donut::Rectangle; // NOLINT(misc-unused-using-decls)
 

@@ -108,7 +108,7 @@ struct Capsule {
  * \tparam T component type for vector coordinates.
  */
 template <glm::length_t L, typename T>
-struct AxisAlignedBox {
+struct Box {
 	Point<L, T> min; ///< Position with the minimum coordinates of the box extents on each coordinate axis.
 	Point<L, T> max; ///< Position with the maximum coordinates of the box extents on each coordinate axis.
 
@@ -135,8 +135,8 @@ struct Rectangle {
 	 *
 	 * \return the rectangle as an axis-aligned box.
 	 */
-	constexpr operator AxisAlignedBox<2, T>() const noexcept {
-		return AxisAlignedBox<2, T>{.min = position, .max = position + size};
+	constexpr operator Box<2, T>() const noexcept {
+		return Box<2, T>{.min = position, .max = position + size};
 	}
 
 	/**
@@ -155,7 +155,7 @@ struct Rectangle {
  * \return an axis-aligned box that contains the entire line segment.
  */
 template <glm::length_t L, typename T>
-[[nodiscard]] constexpr AxisAlignedBox<L, T> getAabbOf(const LineSegment<L, T>& line) noexcept {
+[[nodiscard]] constexpr Box<L, T> getAabbOf(const LineSegment<L, T>& line) noexcept {
 	return {
 		.min = glm::min(line.pointA, line.pointB),
 		.max = glm::max(line.pointA, line.pointB),
@@ -170,7 +170,7 @@ template <glm::length_t L, typename T>
  * \return an axis-aligned box that contains the entire sphere.
  */
 template <glm::length_t L, typename T>
-[[nodiscard]] constexpr AxisAlignedBox<L, T> getAabbOf(const Sphere<L, T>& sphere) noexcept {
+[[nodiscard]] constexpr Box<L, T> getAabbOf(const Sphere<L, T>& sphere) noexcept {
 	return {
 		.min = sphere.center - Length<L, T>{sphere.radius},
 		.max = sphere.center + Length<L, T>{sphere.radius},
@@ -185,7 +185,7 @@ template <glm::length_t L, typename T>
  * \return an axis-aligned box that contains the entire circle.
  */
 template <typename T>
-[[nodiscard]] constexpr AxisAlignedBox<2, T> getAabbOf(const Circle<T>& circle) noexcept {
+[[nodiscard]] constexpr Box<2, T> getAabbOf(const Circle<T>& circle) noexcept {
 	return {
 		.min = circle.center - Length<2, T>{circle.radius},
 		.max = circle.center + Length<2, T>{circle.radius},
@@ -200,7 +200,7 @@ template <typename T>
  * \return an axis-aligned box that contains the entire capsule.
  */
 template <glm::length_t L, typename T>
-[[nodiscard]] constexpr AxisAlignedBox<L, T> getAabbOf(const Capsule<L, T>& capsule) noexcept {
+[[nodiscard]] constexpr Box<L, T> getAabbOf(const Capsule<L, T>& capsule) noexcept {
 	return {
 		.min = glm::min(capsule.centerLine.pointA, capsule.centerLine.pointB) - Length<L, T>{capsule.radius},
 		.max = glm::max(capsule.centerLine.pointA, capsule.centerLine.pointB) + Length<L, T>{capsule.radius},
@@ -215,7 +215,7 @@ template <glm::length_t L, typename T>
  * \return an axis-aligned box that contains the entire axis-aligned box.
  */
 template <glm::length_t L, typename T>
-[[nodiscard]] constexpr AxisAlignedBox<L, T> getAabbOf(const AxisAlignedBox<L, T>& box) noexcept {
+[[nodiscard]] constexpr Box<L, T> getAabbOf(const Box<L, T>& box) noexcept {
 	return box;
 }
 
@@ -227,8 +227,8 @@ template <glm::length_t L, typename T>
  * \return an axis-aligned box that contains the entire rectangle.
  */
 template <typename T>
-[[nodiscard]] constexpr AxisAlignedBox<2, T> getAabbOf(const Rectangle<T>& rectangle) noexcept {
-	return static_cast<AxisAlignedBox<2, T>>(rectangle);
+[[nodiscard]] constexpr Box<2, T> getAabbOf(const Rectangle<T>& rectangle) noexcept {
+	return static_cast<Box<2, T>>(rectangle);
 }
 
 /**
@@ -269,7 +269,7 @@ template <typename T>
  *         false otherwise.
  */
 template <glm::length_t L, typename T>
-[[nodiscard]] constexpr bool intersects(const AxisAlignedBox<L, T>& a, const AxisAlignedBox<L, T>& b) noexcept {
+[[nodiscard]] constexpr bool intersects(const Box<L, T>& a, const Box<L, T>& b) noexcept {
 	for (glm::length_t i = 0; i < L; ++i) {
 		if (a.min[i] >= b.max[i] || a.max[i] <= b.min[i]) {
 			return false;
@@ -289,7 +289,7 @@ template <glm::length_t L, typename T>
  */
 template <typename T>
 [[nodiscard]] constexpr bool intersects(const Rectangle<T>& a, const Rectangle<T>& b) noexcept {
-	return intersects(static_cast<AxisAlignedBox<2, T>>(a), static_cast<AxisAlignedBox<2, T>>(b));
+	return intersects(static_cast<Box<2, T>>(a), static_cast<Box<2, T>>(b));
 }
 
 /**
@@ -330,8 +330,8 @@ template <typename T>
  *         otherwise.
  */
 template <typename T>
-[[nodiscard]] constexpr bool intersects(const Rectangle<T>& a, const AxisAlignedBox<2, T>& b) noexcept {
-	return intersects(static_cast<AxisAlignedBox<2, T>>(a), b);
+[[nodiscard]] constexpr bool intersects(const Rectangle<T>& a, const Box<2, T>& b) noexcept {
+	return intersects(static_cast<Box<2, T>>(a), b);
 }
 
 /**
@@ -344,7 +344,7 @@ template <typename T>
  *         otherwise.
  */
 template <typename T>
-[[nodiscard]] constexpr bool intersects(const AxisAlignedBox<2, T>& a, const Rectangle<T>& b) noexcept {
+[[nodiscard]] constexpr bool intersects(const Box<2, T>& a, const Rectangle<T>& b) noexcept {
 	return intersects(b, a);
 }
 
@@ -358,7 +358,7 @@ template <typename T>
  *         otherwise.
  */
 template <glm::length_t L, typename T>
-[[nodiscard]] constexpr bool intersects(const Sphere<L, T>& a, const AxisAlignedBox<L, T>& b) noexcept {
+[[nodiscard]] constexpr bool intersects(const Sphere<L, T>& a, const Box<L, T>& b) noexcept {
 	return glm::distance2(a.center, glm::clamp(a.center, b.min, b.max)) < glm::length2(a.radius);
 }
 
@@ -372,7 +372,7 @@ template <glm::length_t L, typename T>
  *         otherwise.
  */
 template <glm::length_t L, typename T>
-[[nodiscard]] constexpr bool intersects(const AxisAlignedBox<L, T>& a, const Sphere<L, T>& b) noexcept {
+[[nodiscard]] constexpr bool intersects(const Box<L, T>& a, const Sphere<L, T>& b) noexcept {
 	return intersects(b, a);
 }
 
@@ -386,7 +386,7 @@ template <glm::length_t L, typename T>
  *         otherwise.
  */
 template <typename T>
-[[nodiscard]] constexpr bool intersects(const Circle<T>& a, const AxisAlignedBox<2, T>& b) noexcept {
+[[nodiscard]] constexpr bool intersects(const Circle<T>& a, const Box<2, T>& b) noexcept {
 	return intersects(static_cast<Sphere<2, T>>(a), b);
 }
 
@@ -400,7 +400,7 @@ template <typename T>
  *         otherwise.
  */
 template <typename T>
-[[nodiscard]] constexpr bool intersects(const AxisAlignedBox<2, T>& a, const Circle<T>& b) noexcept {
+[[nodiscard]] constexpr bool intersects(const Box<2, T>& a, const Circle<T>& b) noexcept {
 	return intersects(b, a);
 }
 
@@ -415,7 +415,7 @@ template <typename T>
  */
 template <typename T>
 [[nodiscard]] constexpr bool intersects(const Sphere<2, T>& a, const Rectangle<T>& b) noexcept {
-	return intersects(a, static_cast<AxisAlignedBox<2, T>>(b));
+	return intersects(a, static_cast<Box<2, T>>(b));
 }
 
 /**
@@ -443,7 +443,7 @@ template <typename T>
  */
 template <typename T>
 [[nodiscard]] constexpr bool intersects(const Circle<T>& a, const Rectangle<T>& b) noexcept {
-	return intersects(static_cast<Sphere<2, T>>(a), static_cast<AxisAlignedBox<2, T>>(b));
+	return intersects(static_cast<Sphere<2, T>>(a), static_cast<Box<2, T>>(b));
 }
 
 /**
@@ -601,7 +601,7 @@ constexpr bool Capsule<L, T>::contains(const Point<L, T>& point) const noexcept 
 }
 
 template <glm::length_t L, typename T>
-constexpr bool AxisAlignedBox<L, T>::contains(const Point<L, T>& point) const noexcept {
+constexpr bool Box<L, T>::contains(const Point<L, T>& point) const noexcept {
 	for (glm::length_t i = 0; i < L; ++i) {
 		if (point[i] < min[i] || point[i] >= max[i]) {
 			return false;
@@ -612,7 +612,7 @@ constexpr bool AxisAlignedBox<L, T>::contains(const Point<L, T>& point) const no
 
 template <typename T>
 constexpr bool Rectangle<T>::contains(const Point<2, T>& point) const noexcept {
-	return static_cast<AxisAlignedBox<2, T>>(*this).contains(point);
+	return static_cast<Box<2, T>>(*this).contains(point);
 }
 
 } // namespace donut
