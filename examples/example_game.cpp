@@ -28,9 +28,11 @@
 #include <exception>                    // std::exception
 #include <fmt/format.h>                 // fmt::format, fmt::print
 #include <forward_list>                 // std::forward_list
-#include <glm/ext/matrix_transform.hpp> // glm::identity, glm::translate, glm::rotate, glm::scale
+#include <glm/ext/matrix_transform.hpp> // glm::identity
 #include <glm/glm.hpp>                  // glm::...
+#include <glm/gtx/euler_angles.hpp>     // glm::orientate4
 #include <glm/gtx/norm.hpp>             // glm::length2
+#include <glm/gtx/transform.hpp>        // glm::translate, glm::scale
 #include <optional>                     // std::optional
 #include <span>                         // std::span
 #include <stdexcept>                    // std::runtime_error
@@ -460,41 +462,33 @@ private:
 		constexpr float BACKGROUND_ANGLE = -30.0f;
 		constexpr float BACKGROUND_SPEED = 2.0f;
 
-		glm::mat4 backgroundTransform = glm::identity<glm::mat4>();
-		backgroundTransform = glm::translate(backgroundTransform, BACKGROUND_OFFSET);
-		backgroundTransform = glm::rotate(backgroundTransform, glm::radians(BACKGROUND_ANGLE), {1.0f, 0.0f, 0.0f});
-		backgroundTransform = glm::scale(backgroundTransform, {BACKGROUND_SCALE, 1.0f});
-		backgroundTransform = glm::translate(backgroundTransform, {-0.5f, -0.5f, 0.0f});
 		renderPass.draw(gfx::QuadInstance{
 			.texture = &testTexture,
-			.transformation = backgroundTransform,
+			.transformation = glm::translate(BACKGROUND_OFFSET) *                                      //
+		                      glm::orientate4(glm::vec3{glm::radians(BACKGROUND_ANGLE), 0.0f, 0.0f}) * //
+		                      glm::scale(glm::vec3{BACKGROUND_SCALE, 1.0f}) *                          //
+		                      glm::translate(glm::vec3{-0.5f, -0.5f, 0.0f}),
 			.textureOffset{0.0f, frameInfo.elapsedTime * BACKGROUND_SPEED},
 			.textureScale = 1000.0f * BACKGROUND_SCALE / testTexture.getSize2D(),
 		});
 	}
 
 	void drawWorld(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
-		glm::mat4 carrotCakeTransformation = glm::identity<glm::mat4>();
-		carrotCakeTransformation = glm::translate(carrotCakeTransformation, glm::vec3{0.6f, 0.7f, -3.0f} + carrotCakeDisplayPosition);
-		carrotCakeTransformation = glm::scale(carrotCakeTransformation, {5.0f * carrotCakeScale.x, 5.0f * carrotCakeScale.y, 5.0f});
-		carrotCakeTransformation = glm::rotate(carrotCakeTransformation, frameInfo.elapsedTime * 1.5f, {0.0f, 1.0f, 0.0f});
-		carrotCakeTransformation = glm::rotate(carrotCakeTransformation, frameInfo.elapsedTime * 2.0f, {0.0f, 0.0f, 1.0f});
-		carrotCakeTransformation = glm::translate(carrotCakeTransformation, {0.0f, -0.05f, 0.0f});
 		renderPass.draw(gfx::ModelInstance{
 			.model = &carrotCakeModel,
-			.transformation = carrotCakeTransformation,
+			.transformation = glm::translate(glm::vec3{0.6f, 0.7f, -3.0f} + carrotCakeDisplayPosition) *                     //
+		                      glm::scale(glm::vec3{5.0f * carrotCakeScale.x, 5.0f * carrotCakeScale.y, 5.0f}) *              //
+		                      glm::orientate4(glm::vec3{0.0f, frameInfo.elapsedTime * 1.5f, frameInfo.elapsedTime * 2.0f}) * //
+		                      glm::translate(glm::vec3{0.0f, -0.05f, 0.0f}),
 		});
 
-		glm::mat4 shadedCarrotCakeTransformation = glm::identity<glm::mat4>();
-		shadedCarrotCakeTransformation = glm::translate(shadedCarrotCakeTransformation, {-0.6f, 0.2f, -3.0f});
-		shadedCarrotCakeTransformation = glm::scale(shadedCarrotCakeTransformation, {5.0f, 5.0f, 5.0f});
-		shadedCarrotCakeTransformation = glm::rotate(shadedCarrotCakeTransformation, frameInfo.elapsedTime * 1.5f, {0.0f, 1.0f, 0.0f});
-		shadedCarrotCakeTransformation = glm::rotate(shadedCarrotCakeTransformation, frameInfo.elapsedTime * 2.0f, {0.0f, 0.0f, 1.0f});
-		shadedCarrotCakeTransformation = glm::translate(shadedCarrotCakeTransformation, {0.0f, -0.05f, 0.0f});
 		renderPass.draw(gfx::ModelInstance{
 			.shader = &testShader3D,
 			.model = &carrotCakeModel,
-			.transformation = shadedCarrotCakeTransformation,
+			.transformation = glm::translate(glm::vec3{-0.6f, 0.2f, -3.0f}) *                                                //
+		                      glm::scale(glm::vec3{5.0f, 5.0f, 5.0f}) *                                                      //
+		                      glm::orientate4(glm::vec3{0.0f, frameInfo.elapsedTime * 1.5f, frameInfo.elapsedTime * 2.0f}) * //
+		                      glm::translate(glm::vec3{0.0f, -0.05f, 0.0f}),
 		});
 	}
 

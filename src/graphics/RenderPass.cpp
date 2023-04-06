@@ -1,8 +1,10 @@
 #include <donut/graphics/RenderPass.hpp>
 
-#include <glm/ext/matrix_transform.hpp> // glm::identity, glm::translate, glm::rotate, glm::scale
+#include <glm/ext/matrix_transform.hpp> // glm::identity
 #include <glm/glm.hpp>                  // glm::...
 #include <glm/gtc/matrix_inverse.hpp>   // glm::inverseTranspose
+#include <glm/gtx/euler_angles.hpp>     // glm::orientate2
+#include <glm/gtx/transform.hpp>        // glm::translate, glm::scale
 
 namespace donut {
 namespace graphics {
@@ -40,15 +42,13 @@ RenderPass& RenderPass::draw(const TextureInstance& texture) {
 RenderPass& RenderPass::draw(const RectangleInstance& rectangle) {
 	assert(rectangle.shader);
 
-	glm::mat4 transformation = glm::identity<glm::mat4>();
-	transformation = glm::translate(transformation, {rectangle.position, 0.0f});
-	transformation = glm::rotate(transformation, rectangle.angle, {0.0f, 0.0f, 1.0f});
-	transformation = glm::scale(transformation, {rectangle.size, 1.0f});
-	transformation = glm::translate(transformation, {-rectangle.origin, 0.0f});
 	return draw(QuadInstance{
 		.shader = rectangle.shader,
 		.texture = rectangle.texture,
-		.transformation = transformation,
+		.transformation = glm::translate(glm::vec3{rectangle.position, 0.0f}) * //
+	                      glm::mat4{glm::orientate2(rectangle.angle)} *         //
+	                      glm::scale(glm::vec3{rectangle.size, 1.0f}) *         //
+	                      glm::translate(glm::vec3{-rectangle.origin, 0.0f}),
 		.textureOffset = rectangle.textureOffset,
 		.textureScale = rectangle.textureScale,
 		.tintColor = rectangle.tintColor,
@@ -99,7 +99,8 @@ RenderPass& RenderPass::draw(const TextInstance& text) {
 	}
 	for (const Font::ShapedText::ShapedGlyph& shapedGlyph : text.text.shapedGlyphs) {
 		last_quad->instances.push_back(TexturedQuad::Instance{
-			.transformation = glm::scale(glm::translate(glm::identity<glm::mat4>(), {text.position + shapedGlyph.offset, 0.0f}), {shapedGlyph.size, 1.0f}),
+			.transformation = glm::translate(glm::vec3{text.position + shapedGlyph.offset, 0.0f}) * //
+		                      glm::scale(glm::vec3{shapedGlyph.size, 1.0f}),
 			.textureOffset = shapedGlyph.textureOffset,
 			.textureScale = shapedGlyph.textureScale,
 			.tintColor = text.color,
