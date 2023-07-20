@@ -171,8 +171,7 @@ public:
 	 *
 	 * \warning If not nullptr, the pixel data pointed to by the pixels
 	 *          parameter must be of the shape and format described by the
-	 *          width, height, format and type parameters. Otherwise, the
-	 *          behavior is undefined.
+	 *          width, height, format and type parameters.
 	 *
 	 * \note For uninitialized data, consider using the Texture(TextureFormat, std::size_t, std::size_t, const TextureOptions&)
 	 *       overload instead of passing nullptr to the pixels parameter.
@@ -202,8 +201,7 @@ public:
 	 *
 	 * \warning If not nullptr, the pixel data array pointed to by the pixels
 	 *          parameter must be of the shape and format described by the
-	 *          width, height, depth, format and type parameters. Otherwise, the
-	 *          behavior is undefined.
+	 *          width, height, depth, format and type parameters.
 	 *
 	 * \note For uninitialized data, consider using the Texture(TextureFormat, std::size_t, std::size_t, std::size_t, const TextureOptions&)
 	 *       overload instead of passing nullptr to the pixels parameter.
@@ -282,7 +280,7 @@ public:
 	 * \param newOptions the new options to apply.
 	 *
 	 * \warning This function must only be called on textures that are set up to
-	 *          store 2D image data. Otherwise, the behavior is undefined.
+	 *          store 2D image data.
 	 */
 	void setOptions2D(const TextureOptions& newOptions);
 
@@ -293,8 +291,7 @@ public:
 	 * \param newOptions the new options to apply.
 	 *
 	 * \warning This function must only be called on textures that are set up to
-	 *          store an array of layers of 2D image data. Otherwise, the
-	 *          behavior is undefined.
+	 *          store an array of layers of 2D image data.
 	 */
 	void setOptions2DArray(const TextureOptions& newOptions);
 
@@ -316,14 +313,12 @@ public:
 	 *        pasted image will begin.
 	 *
 	 * \warning This function must only be called on textures that are set up to
-	 *          store 2D image data. Otherwise, the behavior is undefined.
+	 *          store 2D image data.
 	 * \warning The pixel data pointed to by the pixels parameter must be of the
 	 *          shape and format described by the width, height, pixelFormat and
-	 *          pixelComponentType parameters. Otherwise, the behavior is
-	 *          undefined.
+	 *          pixelComponentType parameters.
 	 * \warning Enough space must be allocated in the texture for the full image
-	 *          to fit at the given position. Otherwise, the behavior is
-	 *          undefined.
+	 *          to fit at the given position.
 	 */
 	void pasteImage2D(std::size_t width, std::size_t height, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels, std::size_t x, std::size_t y);
 
@@ -340,10 +335,9 @@ public:
 	 *        pasted image will begin.
 	 *
 	 * \warning This function must only be called on textures that are set up to
-	 *          store 2D image data. Otherwise, the behavior is undefined.
+	 *          store 2D image data.
 	 * \warning Enough space must be allocated in the texture for the full image
-	 *          to fit at the given position. Otherwise, the behavior is
-	 *          undefined.
+	 *          to fit at the given position.
 	 */
 	void pasteImage2D(const ImageView& image, std::size_t x, std::size_t y);
 
@@ -370,15 +364,12 @@ public:
 	 *        image will begin.
 	 *
 	 * \warning This function must only be called on textures that are set up to
-	 *          store arrays of layers of 2D image data. Otherwise, the behavior
-	 *          is undefined.
+	 *          store arrays of layers of 2D image data.
 	 * \warning The pixel data pointed to by the pixels parameter must be of the
 	 *          shape and format described by the width, height, depth,
-	 *          pixelFormat and pixelComponentType parameters. Otherwise, the
-	 *          behavior is undefined.
+	 *          pixelFormat and pixelComponentType parameters.
 	 * \warning Enough space must be allocated in the texture for the full image
-	 *          array to fit at the given position. Otherwise, the behavior is
-	 *          undefined.
+	 *          array to fit at the given position.
 	 */
 	void pasteImage2DArray(std::size_t width, std::size_t height, std::size_t depth, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels,
 		std::size_t x, std::size_t y, std::size_t z);
@@ -398,11 +389,9 @@ public:
 	 *        texture at which to paste the image.
 	 *
 	 * \warning This function must only be called on textures that are set up to
-	 *          store arrays of layers of 2D image data. Otherwise, the behavior
-	 *          is undefined.
+	 *          store arrays of layers of 2D image data.
 	 * \warning Enough space must be allocated in the texture for the full image
-	 *          to fit at the given position. Otherwise, the behavior is
-	 *          undefined.
+	 *          to fit at the given position.
 	 */
 	void pasteImage2DArray(const ImageView& image, std::size_t x, std::size_t y, std::size_t z);
 
@@ -413,9 +402,8 @@ public:
 	 * \param color color to fill the texture with.
 	 *
 	 * \warning This function must only be called on textures that are set up to
-	 *          store 2D image data. Otherwise, the behavior is undefined.
-	 * \warning The internal texture format must be framebuffer-compatible,
-	 *          otherwise the behavior is undefined.
+	 *          store 2D image data.
+	 * \warning The internal texture format must be framebuffer-compatible.
 	 */
 	void fill2D(Renderer& renderer, Color color);
 
@@ -433,9 +421,8 @@ public:
 	 *        color before copying the old data onto it.
 	 *
 	 * \warning This function must only be called on textures that are set up to
-	 *          store 2D image data. Otherwise, the behavior is undefined.
-	 * \warning The internal texture format must be framebuffer-compatible,
-	 *          otherwise the behavior is undefined.
+	 *          store 2D image data.
+	 * \warning The internal texture format must be framebuffer-compatible.
 	 *
 	 * \throws std::bad_alloc on allocation failure. Note: this pertains only to
 	 *         CPU memory allocations. Failure to allocate GPU memory for the
@@ -454,9 +441,8 @@ public:
 	 * \return the new copied texture.
 	 *
 	 * \warning This function must only be called on textures that are set up to
-	 *          store 2D image data. Otherwise, the behavior is undefined.
-	 * \warning The internal texture format must be framebuffer-compatible,
-	 *          otherwise the behavior is undefined.
+	 *          store 2D image data.
+	 * \warning The internal texture format must be framebuffer-compatible.
 	 *
 	 * \throws std::bad_alloc on allocation failure. Note: this pertains only to
 	 *         CPU memory allocations. Failure to allocate GPU memory for the
