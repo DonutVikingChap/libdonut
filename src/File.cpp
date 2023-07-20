@@ -1,19 +1,19 @@
 #include <donut/File.hpp>
 
-#include <fmt/format.h> // fmt::format
-#include <physfs.h>     // PHYSFS_...
+#include <format>   // std::format
+#include <physfs.h> // PHYSFS_...
 
 namespace donut {
 
 void File::createDirectory(const char* filepath) {
 	if (PHYSFS_mkdir(filepath) == 0) {
-		throw Error{fmt::format("Failed to create directory \"{}\": {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw Error{std::format("Failed to create directory \"{}\": {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 }
 
 void File::deleteFile(const char* filepath) {
 	if (PHYSFS_delete(filepath) == 0) {
-		throw Error{fmt::format("Failed to delete file \"{}\": {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw Error{std::format("Failed to delete file \"{}\": {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 }
 
@@ -24,7 +24,7 @@ bool File::exists(const char* filepath) {
 File::Metadata File::getFileMetadata(const char* filepath) {
 	PHYSFS_Stat metadata{};
 	if (PHYSFS_stat(filepath, &metadata) == 0) {
-		throw Error{fmt::format("Failed to get file metadata: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw Error{std::format("Failed to get file metadata: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	Kind kind{};
 	switch (metadata.filetype) {
@@ -52,7 +52,7 @@ std::vector<std::string> File::getFilenamesInDirectory(const char* filepath) {
 				return PHYSFS_ENUM_OK;
 			},
 			&result) == 0) {
-		throw Error{fmt::format("Failed to enumerate directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw Error{std::format("Failed to enumerate directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	return result;
 }
@@ -60,7 +60,7 @@ std::vector<std::string> File::getFilenamesInDirectory(const char* filepath) {
 void File::close() {
 	if (file) {
 		if (PHYSFS_close(static_cast<PHYSFS_File*>(file.get())) == 0) {
-			throw Error{fmt::format("Failed to close file: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+			throw Error{std::format("Failed to close file: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 		}
 		file.release();
 	}

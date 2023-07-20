@@ -23,10 +23,10 @@
 #include <cmath>                        // std::atan2
 #include <concepts>                     // std::integral
 #include <cstddef>                      // std::size_t
-#include <cstdio>                       // stderr, std::sscanf
+#include <cstdio>                       // stderr, std::sscanf, std::fprintf
 #include <cstdlib>                      // EXIT_SUCCESS, EXIT_FAILURE
 #include <exception>                    // std::exception
-#include <fmt/format.h>                 // fmt::format, fmt::print
+#include <format>                       // std::format
 #include <forward_list>                 // std::forward_list
 #include <glm/ext/matrix_transform.hpp> // glm::identity
 #include <glm/glm.hpp>                  // glm::...
@@ -238,13 +238,13 @@ private:
 
 		struct PointLightParameters {
 			PointLightParameters(const gfx::ShaderProgram& program, const char* name)
-				: position(program, fmt::format("{}.position", name).c_str())
-				, ambient(program, fmt::format("{}.ambient", name).c_str())
-				, diffuse(program, fmt::format("{}.diffuse", name).c_str())
-				, specular(program, fmt::format("{}.specular", name).c_str())
-				, constantFalloff(program, fmt::format("{}.constantFalloff", name).c_str())
-				, linearFalloff(program, fmt::format("{}.linearFalloff", name).c_str())
-				, quadraticFalloff(program, fmt::format("{}.quadraticFalloff", name).c_str()) {}
+				: position(program, std::format("{}.position", name).c_str())
+				, ambient(program, std::format("{}.ambient", name).c_str())
+				, diffuse(program, std::format("{}.diffuse", name).c_str())
+				, specular(program, std::format("{}.specular", name).c_str())
+				, constantFalloff(program, std::format("{}.constantFalloff", name).c_str())
+				, linearFalloff(program, std::format("{}.linearFalloff", name).c_str())
+				, quadraticFalloff(program, std::format("{}.quadraticFalloff", name).c_str()) {}
 
 			gfx::ShaderParameter position;
 			gfx::ShaderParameter ambient;
@@ -330,7 +330,7 @@ private:
 
 		TestShader3D()
 			: gfx::Shader3D({
-				  .definitions = fmt::format("#define POINT_LIGHT_COUNT {}", POINT_LIGHT_COUNT).c_str(),
+				  .definitions = std::format("#define POINT_LIGHT_COUNT {}", POINT_LIGHT_COUNT).c_str(),
 				  .vertexShaderSourceCode = gfx::Shader3D::vertexShaderSourceCodeInstancedModel,
 				  .fragmentShaderSourceCode = FRAGMENT_SHADER_SOURCE_CODE,
 			  }) {}
@@ -407,7 +407,7 @@ private:
 			for (const auto& [inputIdentifier, actions] : bindingsValue.as<json::Object>()) {
 				const std::optional<app::Input> input = app::findInput(inputIdentifier);
 				if (!input) {
-					throw std::runtime_error{fmt::format("Invalid input identifier \"{}\".", inputIdentifier)};
+					throw std::runtime_error{std::format("Invalid input identifier \"{}\".", inputIdentifier)};
 				}
 				const std::span<const json::Value> actionValues = (actions.is<json::Array>()) ? actions.as<json::Array>() : std::span{&actions, 1};
 				for (const json::Value& actionValue : actionValues) {
@@ -417,15 +417,15 @@ private:
 					const json::String& actionIdentifier = actionValue.as<json::String>();
 					const auto it = actionsByIdentifier.find(actionIdentifier);
 					if (it == actionsByIdentifier.end()) {
-						throw std::runtime_error{fmt::format("Invalid action identifier \"{}\".", actionIdentifier)};
+						throw std::runtime_error{std::format("Invalid action identifier \"{}\".", actionIdentifier)};
 					}
 					inputManager.addBinding(*input, it->second);
 				}
 			}
 		} catch (const json::Error& e) {
-			throw std::runtime_error{fmt::format("{}:{}:{}: {}", filepath, e.source.lineNumber, e.source.columnNumber, e.what())};
+			throw std::runtime_error{std::format("{}:{}:{}: {}", filepath, e.source.lineNumber, e.source.columnNumber, e.what())};
 		} catch (const std::exception& e) {
-			throw std::runtime_error{fmt::format("{}: {}", filepath, e.what())};
+			throw std::runtime_error{std::format("{}: {}", filepath, e.what())};
 		}
 	}
 
@@ -435,7 +435,7 @@ private:
 		} catch (const audio::Error& e) {
 			// Don't crash on failure, since the user might just not have a working sound card.
 			// Just print an error message instead.
-			fmt::print(stderr, "{}\n", e.what());
+			std::fprintf(stderr, "%s\n", e.what());
 		}
 	}
 
@@ -543,7 +543,7 @@ private:
 		renderPass.draw(gfx::TextInstance{
 			.font = &mainFont,
 			.text = mainFont.shapeText(renderer, 8,
-				fmt::format("Position:\n({:.2f}, {:.2f}, {:.2f})\n\nScale:\n({:.2f}, {:.2f})", carrotCakeDisplayPosition.x, carrotCakeDisplayPosition.y,
+				std::format("Position:\n({:.2f}, {:.2f}, {:.2f})\n\nScale:\n({:.2f}, {:.2f})", carrotCakeDisplayPosition.x, carrotCakeDisplayPosition.y,
 					carrotCakeDisplayPosition.z, carrotCakeScale.x, carrotCakeScale.y)),
 			.position{410.0f, 310.0f},
 		});
@@ -577,7 +577,7 @@ private:
 		renderPass.draw(gfx::TextInstance{
 			.font = &mainFont,
 			.text = mainFont.shapeText(renderer, 8,
-				fmt::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", timerA.getTime(), counterA, timerB.getTime(), counterB)),
+				std::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", timerA.getTime(), counterA, timerB.getTime(), counterB)),
 			.position{410.0f, 240.0f},
 		});
 
@@ -667,7 +667,7 @@ private:
 
 			renderPass.draw(gfx::TextInstance{
 				.font = &mainFont,
-				.text = mainFont.shapeText(renderer, 8, fmt::format("AABB tests: {}\nCircle tests: {}", aabbTestCount, circleTestCount)),
+				.text = mainFont.shapeText(renderer, 8, std::format("AABB tests: {}\nCircle tests: {}", aabbTestCount, circleTestCount)),
 				.position{410.0f, 450.0f},
 				.color = Color::BURLY_WOOD,
 			});
@@ -680,7 +680,7 @@ private:
 
 	void drawFpsCounter(gfx::RenderPass& renderPass) {
 		const unsigned fps = getLatestMeasuredFps();
-		const gfx::Font::ShapedText fpsText = mainFont.shapeText(renderer, 16, fmt::format("FPS: {}", fps));
+		const gfx::Font::ShapedText fpsText = mainFont.shapeText(renderer, 16, std::format("FPS: {}", fps));
 		const glm::vec2 fpsPosition{15.0f + 2.0f, 480.0f - 15.0f - 20.0f};
 		const Color fpsColor = (fps < 60) ? Color::RED : (fps < 120) ? Color::YELLOW : (fps < 240) ? Color::GRAY : Color::LIME;
 		renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = fpsText, .position = fpsPosition + glm::vec2{1.0f, -1.0f}, .color = Color::BLACK});
@@ -773,7 +773,7 @@ public:
 			} else if (argument == "-fov") {
 				parseOptionValue("fov", options.fieldOfView);
 			} else {
-				throw std::runtime_error{fmt::format("Unknown option {}. Try -help.", argument)};
+				throw std::runtime_error{std::format("Unknown option {}. Try -help.", argument)};
 			}
 			++argumentIndex;
 		}
@@ -783,27 +783,27 @@ public:
 private:
 	void parseOptionValue(std::string_view optionName, const char*& output) {
 		if (++argumentIndex >= argumentCount) {
-			throw std::runtime_error{fmt::format("Missing {} value.", optionName)};
+			throw std::runtime_error{std::format("Missing {} value.", optionName)};
 		}
 		output = arguments[argumentIndex];
 	}
 
 	void parseOptionValue(std::string_view optionName, std::integral auto& output) {
 		if (++argumentIndex >= argumentCount) {
-			throw std::runtime_error{fmt::format("Missing {} value.", optionName)};
+			throw std::runtime_error{std::format("Missing {} value.", optionName)};
 		}
 		const std::string_view string{arguments[argumentIndex]};
 		if (const std::from_chars_result result = std::from_chars(string.data(), string.data() + string.size(), output); result.ec != std::errc{}) {
-			throw std::runtime_error{fmt::format("Invalid {} value \"{}\": {}", optionName, string, std::make_error_code(result.ec).message())};
+			throw std::runtime_error{std::format("Invalid {} value \"{}\": {}", optionName, string, std::make_error_code(result.ec).message())};
 		}
 	}
 
 	void parseOptionValue(std::string_view optionName, float& output) {
 		if (++argumentIndex >= argumentCount) {
-			throw std::runtime_error{fmt::format("Missing {} value.", optionName)};
+			throw std::runtime_error{std::format("Missing {} value.", optionName)};
 		}
 		if (std::sscanf(arguments[argumentIndex], "%f", &output) != 1) {
-			throw std::runtime_error{fmt::format("Invalid {} value \"{}\".", optionName, arguments[argumentIndex])};
+			throw std::runtime_error{std::format("Invalid {} value \"{}\".", optionName, arguments[argumentIndex])};
 		}
 	}
 
@@ -826,9 +826,9 @@ int main(int argc, char* argv[]) {
 					Game game{argv[0], options};
 					game.run();
 				},
-				[&](const std::string& string) -> void { fmt::print(stderr, "{}\n", string); });
+				[&](const std::string& string) -> void { std::fprintf(stderr, "%s\n", string.c_str()); });
 		} catch (const std::exception& e) {
-			fmt::print(stderr, "{}\n", e.what());
+			std::fprintf(stderr, "%s\n", e.what());
 			Game::showSimpleMessageBox(Game::MessageBoxType::ERROR_MESSAGE, "Error", e.what());
 			return EXIT_FAILURE;
 		}

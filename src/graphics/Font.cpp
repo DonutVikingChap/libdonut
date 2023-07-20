@@ -6,15 +6,15 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/unicode.hpp>
 
-#include <algorithm>    // std::min, std::max
-#include <cmath>        // std::floor, std::round
-#include <cstddef>      // std::size_t, std::byte
-#include <cstdint>      // std::uint32_t
-#include <fmt/format.h> // fmt::format
-#include <glm/glm.hpp>  // glm::...
-#include <schrift.h>    // SFT..., sft_...
-#include <string_view>  // std::string_view, std::u8string_view
-#include <vector>       // std::vector
+#include <algorithm>   // std::min, std::max
+#include <cmath>       // std::floor, std::round
+#include <cstddef>     // std::size_t, std::byte
+#include <cstdint>     // std::uint32_t
+#include <format>      // std::format
+#include <glm/glm.hpp> // glm::...
+#include <schrift.h>   // SFT..., sft_...
+#include <string_view> // std::string_view, std::u8string_view
+#include <vector>      // std::vector
 
 namespace donut {
 namespace graphics {
@@ -24,7 +24,7 @@ Font::Font(const char* filepath, const FontOptions& options)
 	, font(sft_loadmem(fontFileContents.data(), fontFileContents.size()))
 	, options(options) {
 	if (!font) {
-		throw Error{fmt::format("Failed to load font \"{}\".", filepath)};
+		throw Error{std::format("Failed to load font \"{}\".", filepath)};
 	}
 }
 
@@ -174,7 +174,7 @@ Font::Glyph Font::renderGlyph(Renderer& renderer, std::uint32_t characterSize, c
 
 	SFT_Glyph glyph{};
 	if (sft_lookup(&sft, SFT_UChar{codePoint}, &glyph) != 0) {
-		throw Error{fmt::format("Failed to lookup font glyph for code point U+{:04X}", static_cast<std::uint32_t>(codePoint))};
+		throw Error{std::format("Failed to lookup font glyph for code point U+{:04X}", static_cast<std::uint32_t>(codePoint))};
 	}
 
 	SFT_GMetrics gmetrics{};
@@ -188,7 +188,7 @@ Font::Glyph Font::renderGlyph(Renderer& renderer, std::uint32_t characterSize, c
 	if (width > 0 && height > 0) {
 		std::vector<std::byte> pixels(width * height);
 		if (sft_render(&sft, glyph, SFT_Image{.pixels = pixels.data(), .width = static_cast<int>(width), .height = static_cast<int>(height)}) != 0) {
-			throw Error{fmt::format("Failed to render font glyph for code point U+{:04X}", static_cast<std::uint32_t>(codePoint))};
+			throw Error{std::format("Failed to render font glyph for code point U+{:04X}", static_cast<std::uint32_t>(codePoint))};
 		}
 		atlasTexture.pasteImage2D(width, height, PixelFormat::R, PixelComponentType::U8, pixels.data(), x, y);
 	}

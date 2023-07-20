@@ -144,7 +144,6 @@ if(DONUT_ENABLE_LIBRARY)
 		add_custom_command(TARGET donut
 			POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-				$<TARGET_FILE:fmt>
 				$<TARGET_FILE:physfs>
 				$<TARGET_FILE:SDL2>
 				$<TARGET_FILE_DIR:donut>)

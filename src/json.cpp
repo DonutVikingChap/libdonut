@@ -1,20 +1,19 @@
 #include <donut/json.hpp>
 #include <donut/unicode.hpp>
 
-#include <charconv>      // std::from_chars_result, std::from_chars
-#include <cmath>         // std::isnan, std::isinf, std::signbit
-#include <cstddef>       // std::size_t
-#include <cstdint>       // std::uint32_t
-#include <cstdlib>       // std::strtoull, std::strtod
-#include <fmt/format.h>  // fmt::print
-#include <fmt/ostream.h> // fmt::print(std::ostream)
-#include <iterator>      // std::istreambuf_iterator
-#include <limits>        // std::numeric_limits
-#include <optional>      // std::optional
-#include <string>        // std::string
-#include <string_view>   // std::string_view, std::u8string_view
-#include <system_error>  // std::errc
-#include <utility>       // std::pair, std::move
+#include <charconv>     // std::from_chars_result, std::from_chars
+#include <cmath>        // std::isnan, std::isinf, std::signbit
+#include <cstddef>      // std::size_t
+#include <cstdint>      // std::uint32_t
+#include <cstdlib>      // std::strtoull, std::strtod
+#include <format>       // std::format_to
+#include <iterator>     // std::istreambuf_iterator, std::ostreambuf_iterator
+#include <limits>       // std::numeric_limits
+#include <optional>     // std::optional
+#include <string>       // std::string
+#include <string_view>  // std::string_view, std::u8string_view
+#include <system_error> // std::errc
+#include <utility>      // std::pair, std::move
 
 namespace donut {
 namespace json {
@@ -680,7 +679,7 @@ void SerializationState::writeNumber(Number value) {
 			stream << "Infinity";
 		}
 	} else {
-		[[likely]] fmt::print(stream, "{}", value);
+		[[likely]] std::format_to(std::ostreambuf_iterator{stream}, "{}", value);
 	}
 }
 

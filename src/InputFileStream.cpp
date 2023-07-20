@@ -1,18 +1,18 @@
 #include <donut/InputFileStream.hpp>
 
-#include <cstddef>      // std::size_t, std::ptrdiff_t, std::byte
-#include <fmt/format.h> // fmt::format
-#include <physfs.h>     // PHYSFS_...
-#include <span>         // std::span
-#include <string>       // std::string
-#include <vector>       // std::vector
+#include <cstddef>  // std::size_t, std::ptrdiff_t, std::byte
+#include <format>   // std::format
+#include <physfs.h> // PHYSFS_...
+#include <span>     // std::span
+#include <string>   // std::string
+#include <vector>   // std::vector
 
 namespace donut {
 
 InputFileStream InputFileStream::open(const char* filepath) {
 	InputFileStream result{PHYSFS_openRead(filepath)};
 	if (!result) {
-		throw Error{fmt::format("Failed to open file \"{}\" for reading: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw Error{std::format("Failed to open file \"{}\" for reading: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	return result;
 }
@@ -22,7 +22,7 @@ std::vector<std::byte> InputFileStream::readAll() && {
 	seek(0);
 	result.resize(size());
 	if (read(result) != result.size()) {
-		throw Error{fmt::format("Failed to read file contents: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw Error{std::format("Failed to read file contents: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	return result;
 }
@@ -32,7 +32,7 @@ std::string InputFileStream::readAllIntoString() && {
 	seek(0);
 	result.resize(size());
 	if (read(std::as_writable_bytes(std::span{result})) != result.size()) {
-		throw Error{fmt::format("Failed to read file contents: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw Error{std::format("Failed to read file contents: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	return result;
 }

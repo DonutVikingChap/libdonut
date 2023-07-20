@@ -9,7 +9,7 @@
 #include <algorithm>        // std::find_if
 #include <cstddef>          // std::size_t
 #include <exception>        // std::exception
-#include <fmt/format.h>     // fmt::format
+#include <format>           // std::format
 #include <functional>       // std::hash
 #include <glm/glm.hpp>      // glm::...
 #include <glm/gtx/norm.hpp> // glm::length2
@@ -204,11 +204,11 @@ Model::Model(const char* filepath) {
 	try {
 		loadObjScene(*this, obj::Scene::parse(InputFileStream::open(filepath).readAllIntoString()));
 	} catch (const obj::Error& e) {
-		throw Error{fmt::format("Failed to load model \"{}\": Line {}: {}", filepath, e.lineNumber, e.what())};
+		throw Error{std::format("Failed to load model \"{}\": Line {}: {}", filepath, e.lineNumber, e.what())};
 	} catch (const std::exception& e) {
-		throw Error{fmt::format("Failed to load model \"{}\": {}", filepath, e.what())};
+		throw Error{std::format("Failed to load model \"{}\": {}", filepath, e.what())};
 	} catch (...) {
-		throw Error{fmt::format("Failed to load model \"{}\".", filepath)};
+		throw Error{std::format("Failed to load model \"{}\".", filepath)};
 	}
 }
 

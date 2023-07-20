@@ -12,19 +12,19 @@
 #endif
 //
 
-#include <algorithm>    // std::min
-#include <array>        // std::array
-#include <cmath>        // std::ceil
-#include <cstdio>       // stderr
-#include <exception>    // std::exception
-#include <fmt/format.h> // fmt::format, fmt::print
-#include <glm/glm.hpp>  // glm::...
-#include <limits>       // std::numeric_limits
-#include <optional>     // std::optional
-#include <physfs.h>     // PHYSFS_...
-#include <string>       // std::string
-#include <string_view>  // std::string_view
-#include <utility>      // std::move
+#include <algorithm>   // std::min
+#include <array>       // std::array
+#include <cmath>       // std::ceil
+#include <cstdio>      // stderr, std::fprintf
+#include <exception>   // std::exception
+#include <format>      // std::format
+#include <glm/glm.hpp> // glm::...
+#include <limits>      // std::numeric_limits
+#include <optional>    // std::optional
+#include <physfs.h>    // PHYSFS_...
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::move
 
 namespace donut {
 namespace application {
@@ -317,7 +317,7 @@ void Application::showSimpleMessageBox(MessageBoxType type, const char* title, c
 		case MessageBoxType::INFO_MESSAGE: flags = SDL_MESSAGEBOX_INFORMATION; break;
 	}
 	if (SDL_ShowSimpleMessageBox(flags, title, message, nullptr) != 0) {
-		throw std::runtime_error{fmt::format("Failed to show simple message box: {}", SDL_GetError())};
+		throw std::runtime_error{std::format("Failed to show simple message box: {}", SDL_GetError())};
 	}
 }
 
@@ -349,10 +349,10 @@ void Application::run() {
 		try {
 			application->runFrame();
 		} catch (const std::exception& e) {
-			fmt::print(stderr, "Fatal error: {}\n", e.what());
+			std::fprintf(stderr, "Fatal error: %s\n", e.what());
 			application->quit();
 		} catch (...) {
-			fmt::print(stderr, "Fatal error!\n");
+			std::fprintf(stderr, "Fatal error!\n");
 			application->quit();
 		}
 		if (!application->isRunning()) {
@@ -465,29 +465,29 @@ Application::PhysFSManager::PhysFSManager(const char* programFilepath, const cha
 		[[nodiscard]] Context(const char* programFilepath, const char* organizationName, const char* applicationName, const char* dataDirectoryFilepath,
 			const char* archiveFilenameExtension) {
 			if (PHYSFS_init(programFilepath) == 0) {
-				throw Error{fmt::format("Failed to initialize PhysicsFS: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+				throw Error{std::format("Failed to initialize PhysicsFS: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 			}
 
 #ifndef __EMSCRIPTEN__
 			if (organizationName && applicationName) {
 				const char* const prefDir = PHYSFS_getPrefDir(organizationName, applicationName);
 				if (!prefDir) {
-					throw Error{fmt::format("Failed to get application preferences directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+					throw Error{std::format("Failed to get application preferences directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 				}
 
 				if (PHYSFS_setWriteDir(prefDir) == 0) {
-					throw Error{fmt::format("Failed to set application write directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+					throw Error{std::format("Failed to set application write directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 				}
 
 				if (PHYSFS_mount(prefDir, nullptr, 0) == 0) {
-					throw Error{fmt::format("Failed to mount application write directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+					throw Error{std::format("Failed to mount application write directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 				}
 			}
 #endif
 
 			if (dataDirectoryFilepath) {
 				if (PHYSFS_mount(dataDirectoryFilepath, nullptr, 1) == 0) {
-					throw Error{fmt::format("Failed to set application data directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+					throw Error{std::format("Failed to set application data directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 				}
 			}
 
@@ -501,12 +501,12 @@ Application::PhysFSManager::PhysFSManager(const char* programFilepath, const cha
 							(archiveFilenameExtension.front() == '.' || filename[filename.size() - archiveFilenameExtension.size() - 1] == '.') &&
 							filename.ends_with(archiveFilenameExtension)) {
 							if (const char* directory = PHYSFS_getRealDir(fname)) {
-								const std::string archiveFilepath = fmt::format("{}{}{}", directory, PHYSFS_getDirSeparator(), fname);
+								const std::string archiveFilepath = std::format("{}{}{}", directory, PHYSFS_getDirSeparator(), fname);
 								if (PHYSFS_mount(archiveFilepath.c_str(), nullptr, 0) == 0) {
-									fmt::print(stderr, "Failed to mount archive \"{}\": {}\n", archiveFilepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+									std::fprintf(stderr, "Failed to mount archive \"%s\": %s\n", archiveFilepath.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 								}
 							} else {
-								fmt::print(stderr, "Failed to get the real directory of archive \"{}\": {}\n", fname, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+								std::fprintf(stderr, "Failed to get the real directory of archive \"%s\": %s\n", fname, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 							}
 						}
 						return PHYSFS_ENUM_OK;
@@ -531,7 +531,7 @@ Application::SDLManager::SDLManager() {
 	struct Context {
 		[[nodiscard]] Context() {
 			if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
-				throw Error{fmt::format("Failed to initialize SDL: {}", SDL_GetError())};
+				throw Error{std::format("Failed to initialize SDL: {}", SDL_GetError())};
 			}
 		}
 

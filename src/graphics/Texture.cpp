@@ -8,13 +8,12 @@
 #include <donut/graphics/Viewport.hpp>
 #include <donut/graphics/opengl.hpp>
 
-#include <array>        // std::array
-#include <cassert>      // assert
-#include <cstddef>      // std::size_t, std::byte
-#include <fmt/format.h> // fmt::format
-#include <memory>       // std::construct_at, std::destroy_at
-#include <optional>     // std::optional
-#include <utility>      // std::move
+#include <array>    // std::array
+#include <cassert>  // assert
+#include <cstddef>  // std::size_t, std::byte
+#include <memory>   // std::construct_at, std::destroy_at
+#include <optional> // std::optional
+#include <utility>  // std::move
 
 namespace donut {
 namespace graphics {

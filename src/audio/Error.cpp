@@ -1,10 +1,10 @@
 #include <donut/audio/Error.hpp>
 
-#include <fmt/format.h> // fmt::format
-#include <soloud.h>     // SoLoud::...
-#include <stdexcept>    // std::runtime_error
-#include <string_view>  // std::string_view
-#include <type_traits>  // std::is_same_v
+#include <format>      // std::format
+#include <soloud.h>    // SoLoud::...
+#include <stdexcept>   // std::runtime_error
+#include <string_view> // std::string_view
+#include <type_traits> // std::is_same_v
 
 namespace donut {
 namespace audio {
@@ -30,7 +30,7 @@ constexpr std::string_view getErrorCodeMessage(unsigned errorCode) noexcept {
 } // namespace
 
 Error::Error(std::string_view message, unsigned errorCode)
-	: std::runtime_error(fmt::format("{}: {}", message, getErrorCodeMessage(errorCode))) {}
+	: std::runtime_error(std::format("{}: {}", message, getErrorCodeMessage(errorCode))) {}
 
 } // namespace audio
 } // namespace donut

@@ -10,9 +10,7 @@ target_compile_options(donut-example-base INTERFACE
 	$<$<CXX_COMPILER_ID:Clang>: -std=c++20  -Wall -Wextra   -Wconversion    -Wpedantic      -Werror                 $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
 	$<$<CXX_COMPILER_ID:MSVC>:  /std:c++20  /W4                             /permissive-    /WX     /wd4996 /utf-8  $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>    $<$<CONFIG:MinSizeRel>:/Os> $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
 
-target_link_libraries(donut-example-base INTERFACE
-	donut::donut
-	fmt)
+target_link_libraries(donut-example-base INTERFACE donut::donut)
 
 add_executable(donut-example-game "example_game.cpp")
 target_link_libraries(donut-example-game PRIVATE donut-example-base)

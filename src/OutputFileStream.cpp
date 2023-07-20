@@ -1,16 +1,16 @@
 #include <donut/OutputFileStream.hpp>
 
-#include <cstddef>      // std::size_t, std::byte
-#include <fmt/format.h> // fmt::format
-#include <physfs.h>     // PHYSFS_...
-#include <span>         // std::span
+#include <cstddef>  // std::size_t, std::byte
+#include <format>   // std::format
+#include <physfs.h> // PHYSFS_...
+#include <span>     // std::span
 
 namespace donut {
 
 OutputFileStream OutputFileStream::create(const char* filepath) {
 	OutputFileStream result{PHYSFS_openWrite(filepath)};
 	if (!result) {
-		throw Error{fmt::format("Failed to create file \"{}\" for writing: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw Error{std::format("Failed to create file \"{}\" for writing: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	return result;
 }
@@ -18,7 +18,7 @@ OutputFileStream OutputFileStream::create(const char* filepath) {
 OutputFileStream OutputFileStream::append(const char* filepath) {
 	OutputFileStream result{PHYSFS_openAppend(filepath)};
 	if (!result) {
-		throw Error{fmt::format("Failed to open file \"{}\" for appending: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw Error{std::format("Failed to open file \"{}\" for appending: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	return result;
 }
