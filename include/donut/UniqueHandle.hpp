@@ -1,5 +1,5 @@
-#ifndef DONUT_RESOURCE_HPP
-#define DONUT_RESOURCE_HPP
+#ifndef DONUT_UNIQUE_HANDLE_HPP
+#define DONUT_UNIQUE_HANDLE_HPP
 
 #include <utility> // std::exchange
 
@@ -18,12 +18,12 @@ namespace donut {
  *         have an associated resource. Usually 0 or nullptr.
  */
 template <typename Handle, typename Deleter, Handle NullHandle = Handle{}>
-class Resource {
+class UniqueHandle {
 public:
 	/**
 	 * Construct a null handle without an associated resource.
 	 */
-	constexpr Resource() noexcept = default;
+	constexpr UniqueHandle() noexcept = default;
 
 	/**
 	 * Construct a handle that takes ownership of an existing resource handle.
@@ -31,20 +31,20 @@ public:
 	 * \param handle the underlying handle to take ownership of, or NullHandle
 	 *        to construct a null handle without an associated resource.
 	 */
-	constexpr explicit Resource(Handle handle) noexcept
+	constexpr explicit UniqueHandle(Handle handle) noexcept
 		: handle(handle) {}
 
 	/**
 	 * Destroy the handle and its associated resource if it has one.
 	 */
-	~Resource() {
+	~UniqueHandle() {
 		Deleter{}(handle);
 	}
 
 	/**
 	 * Copying a resource handle is disallowed to enforce exclusive ownership.
 	 */
-	Resource(const Resource&) = delete;
+	UniqueHandle(const UniqueHandle&) = delete;
 
 	/**
 	 * Move constructor.
@@ -54,13 +54,13 @@ public:
 	 *
 	 * \param other resource handle to take ownership of.
 	 */
-	constexpr Resource(Resource&& other) noexcept
+	constexpr UniqueHandle(UniqueHandle&& other) noexcept
 		: handle(other.release()) {}
 
 	/**
 	 * Copying a resource handle is disallowed to enforce exclusive ownership.
 	 */
-	Resource& operator=(const Resource&) = delete;
+	UniqueHandle& operator=(const UniqueHandle&) = delete;
 
 	/**
 	 * Move assignment.
@@ -73,7 +73,7 @@ public:
 	 *
 	 * \return `*this`, for chaining.
 	 */
-	constexpr Resource& operator=(Resource&& other) noexcept {
+	constexpr UniqueHandle& operator=(UniqueHandle&& other) noexcept {
 		reset(other.release());
 		return *this;
 	}
@@ -99,7 +99,7 @@ public:
 	 * \note This does not compare the values of any associated resources. It
 	 *       only compares the values of the handles themselves.
 	 */
-	[[nodiscard]] constexpr bool operator==(const Resource& other) const noexcept {
+	[[nodiscard]] constexpr bool operator==(const UniqueHandle& other) const noexcept {
 		return get() == other.get();
 	}
 

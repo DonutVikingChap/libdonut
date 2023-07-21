@@ -2,12 +2,13 @@
 #define DONUT_GRAPHICS_FONT_HPP
 
 #include <donut/AtlasPacker.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Texture.hpp>
 
 #include <cstddef>       // std::size_t, std::byte
 #include <cstdint>       // std::uint32_t, std::uint64_t
 #include <glm/glm.hpp>   // glm::...
-#include <string_view>   // std::string_view
+#include <string_view>   // std::string_view, std::u8string_view
 #include <unordered_map> // std::unordered_map
 #include <vector>        // std::vector
 
@@ -282,7 +283,7 @@ private:
 	[[nodiscard]] Glyph renderGlyph(Renderer& renderer, std::uint32_t characterSize, char32_t codePoint);
 
 	std::vector<std::byte> fontFileContents;
-	Resource<void*, FontDeleter, nullptr> font;
+	UniqueHandle<void*, FontDeleter, nullptr> font;
 	AtlasPacker<INITIAL_RESOLUTION, PADDING> atlasPacker{};
 	Texture atlasTexture{};
 	std::unordered_map<GlyphKey, Glyph> glyphs{};

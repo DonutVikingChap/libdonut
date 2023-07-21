@@ -8,8 +8,8 @@
 #include <donut/LinearAllocator.hpp>
 #include <donut/LooseQuadtree.hpp>
 #include <donut/OutputFileStream.hpp>
-#include <donut/Resource.hpp>
 #include <donut/Time.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/Variant.hpp>
 #include <donut/base64.hpp>
 #include <donut/json.hpp>

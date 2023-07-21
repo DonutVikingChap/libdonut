@@ -35,7 +35,7 @@ using donut::LooseQuadtree; // NOLINT(misc-unused-using-decls)
 
 using donut::OutputFileStream; // NOLINT(misc-unused-using-decls)
 
-using donut::Resource; // NOLINT(misc-unused-using-decls)
+using donut::UniqueHandle; // NOLINT(misc-unused-using-decls)
 
 template <glm::length_t L, typename T>
 using Point = glm::vec<L, T>;

@@ -77,9 +77,6 @@ class Xoroshiro128PlusPlusEngine;
 
 namespace reflection {}
 
-template <typename Handle, typename Deleter, Handle NullHandle>
-class Resource;
-
 template <glm::length_t L, typename T>
 struct LineSegment;
 
@@ -110,6 +107,9 @@ class UTF8Iterator;
 class UTF8View;
 
 } // namespace unicode
+
+template <typename Handle, typename Deleter, Handle NullHandle>
+class UniqueHandle;
 
 struct BadVariantAccess;
 template <typename... Ts>

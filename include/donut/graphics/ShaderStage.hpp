@@ -1,7 +1,7 @@
 #ifndef DONUT_GRAPHICS_SHADER_STAGE_HPP
 #define DONUT_GRAPHICS_SHADER_STAGE_HPP
 
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Handle.hpp>
 
 namespace donut {
@@ -69,7 +69,7 @@ private:
 		void operator()(Handle handle) const noexcept;
 	};
 
-	Resource<Handle, ShaderDeleter> shader{};
+	UniqueHandle<Handle, ShaderDeleter> shader{};
 };
 
 } // namespace graphics

@@ -1,7 +1,7 @@
 #ifndef DONUT_FILE_HPP
 #define DONUT_FILE_HPP
 
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 
 #include <cstddef>   // std::size_t
 #include <cstdint>   // std::int64_t, std::uint8_t
@@ -239,10 +239,9 @@ protected:
 		: file(handle) {}
 
 	/**
-	 * Resource handle wrapping the underlying handle pointer to the virtual
-	 * file.
+	 * Resource handle wrapping the underlying handle to the virtual file.
 	 */
-	Resource<void*, FileDeleter, nullptr> file{};
+	UniqueHandle<void*, FileDeleter, nullptr> file{};
 };
 
 } // namespace donut

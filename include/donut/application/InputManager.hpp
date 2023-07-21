@@ -1,7 +1,7 @@
 #ifndef DONUT_APPLICATION_INPUT_MANAGER_HPP
 #define DONUT_APPLICATION_INPUT_MANAGER_HPP
 
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/application/Event.hpp>
 #include <donut/application/Input.hpp>
 
@@ -1299,7 +1299,7 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	using Controller = Resource<void*, ControllerDeleter, nullptr>;
+	using Controller = UniqueHandle<void*, ControllerDeleter, nullptr>;
 
 	void setMousePosition(glm::vec2 position) noexcept;
 	void scrollMouseWheelHorizontally(float offset) noexcept;

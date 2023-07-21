@@ -74,10 +74,10 @@ if(DONUT_ENABLE_LIBRARY)
 		"include/donut/OutputFileStream.hpp"
 		"include/donut/random.hpp"
 		"include/donut/reflection.hpp"
-		"include/donut/Resource.hpp"
 		"include/donut/shapes.hpp"
 		"include/donut/Time.hpp"
 		"include/donut/unicode.hpp"
+		"include/donut/UniqueHandle.hpp"
 		"include/donut/Variant.hpp"
 		"include/donut/xml.hpp"
 		

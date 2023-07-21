@@ -1,7 +1,7 @@
 #ifndef DONUT_GRAPHICS_SHADER_PROGRAM_HPP
 #define DONUT_GRAPHICS_SHADER_PROGRAM_HPP
 
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/Variant.hpp>
 #include <donut/graphics/Handle.hpp>
 #include <donut/graphics/ShaderStage.hpp>
@@ -385,7 +385,7 @@ private:
 		void operator()(Handle handle) const noexcept;
 	};
 
-	Resource<Handle, ProgramDeleter> program{};
+	UniqueHandle<Handle, ProgramDeleter> program{};
 	ShaderStage vertexShader;
 	ShaderStage fragmentShader;
 	std::vector<std::pair<std::int32_t, UniformValue>> uniformUploadQueue{};

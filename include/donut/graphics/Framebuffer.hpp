@@ -1,7 +1,7 @@
 #ifndef DONUT_GRAPHICS_FRAMEBUFFER_HPP
 #define DONUT_GRAPHICS_FRAMEBUFFER_HPP
 
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Handle.hpp>
 
 namespace donut {
@@ -82,7 +82,7 @@ private:
 		void operator()(Handle handle) const noexcept;
 	};
 
-	Resource<Handle, FramebufferDeleter> fbo{};
+	UniqueHandle<Handle, FramebufferDeleter> fbo{};
 };
 
 } // namespace graphics

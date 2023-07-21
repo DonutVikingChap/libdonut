@@ -1,7 +1,7 @@
 #ifndef DONUT_GRAPHICS_WINDOW_HPP
 #define DONUT_GRAPHICS_WINDOW_HPP
 
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Framebuffer.hpp>
 #include <donut/graphics/Handle.hpp>
 
@@ -208,16 +208,12 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	using WindowObject = Resource<void*, WindowDeleter, nullptr>;
-
 	struct GLContextDeleter {
 		void operator()(void* handle) const noexcept;
 	};
 
-	using GLContext = Resource<void*, GLContextDeleter, nullptr>;
-
-	WindowObject window{};
-	GLContext glContext{};
+	UniqueHandle<void*, WindowDeleter, nullptr> window{};
+	UniqueHandle<void*, GLContextDeleter, nullptr> glContext{};
 	Framebuffer framebuffer{Handle{}};
 };
 

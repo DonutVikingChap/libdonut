@@ -1,7 +1,7 @@
 #ifndef DONUT_GRAPHICS_VERTEX_ARRAY_HPP
 #define DONUT_GRAPHICS_VERTEX_ARRAY_HPP
 
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Handle.hpp>
 
 namespace donut {
@@ -36,7 +36,7 @@ private:
 		void operator()(Handle handle) const noexcept;
 	};
 
-	Resource<Handle, VertexArrayDeleter> vao{};
+	UniqueHandle<Handle, VertexArrayDeleter> vao{};
 };
 
 } // namespace graphics

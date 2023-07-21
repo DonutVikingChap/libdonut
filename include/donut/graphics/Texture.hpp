@@ -2,7 +2,7 @@
 #define DONUT_GRAPHICS_TEXTURE_HPP
 
 #include <donut/Color.hpp>
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Handle.hpp>
 #include <donut/graphics/Image.hpp>
 
@@ -547,7 +547,7 @@ private:
 		void operator()(Handle handle) const noexcept;
 	};
 
-	Resource<Handle, TextureDeleter> texture{};
+	UniqueHandle<Handle, TextureDeleter> texture{};
 	std::size_t width = 0;
 	std::size_t height = 0;
 	TextureFormat internalFormat = TextureFormat::R8_UNORM;

@@ -1,7 +1,7 @@
 #ifndef DONUT_GRAPHICS_BUFFER_HPP
 #define DONUT_GRAPHICS_BUFFER_HPP
 
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Handle.hpp>
 
 namespace donut {
@@ -38,7 +38,7 @@ private:
 		void operator()(Handle handle) const noexcept;
 	};
 
-	Resource<Handle, BufferDeleter> buffer{};
+	UniqueHandle<Handle, BufferDeleter> buffer{};
 };
 
 } // namespace graphics

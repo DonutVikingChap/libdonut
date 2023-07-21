@@ -1,8 +1,8 @@
 #ifndef DONUT_AUDIO_SOUND_STAGE_HPP
 #define DONUT_AUDIO_SOUND_STAGE_HPP
 
-#include <donut/Resource.hpp>
 #include <donut/Time.hpp>
+#include <donut/UniqueHandle.hpp>
 #include <donut/audio/Listener.hpp>
 
 #include <glm/glm.hpp> // glm::...
@@ -433,9 +433,7 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	using Engine = Resource<void*, EngineDeleter, nullptr>;
-
-	Engine engine{};
+	UniqueHandle<void*, EngineDeleter, nullptr> engine{};
 	Time<float> time{};
 };
 

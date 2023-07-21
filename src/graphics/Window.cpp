@@ -46,12 +46,12 @@ Window::Window(const WindowOptions& options) {
 		windowFlags |= SDL_WINDOW_FULLSCREEN;
 	}
 
-	window = WindowObject{SDL_CreateWindow(options.title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, options.size.x, options.size.y, windowFlags)};
+	window.reset(SDL_CreateWindow(options.title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, options.size.x, options.size.y, windowFlags));
 	if (!window) {
 		throw Error{std::format("Failed to create window: {}", SDL_GetError())};
 	}
 
-	glContext = GLContext{SDL_GL_CreateContext(static_cast<SDL_Window*>(window.get()))};
+	glContext.reset(SDL_GL_CreateContext(static_cast<SDL_Window*>(window.get())));
 	if (!glContext) {
 		throw Error{std::format("Failed to create OpenGL context: {}", SDL_GetError())};
 	}

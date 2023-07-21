@@ -1,7 +1,7 @@
 #ifndef DONUT_GRAPHICS_IMAGE_HPP
 #define DONUT_GRAPHICS_IMAGE_HPP
 
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 
 #include <cassert>  // assert
 #include <cstddef>  // std::size_t
@@ -678,9 +678,7 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	using Pixels = Resource<void*, PixelsDeleter, nullptr>;
-
-	Pixels pixels{};
+	UniqueHandle<void*, PixelsDeleter, nullptr> pixels{};
 	std::size_t width = 0;
 	std::size_t height = 0;
 	PixelFormat pixelFormat = PixelFormat::R;

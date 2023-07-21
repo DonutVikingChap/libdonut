@@ -1,7 +1,7 @@
 #ifndef DONUT_AUDIO_SOUND_HPP
 #define DONUT_AUDIO_SOUND_HPP
 
-#include <donut/Resource.hpp>
+#include <donut/UniqueHandle.hpp>
 
 #include <limits> // std::numeric_limits
 
@@ -247,7 +247,7 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	using Source = Resource<void*, SourceDeleter, nullptr>;
+	using Source = UniqueHandle<void*, SourceDeleter, nullptr>;
 
 	Source buffer{};
 };
