@@ -1,7 +1,6 @@
 #ifndef DONUT_VARIANT_HPP
 #define DONUT_VARIANT_HPP
 
-#include <algorithm>        // std::max
 #include <cassert>          // assert
 #include <compare>          // std::strong_ordering, std::common_comparison_category_t, std::compare_three_way_result_t
 #include <cstddef>          // std::size_t, std::byte
@@ -12,8 +11,8 @@
 #include <memory>           // std::construct_at, std::destroy_at
 #include <new>              // std::launder
 #include <optional>         // std::optional
-#include <type_traits>      // std::is_..._v, std::false_type, std::true_type, std::integral_constant, std::remove_..._t, std::common_type_t, std::contitional_t
-#include <utility>          // std::move, std::forward, std::swap, std::in_place_type_t, std::in_place_index_t, std::index_sequence, std::make_index_sequence
+#include <type_traits>      // std::is_..._v, std::false_type, std::true_type, std::integral_constant, std::remove_..._t, std::common_type_t
+#include <utility>          // std::move, std::forward, std::swap, std::in_place_..., std::...index_sequence
 
 namespace donut {
 
@@ -29,6 +28,91 @@ template <typename... Ts>
 class Variant;
 
 namespace detail {
+
+template <auto...>
+struct ConstantList {};
+
+template <std::size_t N, typename Union, auto... MemberPointers>
+struct get_n_member_pointers {
+	using type = ConstantList<MemberPointers..., &Union::head>;
+};
+
+template <std::size_t N, typename Union, auto... MemberPointers>
+requires(N > 0) struct get_n_member_pointers<N, Union, MemberPointers...> : get_n_member_pointers<N - 1, typename Union::Tail, MemberPointers..., &Union::tail> {};
+
+template <std::size_t N, typename Union>
+using get_n_member_pointers_t = typename get_n_member_pointers<N, Union>::type;
+
+template <auto... MemberPointers, typename U>
+[[nodiscard]] constexpr auto& getUnionMemberImpl(ConstantList<MemberPointers...>, U&& u) noexcept {
+	return (std::forward<U>(u).*....*MemberPointers);
+}
+
+template <std::size_t Index, typename U>
+[[nodiscard]] constexpr auto& getUnionMember(U& u) noexcept {
+	return getUnionMemberImpl(get_n_member_pointers_t<Index, U>{}, u);
+}
+
+template <typename... Ts>
+union UnionStorage {
+	UnionStorage() = default;
+
+	template <size_t Index, typename... Args>
+	UnionStorage(std::in_place_index_t<Index>, Args&&...) = delete; // NOLINT(cppcoreguidelines-missing-std-forward)
+};
+
+template <typename First, typename... Rest>
+union UnionStorage<First, Rest...> {
+	static constexpr std::size_t size = 1 + sizeof...(Rest);
+
+	using Head = First;
+	using Tail = UnionStorage<Rest...>;
+
+	constexpr UnionStorage()
+		: tail() {}
+
+	template <typename... Args>
+	constexpr UnionStorage(std::in_place_index_t<0>, Args&&... args)
+		: head(std::forward<Args>(args)...) {}
+
+	template <std::size_t Index, typename... Args>
+	constexpr UnionStorage(std::in_place_index_t<Index>, Args&&... args)
+		: tail(std::in_place_index<Index - 1>, std::forward<Args>(args)...) {}
+
+	constexpr UnionStorage(const UnionStorage& other, std::size_t other_index) {
+		[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
+			(void)(((other_index == Indices) ? (create<Indices>(getUnionMember<Indices>(other)), true) : false) || ...);
+		}(std::make_index_sequence<size>{});
+	}
+
+	constexpr UnionStorage(UnionStorage&& other, std::size_t other_index) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+		[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
+			(void)(((other_index == Indices) ? (create<Indices>(std::move(getUnionMember<Indices>(other))), true) : false) || ...);
+		}(std::make_index_sequence<size>{});
+	}
+
+	~UnionStorage() = default;
+	constexpr ~UnionStorage() requires(!std::is_trivially_destructible_v<Head> || !std::is_trivially_destructible_v<Tail>) {}
+
+	UnionStorage(const UnionStorage&) = default;
+	UnionStorage(UnionStorage&&) = default;
+	UnionStorage& operator=(const UnionStorage&) = default;
+	UnionStorage& operator=(UnionStorage&&) = default;
+
+	template <std::size_t Index, typename... Args>
+	constexpr void create(Args&&... args) {
+		std::construct_at(&getUnionMember<Index>(*this), std::forward<Args>(args)...);
+	}
+
+	constexpr void destroy(std::size_t index) noexcept {
+		[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
+			(void)(((index == Indices) ? (std::destroy_at(&getUnionMember<Indices>(*this)), true) : false) || ...);
+		}(std::make_index_sequence<size>{});
+	}
+
+	Head head;
+	Tail tail;
+};
 
 template <template <typename...> typename Template, typename... TemplateArgs>
 constexpr void derivedFromTemplateSpecializationTest(const Template<TemplateArgs...>&);
@@ -198,9 +282,7 @@ struct BadVariantAccess : std::exception {
 template <typename... Ts>
 class Variant {
 private:
-	using FirstAlternative = variant_alternative_t<0, Variant>;
-
-	static constexpr bool HAS_DEFAULT_CONSTRUCTOR = std::is_default_constructible_v<FirstAlternative>;
+	static constexpr bool HAS_DEFAULT_CONSTRUCTOR = std::is_default_constructible_v<variant_alternative_t<0, Variant>>;
 	static constexpr bool HAS_COPY_CONSTRUCTOR = (std::is_copy_constructible_v<Ts> && ...);
 	static constexpr bool HAS_MOVE_CONSTRUCTOR = (std::is_move_constructible_v<Ts> && ...);
 	static constexpr bool HAS_COPY_ASSIGNMENT = ((std::is_copy_constructible_v<Ts> && std::is_copy_assignable_v<Ts>)&&...);
@@ -245,7 +327,7 @@ public:
 	/**
 	 * Invalid alternative index, representing the valueless by exception state.
 	 */
-	static constexpr index_type npos = static_cast<index_type>(-1);
+	static constexpr index_type npos = sizeof...(Ts);
 
 	/**
 	 * Default-construct a variant with the first variant alternative, if it is
@@ -254,10 +336,8 @@ public:
 	 * \throws any exception thrown by the underlying constructor of the first
 	 *         alternative type.
 	 */
-	Variant() noexcept(std::is_nothrow_default_constructible_v<FirstAlternative>) requires(HAS_DEFAULT_CONSTRUCTOR)
-		: activeTypeIndex(0) {
-		std::construct_at(reinterpret_cast<FirstAlternative*>(&storage));
-	}
+	constexpr Variant() noexcept(std::is_nothrow_default_constructible_v<variant_alternative_t<0, Variant>>) requires(HAS_DEFAULT_CONSTRUCTOR)
+		: Variant(std::in_place_index<0>) {}
 
 	/**
 	 * Converting constructor.
@@ -272,17 +352,15 @@ public:
 	 *         relevant alternative type.
 	 */
 	template <typename U>
-	Variant(U&& value) noexcept(std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value)))>)
+	constexpr Variant(U&& value) noexcept(std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value)))>)
 		requires(!std::is_same_v<std::remove_cvref_t<U>, Variant> && variant_has_alternative_v<decltype(F(std::forward<U>(value))), Variant> &&
 				 std::is_constructible_v<decltype(F(std::forward<U>(value))), U>)
-		: activeTypeIndex(variant_index_v<decltype(F(std::forward<U>(value))), Variant>) {
-		std::construct_at(reinterpret_cast<decltype(F(std::forward<U>(value)))*>(&storage), std::forward<U>(value));
-	}
+		: Variant(std::in_place_index<variant_index_v<decltype(F(std::forward<U>(value))), Variant>>, std::forward<U>(value)) {}
 
 	/**
 	 * Construct a variant alternative in-place given its type.
 	 *
-	 * \param 0 std::in_place_type<T>, where T is the alternative type to
+	 * \param type std::in_place_type<T>, where T is the alternative type to
 	 *        construct, which must be one of the variant's listed alternative
 	 *        types.
 	 * \param args arguments to pass to the underlying value's constructor.
@@ -291,16 +369,16 @@ public:
 	 *         relevant alternative type.
 	 */
 	template <typename T, typename... Args>
-	explicit Variant(std::in_place_type_t<T>, Args&&... args) requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, Args...>)
-		: activeTypeIndex(variant_index_v<T, Variant>) {
-		std::construct_at(reinterpret_cast<T*>(&storage), std::forward<Args>(args)...);
+	constexpr explicit Variant(std::in_place_type_t<T> type, Args&&... args) requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, Args...>)
+		: Variant(std::in_place_index<variant_index_v<T, Variant>>, std::forward<Args>(args)...) {
+		(void)type;
 	}
 
 	/**
 	 * Construct a variant alternative in-place given its type, with an
 	 * initializer list as the first constructor argument.
 	 *
-	 * \param 0 std::in_place_type<T>, where T is the alternative type to
+	 * \param type std::in_place_type<T>, where T is the alternative type to
 	 *        construct, which must be one of the variant's listed alternative
 	 *        types.
 	 * \param ilist first argument to pass to the underlying value's
@@ -312,16 +390,16 @@ public:
 	 *         relevant alternative type.
 	 */
 	template <typename T, typename U, typename... Args>
-	explicit Variant(std::in_place_type_t<T>, std::initializer_list<U> ilist, Args&&... args)
+	constexpr explicit Variant(std::in_place_type_t<T> type, std::initializer_list<U> ilist, Args&&... args)
 		requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, std::initializer_list<U>&, Args...>)
-		: activeTypeIndex(variant_index_v<T, Variant>) {
-		std::construct_at(reinterpret_cast<T*>(&storage), ilist, std::forward<Args>(args)...);
+		: Variant(std::in_place_index<variant_index_v<T, Variant>>, ilist, std::forward<Args>(args)...) {
+		(void)type;
 	}
 
 	/**
 	 * Construct a variant alternative in-place given its index.
 	 *
-	 * \param 0 std::in_place_index<Index>, where Index is the alternative index
+	 * \param index std::in_place_index<Index>, where Index is the alternative index
 	 *        to construct, which must be within the range of the variant's list
 	 *        of alternative types.
 	 * \param args arguments to pass to the underlying value's constructor.
@@ -330,16 +408,16 @@ public:
 	 *         relevant alternative type.
 	 */
 	template <std::size_t Index, typename... Args>
-	explicit Variant(std::in_place_index_t<Index>, Args&&... args) requires(Index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<Index, Variant>, Args...>)
-		: activeTypeIndex(Index) {
-		std::construct_at(reinterpret_cast<variant_alternative_t<Index, Variant>*>(&storage), std::forward<Args>(args)...);
-	}
+	constexpr explicit Variant(std::in_place_index_t<Index> index, Args&&... args)
+		requires(Index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<Index, Variant>, Args...>)
+		: storage(index, std::forward<Args>(args)...)
+		, activeTypeIndex(Index) {}
 
 	/**
 	 * Construct a variant alternative in-place given its index, with an
 	 * initializer list as the first constructor argument.
 	 *
-	 * \param 0 std::in_place_index<Index>, where Index is the alternative index
+	 * \param index std::in_place_index<Index>, where Index is the alternative index
 	 *        to construct, which must be within the range of the variant's list
 	 *        of alternative types.
 	 * \param ilist first argument to pass to the underlying value's
@@ -351,58 +429,45 @@ public:
 	 *         relevant alternative type.
 	 */
 	template <std::size_t Index, typename U, typename... Args>
-	explicit Variant(std::in_place_index_t<Index>, std::initializer_list<U> ilist, Args&&... args)
+	constexpr explicit Variant(std::in_place_index_t<Index> index, std::initializer_list<U> ilist, Args&&... args)
 		requires(Index < sizeof...(Ts) && std::is_constructible_v<variant_alternative_t<Index, Variant>, std::initializer_list<U>&, Args...>)
-		: activeTypeIndex(Index) {
-		std::construct_at(reinterpret_cast<variant_alternative_t<Index, Variant>*>(&storage), ilist, std::forward<Args>(args)...);
-	}
+		: storage(index, ilist, std::forward<Args>(args)...)
+		, activeTypeIndex(Index) {}
 
 	/** Destructor. */
-	~Variant() {
+	constexpr ~Variant() {
 		destroy();
 	}
 
 	/** Trivial destructor. */
-	~Variant() requires(HAS_TRIVIAL_DESTRUCTOR) = default;
+	constexpr ~Variant() requires(HAS_TRIVIAL_DESTRUCTOR) = default;
 
 	/** Deleted copy constructor. */
-	Variant(const Variant& other) requires(!HAS_COPY_CONSTRUCTOR) = delete;
+	constexpr Variant(const Variant& other) requires(!HAS_COPY_CONSTRUCTOR) = delete;
 
 	/** Trivial copy constructor. */
-	Variant(const Variant& other) requires(HAS_COPY_CONSTRUCTOR && HAS_TRIVIAL_COPY_CONSTRUCTOR) = default;
+	constexpr Variant(const Variant& other) requires(HAS_COPY_CONSTRUCTOR && HAS_TRIVIAL_COPY_CONSTRUCTOR) = default;
 
 	/** Copy constructor. */
-	Variant(const Variant& other) requires(HAS_COPY_CONSTRUCTOR && !HAS_TRIVIAL_COPY_CONSTRUCTOR)
-		: activeTypeIndex(other.activeTypeIndex) {
-		const auto visitor = [&]<typename T>(const T& value) -> void {
-			std::construct_at(reinterpret_cast<T*>(&storage), value);
-		};
-		[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
-			(void)(((other.template is<Indices>()) ? (visitor(other.template as<Indices>()), true) : false) || ...);
-		}
-		(std::make_index_sequence<sizeof...(Ts)>{});
-	}
+	constexpr Variant(const Variant& other) requires(HAS_COPY_CONSTRUCTOR && !HAS_TRIVIAL_COPY_CONSTRUCTOR)
+		: storage(other.storage, other.activeTypeIndex)
+		, activeTypeIndex(other.activeTypeIndex) {}
 
 	/** Trivial move constructor. */
-	Variant(Variant&& other) noexcept requires(HAS_MOVE_CONSTRUCTOR && HAS_TRIVIAL_MOVE_CONSTRUCTOR) = default;
+	constexpr Variant(Variant&& other) noexcept requires(HAS_MOVE_CONSTRUCTOR && HAS_TRIVIAL_MOVE_CONSTRUCTOR) = default;
 
 	/** Move constructor. */
-	Variant(Variant&& other) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...)) requires(HAS_MOVE_CONSTRUCTOR && !HAS_TRIVIAL_MOVE_CONSTRUCTOR)
-		: activeTypeIndex(other.activeTypeIndex) {
-		const auto visitor = [&]<typename T>(T& value) -> void {
-			std::construct_at(reinterpret_cast<T*>(&storage), std::move(value));
-		};
-		[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
-			(void)(((other.template is<Indices>()) ? (visitor(other.template as<Indices>()), true) : false) || ...);
-		}
-		(std::make_index_sequence<sizeof...(Ts)>{});
-	}
+	constexpr Variant(Variant&& other) noexcept(
+		(std::is_nothrow_move_constructible_v<Ts> && ...)) // NOLINT(performance-noexcept-move-constructor, cppcoreguidelines-noexcept-move-operations)
+		requires(HAS_MOVE_CONSTRUCTOR && !HAS_TRIVIAL_MOVE_CONSTRUCTOR)
+		: storage(std::move(other.storage), other.activeTypeIndex)
+		, activeTypeIndex(other.activeTypeIndex) {}
 
 	/** Deleted copy assignment. */
-	Variant& operator=(const Variant& other) requires(!HAS_COPY_ASSIGNMENT) = delete;
+	constexpr Variant& operator=(const Variant& other) requires(!HAS_COPY_ASSIGNMENT) = delete;
 
 	/** Trivial copy assignment. */
-	Variant& operator=(const Variant& other) requires(HAS_COPY_ASSIGNMENT && HAS_TRIVIAL_COPY_ASSIGNMENT) = default;
+	constexpr Variant& operator=(const Variant& other) requires(HAS_COPY_ASSIGNMENT && HAS_TRIVIAL_COPY_ASSIGNMENT) = default;
 
 	/**
 	 * Copy assignment.
@@ -410,13 +475,13 @@ public:
 	 * \note If an exception is thrown after the old value has been destroyed,
 	 *       the variant ends up in the valueless by exception state.
 	 */
-	Variant& operator=(const Variant& other) requires(HAS_COPY_ASSIGNMENT && !HAS_TRIVIAL_COPY_ASSIGNMENT) {
+	constexpr Variant& operator=(const Variant& other) requires(HAS_COPY_ASSIGNMENT && !HAS_TRIVIAL_COPY_ASSIGNMENT) {
 		*this = Variant{other};
 		return *this;
 	}
 
 	/** Trivial move assignment. */
-	Variant& operator=(Variant&& other) noexcept requires(HAS_MOVE_ASSIGNMENT && HAS_TRIVIAL_MOVE_ASSIGNMENT) = default;
+	constexpr Variant& operator=(Variant&& other) noexcept requires(HAS_MOVE_ASSIGNMENT && HAS_TRIVIAL_MOVE_ASSIGNMENT) = default;
 
 	/**
 	 * Move assignment.
@@ -424,43 +489,20 @@ public:
 	 * \note If an exception is thrown after the old value has been destroyed,
 	 *       the variant ends up in the valueless by exception state.
 	 */
-	Variant& operator=(Variant&& other) noexcept(((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_move_assignable_v<Ts>)&&...))
-		requires(HAS_MOVE_ASSIGNMENT && !HAS_TRIVIAL_MOVE_ASSIGNMENT) {
+	constexpr Variant& operator=(Variant&& other) noexcept(
+		((std::is_nothrow_move_constructible_v<Ts> && // NOLINT(performance-noexcept-move-constructor, cppcoreguidelines-noexcept-move-operations)
+			std::is_nothrow_move_assignable_v<Ts>)&&...)) requires(HAS_MOVE_ASSIGNMENT && !HAS_TRIVIAL_MOVE_ASSIGNMENT) {
 		if (activeTypeIndex == other.activeTypeIndex) {
-			const auto visitor = [&]<typename T>(T& value) -> void {
-				*std::launder(reinterpret_cast<T*>(&storage)) = std::move(value);
-			};
-			[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
-				(void)(((other.template is<Indices>()) ? (visitor(other.template as<Indices>()), true) : false) || ...);
-			}
-			(std::make_index_sequence<sizeof...(Ts)>{});
+			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
+				(void)(((is<Indices>()) ? ((as<Indices>() = std::move(other.template as<Indices>())), true) : false) || ...);
+			}(std::make_index_sequence<sizeof...(Ts)>{});
 		} else if (other.activeTypeIndex == npos) {
 			destroy();
-			activeTypeIndex = npos;
 		} else {
 			destroy();
-			if constexpr (((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_move_assignable_v<Ts>)&&...)) {
-				const auto visitor = [&]<typename T>(T& value) -> void {
-					std::construct_at(reinterpret_cast<T*>(&storage), std::move(value));
-				};
-				[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
-					(void)(((other.template is<Indices>()) ? (visitor(other.template as<Indices>()), true) : false) || ...);
-				}
-				(std::make_index_sequence<sizeof...(Ts)>{});
-			} else {
-				try {
-					const auto visitor = [&]<typename T>(T& value) -> void {
-						std::construct_at(reinterpret_cast<T*>(&storage), std::move(value));
-					};
-					[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
-						(void)(((other.template is<Indices>()) ? (visitor(other.template as<Indices>()), true) : false) || ...);
-					}
-					(std::make_index_sequence<sizeof...(Ts)>{});
-				} catch (...) {
-					activeTypeIndex = npos;
-					throw;
-				}
-			}
+			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
+				(void)(((other.template is<Indices>()) ? ((storage.template create<Indices>(std::move(other.template as<Indices>()))), true) : false) || ...);
+			}(std::make_index_sequence<sizeof...(Ts)>{});
 			activeTypeIndex = other.activeTypeIndex;
 		}
 		return *this;
@@ -482,8 +524,8 @@ public:
 	 *       the variant ends up in the valueless by exception state.
 	 */
 	template <typename U>
-	Variant& operator=(U&& value) noexcept(
-		std::is_nothrow_assignable_v<decltype(F(std::forward<U>(value)))&, U>&& std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value))), U>)
+	constexpr Variant& operator=(U&& value) noexcept(
+		std::is_nothrow_assignable_v<decltype(F(std::forward<U>(value)))&, U> && std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value))), U>)
 		requires(!std::is_same_v<std::remove_cvref_t<U>, Variant> && variant_has_alternative_v<decltype(F(std::forward<U>(value))), Variant> &&
 				 std::is_assignable_v<decltype(F(std::forward<U>(value))), U>) {
 		using T = decltype(F(std::forward<U>(value)));
@@ -514,7 +556,7 @@ public:
 	 *       the variant ends up in the valueless by exception state.
 	 */
 	template <typename T, typename... Args>
-	T& emplace(Args&&... args) requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, Args...>) {
+	constexpr T& emplace(Args&&... args) requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, Args...>) {
 		return emplace<variant_index_v<T, Variant>>(std::forward<Args>(args)...);
 	}
 
@@ -537,7 +579,8 @@ public:
 	 *       the variant ends up in the valueless by exception state.
 	 */
 	template <typename T, typename U, typename... Args>
-	T& emplace(std::initializer_list<U> ilist, Args&&... args) requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, std::initializer_list<U>&, Args...>) {
+	constexpr T& emplace(std::initializer_list<U> ilist, Args&&... args)
+		requires(variant_has_alternative_v<T, Variant> && std::is_constructible_v<T, std::initializer_list<U>&, Args...>) {
 		return emplace<variant_index_v<T, Variant>>(ilist, std::forward<Args>(args)...);
 	}
 
@@ -556,18 +599,12 @@ public:
 	 *       the variant ends up in the valueless by exception state.
 	 */
 	template <std::size_t Index, typename... Args>
-	variant_alternative_t<Index, Variant>& emplace(Args&&... args) requires(std::is_constructible_v<variant_alternative_t<Index, Variant>, Args...>) {
+	constexpr variant_alternative_t<Index, Variant>& emplace(Args&&... args) requires(std::is_constructible_v<variant_alternative_t<Index, Variant>, Args...>) {
 		static_assert(Index < sizeof...(Ts));
-		using T = variant_alternative_t<Index, Variant>;
 		destroy();
-		try {
-			std::construct_at(reinterpret_cast<T*>(&storage), std::forward<Args>(args)...);
-			activeTypeIndex = Index;
-		} catch (...) {
-			activeTypeIndex = npos;
-			throw;
-		}
-		return *std::launder(reinterpret_cast<T*>(&storage));
+		storage.template create<Index>(std::forward<Args>(args)...);
+		activeTypeIndex = Index;
+		return as<Index>();
 	}
 
 	/**
@@ -589,19 +626,13 @@ public:
 	 *       the variant ends up in the valueless by exception state.
 	 */
 	template <std::size_t Index, typename U, typename... Args>
-	variant_alternative_t<Index, Variant>& emplace(std::initializer_list<U> ilist, Args&&... args)
+	constexpr variant_alternative_t<Index, Variant>& emplace(std::initializer_list<U> ilist, Args&&... args)
 		requires(std::is_constructible_v<variant_alternative_t<Index, Variant>, std::initializer_list<U>&, Args...>) {
 		static_assert(Index < sizeof...(Ts));
-		using T = variant_alternative_t<Index, Variant>;
 		destroy();
-		try {
-			std::construct_at(reinterpret_cast<T*>(&storage), ilist, std::forward<Args>(args)...);
-			activeTypeIndex = Index;
-		} catch (...) {
-			activeTypeIndex = npos;
-			throw;
-		}
-		return *std::launder(reinterpret_cast<T*>(&storage));
+		storage.template create<Index>(ilist, std::forward<Args>(args)...);
+		activeTypeIndex = Index;
+		return as<Index>();
 	}
 
 	/**
@@ -616,16 +647,13 @@ public:
 	 *       and before it has been replaced with a new value, the associated
 	 *       variant ends up in the valueless by exception state.
 	 */
-	void swap(Variant& other) noexcept(((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_swappable_v<Ts>)&&...)) {
+	constexpr void swap(Variant& other) noexcept(
+		((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_swappable_v<Ts>)&&...)) { // NOLINT(performance-noexcept-swap, cppcoreguidelines-noexcept-swap)
 		if (activeTypeIndex == other.activeTypeIndex) {
-			const auto visitor = [&]<typename T>(T& value) -> void {
-				using std::swap;
-				swap(*std::launder(reinterpret_cast<T*>(&storage)), value);
-			};
-			[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
-				(void)(((other.template is<Indices>()) ? (visitor(other.template as<Indices>()), true) : false) || ...);
-			}
-			(std::make_index_sequence<sizeof...(Ts)>{});
+			using std::swap;
+			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
+				(void)(((is<Indices>()) ? ((swap(as<Indices>(), other.template as<Indices>())), true) : false) || ...);
+			}(std::make_index_sequence<sizeof...(Ts)>{});
 		} else {
 			Variant old = std::move(*this);
 			*this = std::move(other);
@@ -646,7 +674,7 @@ public:
 	 *       and before it has been replaced with a new value, the associated
 	 *       variant ends up in the valueless by exception state.
 	 */
-	friend void swap(Variant& a, Variant& b) noexcept(noexcept(a.swap(b))) {
+	friend constexpr void swap(Variant& a, Variant& b) noexcept(noexcept(a.swap(b))) { // NOLINT(performance-noexcept-swap, cppcoreguidelines-noexcept-swap)
 		a.swap(b);
 	}
 
@@ -725,9 +753,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-	[[nodiscard]] T& as() & noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] constexpr T& as() & noexcept requires(variant_has_alternative_v<T, Variant>) {
 		assert(is<T>());
-		return *std::launder(reinterpret_cast<T*>(&storage));
+		return as<variant_index_v<T, Variant>>();
 	}
 
 	/**
@@ -755,9 +783,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-	[[nodiscard]] const T& as() const& noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] constexpr const T& as() const& noexcept requires(variant_has_alternative_v<T, Variant>) {
 		assert(is<T>());
-		return *std::launder(reinterpret_cast<const T*>(&storage));
+		return as<variant_index_v<T, Variant>>();
 	}
 
 	/**
@@ -785,9 +813,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-	[[nodiscard]] T&& as() && noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] constexpr T&& as() && noexcept requires(variant_has_alternative_v<T, Variant>) {
 		assert(is<T>());
-		return std::move(*std::launder(reinterpret_cast<T*>(&storage)));
+		return std::move(as<variant_index_v<T, Variant>>());
 	}
 
 	/**
@@ -815,9 +843,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-	[[nodiscard]] const T&& as() const&& noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] constexpr const T&& as() const&& noexcept requires(variant_has_alternative_v<T, Variant>) {
 		assert(is<T>());
-		return std::move(*std::launder(reinterpret_cast<const T*>(&storage)));
+		return std::move(as<variant_index_v<T, Variant>>());
 	}
 
 	/**
@@ -846,9 +874,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <std::size_t Index>
-	[[nodiscard]] variant_alternative_t<Index, Variant>& as() & noexcept {
+	[[nodiscard]] constexpr variant_alternative_t<Index, Variant>& as() & noexcept {
 		assert(is<Index>());
-		return *std::launder(reinterpret_cast<variant_alternative_t<Index, Variant>*>(&storage));
+		return detail::getUnionMember<Index>(storage);
 	}
 
 	/**
@@ -877,9 +905,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <std::size_t Index>
-	[[nodiscard]] const variant_alternative_t<Index, Variant>& as() const& noexcept {
+	[[nodiscard]] constexpr const variant_alternative_t<Index, Variant>& as() const& noexcept {
 		assert(is<Index>());
-		return *std::launder(reinterpret_cast<const variant_alternative_t<Index, Variant>*>(&storage));
+		return detail::getUnionMember<Index>(storage);
 	}
 
 	/**
@@ -908,9 +936,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <std::size_t Index>
-	[[nodiscard]] variant_alternative_t<Index, Variant>&& as() && noexcept {
+	[[nodiscard]] constexpr variant_alternative_t<Index, Variant>&& as() && noexcept {
 		assert(is<Index>());
-		return std::move(*std::launder(reinterpret_cast<variant_alternative_t<Index, Variant>*>(&storage)));
+		return std::move(detail::getUnionMember<Index>(storage));
 	}
 
 	/**
@@ -939,9 +967,9 @@ public:
 	 * \sa get_if()
 	 */
 	template <std::size_t Index>
-	[[nodiscard]] const variant_alternative_t<Index, Variant>&& as() const&& noexcept {
+	[[nodiscard]] constexpr const variant_alternative_t<Index, Variant>&& as() const&& noexcept {
 		assert(is<Index>());
-		return std::move(*std::launder(reinterpret_cast<const variant_alternative_t<Index, Variant>*>(&storage)));
+		return std::move(detail::getUnionMember<Index>(storage));
 	}
 
 	/**
@@ -959,7 +987,7 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-		[[nodiscard]] T& get() &
+		[[nodiscard]] constexpr T& get() &
 		requires(variant_has_alternative_v<T, Variant>) {
 			if (!is<T>()) {
 				throw BadVariantAccess{};
@@ -982,7 +1010,7 @@ public:
 	 * \sa get_if()
 	 */
 		template <typename T>
-		[[nodiscard]] const T& get() const& requires(variant_has_alternative_v<T, Variant>) {
+		[[nodiscard]] constexpr const T& get() const& requires(variant_has_alternative_v<T, Variant>) {
 		if (!is<T>()) {
 			throw BadVariantAccess{};
 		}
@@ -1004,7 +1032,7 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-		[[nodiscard]] T&& get() &&
+		[[nodiscard]] constexpr T&& get() &&
 		requires(variant_has_alternative_v<T, Variant>) {
 			if (!is<T>()) {
 				throw BadVariantAccess{};
@@ -1027,7 +1055,7 @@ public:
 	 * \sa get_if()
 	 */
 		template <typename T>
-		[[nodiscard]] const T&& get() const&& requires(variant_has_alternative_v<T, Variant>) {
+		[[nodiscard]] constexpr const T&& get() const&& requires(variant_has_alternative_v<T, Variant>) {
 		if (!is<T>()) {
 			throw BadVariantAccess{};
 		}
@@ -1050,7 +1078,7 @@ public:
 	 * \sa get_if()
 	 */
 	template <std::size_t Index>
-	[[nodiscard]] variant_alternative_t<Index, Variant>& get() & {
+	[[nodiscard]] constexpr variant_alternative_t<Index, Variant>& get() & {
 		if (!is<Index>()) {
 			throw BadVariantAccess{};
 		}
@@ -1073,7 +1101,7 @@ public:
 	 * \sa get_if()
 	 */
 	template <std::size_t Index>
-	[[nodiscard]] const variant_alternative_t<Index, Variant>& get() const& {
+	[[nodiscard]] constexpr const variant_alternative_t<Index, Variant>& get() const& {
 		if (!is<Index>()) {
 			throw BadVariantAccess{};
 		}
@@ -1096,7 +1124,7 @@ public:
 	 * \sa get_if()
 	 */
 	template <std::size_t Index>
-	[[nodiscard]] variant_alternative_t<Index, Variant>&& get() && {
+	[[nodiscard]] constexpr variant_alternative_t<Index, Variant>&& get() && {
 		if (!is<Index>()) {
 			throw BadVariantAccess{};
 		}
@@ -1119,7 +1147,7 @@ public:
 	 * \sa get_if()
 	 */
 	template <std::size_t Index>
-	[[nodiscard]] const variant_alternative_t<Index, Variant>&& get() const&& {
+	[[nodiscard]] constexpr const variant_alternative_t<Index, Variant>&& get() const&& {
 		if (!is<Index>()) {
 			throw BadVariantAccess{};
 		}
@@ -1140,7 +1168,7 @@ public:
 	 * \sa get()
 	 */
 	template <typename T>
-	[[nodiscard]] T* get_if() noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] constexpr T* get_if() noexcept requires(variant_has_alternative_v<T, Variant>) {
 		return (is<T>()) ? &as<T>() : nullptr;
 	}
 
@@ -1159,7 +1187,7 @@ public:
 	 * \sa get()
 	 */
 	template <typename T>
-	[[nodiscard]] const T* get_if() const noexcept requires(variant_has_alternative_v<T, Variant>) {
+	[[nodiscard]] constexpr const T* get_if() const noexcept requires(variant_has_alternative_v<T, Variant>) {
 		return (is<T>()) ? &as<T>() : nullptr;
 	}
 
@@ -1177,7 +1205,7 @@ public:
 	 * \sa get()
 	 */
 	template <std::size_t Index>
-	[[nodiscard]] variant_alternative_t<Index, Variant>* get_if() noexcept {
+	[[nodiscard]] constexpr variant_alternative_t<Index, Variant>* get_if() noexcept {
 		return (is<Index>()) ? &as<Index>() : nullptr;
 	}
 
@@ -1196,7 +1224,7 @@ public:
 	 * \sa get()
 	 */
 	template <std::size_t Index>
-	[[nodiscard]] const variant_alternative_t<Index, Variant>* get_if() const noexcept {
+	[[nodiscard]] constexpr const variant_alternative_t<Index, Variant>* get_if() const noexcept {
 		return (is<Index>()) ? &as<Index>() : nullptr;
 	}
 
@@ -1218,40 +1246,37 @@ public:
 	 * \sa match()
 	 */
 	template <typename Visitor, typename V>
-	static constexpr decltype(auto) visit(Visitor&& visitor, V&& variant) {
+	static constexpr decltype(auto) visit(Visitor&& visitor, V&& variant) { // NOLINT(cppcoreguidelines-missing-std-forward)
 		constexpr bool IS_ALL_LVALUE_REFERENCE =
 			(std::is_lvalue_reference_v<decltype(std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Ts>()))> && ...);
 		constexpr bool IS_ANY_CONST =
 			(std::is_const_v<std::remove_reference_t<decltype(std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Ts>()))>> || ...);
 		using R = std::common_type_t<decltype(std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Ts>()))...>;
 		if constexpr (std::is_void_v<R>) {
-			[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
+			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
 				if (!(((variant.template is<Indices>()) ? (std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Indices>()), true) : false) || ...)) {
 					throw BadVariantAccess{};
 				}
-			}
-			(std::make_index_sequence<sizeof...(Ts)>{});
+			}(std::make_index_sequence<sizeof...(Ts)>{});
 		} else if constexpr (IS_ALL_LVALUE_REFERENCE) {
 			std::conditional_t<IS_ANY_CONST, const R*, R*> result = nullptr;
-			[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
+			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
 				if (!(((variant.template is<Indices>()) ? ((result = &std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Indices>())), true)
 														: false) ||
 						...)) {
 					throw BadVariantAccess{};
 				}
-			}
-			(std::make_index_sequence<sizeof...(Ts)>{});
+			}(std::make_index_sequence<sizeof...(Ts)>{});
 			return *result;
 		} else {
 			std::optional<R> result{};
-			[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
+			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
 				if (!(((variant.template is<Indices>()) ? (result.emplace(std::invoke(std::forward<Visitor>(visitor), std::forward<V>(variant).template as<Indices>())), true)
 														: false) ||
 						...)) {
 					throw BadVariantAccess{};
 				}
-			}
-			(std::make_index_sequence<sizeof...(Ts)>{});
+			}(std::make_index_sequence<sizeof...(Ts)>{});
 			return R{std::move(*result)};
 		}
 	}
@@ -1259,17 +1284,12 @@ public:
 private:
 	void destroy() noexcept {
 		if constexpr (!HAS_TRIVIAL_DESTRUCTOR) {
-			const auto visitor = [&](auto& value) -> void {
-				std::destroy_at(&value);
-			};
-			[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
-				(void)(((is<Indices>()) ? (visitor(as<Indices>()), true) : false) || ...);
-			}
-			(std::make_index_sequence<sizeof...(Ts)>{});
+			storage.destroy(activeTypeIndex);
 		}
+		activeTypeIndex = npos;
 	}
 
-	alignas(std::max({alignof(Ts)...})) std::byte storage[std::max({sizeof(Ts)...})];
+	detail::UnionStorage<Ts..., Monostate> storage;
 	index_type activeTypeIndex;
 };
 
