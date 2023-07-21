@@ -109,7 +109,7 @@ public:
 	 * Get the number of texel component channels defined by an internal texel
 	 * format.
 	 *
-	 * \param format the format to get the number of channels of.
+	 * \param internalFormat the format to get the number of channels of.
 	 *
 	 * \return the number of channels in the given format.
 	 */
@@ -119,7 +119,8 @@ public:
 	 * Get a description of the pixel format that corresponds to the texel
 	 * format of an internal texture format.
 	 *
-	 * \param format the internal texel format to get the pixel format of.
+	 * \param internalFormat the internal texel format to get the pixel format
+	 *        of.
 	 *
 	 * \return the corresponding pixel format.
 	 */
@@ -129,7 +130,8 @@ public:
 	 * Get a description of the pixel component type that corresponds to
 	 * the texel component type of an internal texture format.
 	 *
-	 * \param format the internal texel format to get the component type of.
+	 * \param internalFormat the internal texel format to get the component type
+	 *        of.
 	 *
 	 * \return the corresponding pixel component type.
 	 */

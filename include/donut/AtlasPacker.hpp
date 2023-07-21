@@ -70,7 +70,7 @@ public:
 	 * inserted into the atlas.
 	 *
 	 * \param width width of the new rectangle, in pixels.
-	 * \param width height of the new rectangle, in pixels.
+	 * \param height height of the new rectangle, in pixels.
 	 *
 	 * \return see InsertRectangleResult.
 	 *

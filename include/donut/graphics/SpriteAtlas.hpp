@@ -123,7 +123,7 @@ public:
 	 * \param offsetX horizontal offset, in pixels, from the left edge of the
 	 *        original sprite, where the new sprite will begin. Must be less
 	 *        than or equal to the width of the original sprite image.
-	 * \param offsetX vertical offset, in pixels, from the bottom edge of the
+	 * \param offsetY vertical offset, in pixels, from the bottom edge of the
 	 *        original sprite, where the new sprite will begin. Must be less
 	 *        than or equal to the height of the original sprite image.
 	 * \param width width, in pixels, of the new sprite region. Must be less

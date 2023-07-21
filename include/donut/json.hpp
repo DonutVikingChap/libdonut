@@ -616,8 +616,8 @@ enum class TokenType : std::uint8_t {
 	NUMBER_HEXADECIMAL,              ///< Hexadecimal number literal, e.g. 0x01FF.
 	NUMBER_POSITIVE_INFINITY,        ///< Keyword Infinity.
 	NUMBER_NEGATIVE_INFINITY,        ///< Keyword -Infinity.
-	NUMBER_POSITIVE_NAN,             /// Keyword NaN.
-	NUMBER_NEGATIVE_NAN,             /// Keyword -NaN.
+	NUMBER_POSITIVE_NAN,             ///< Keyword NaN.
+	NUMBER_NEGATIVE_NAN,             ///< Keyword -NaN.
 };
 
 /**
@@ -3261,9 +3261,9 @@ struct VisitElement : Base {
  * \sa json::onNumber()
  * \sa json::onObject()
  * \sa json::onArray()
- * \sa Parser::parseFile(ValueVisitor&)
- * \sa Parser::parseValue(ValueVisitor&)
- * \sa Parser::parseArray(ValueVisitor&)
+ * \sa Parser::parseFile(Parser::ValueVisitor&)
+ * \sa Parser::parseValue(Parser::ValueVisitor&)
+ * \sa Parser::parseArray(Parser::ValueVisitor&)
  */
 template <typename Callback>
 [[nodiscard]] inline auto onNull(Callback callback) {
@@ -3288,9 +3288,9 @@ template <typename Callback>
  * \sa json::onNumber()
  * \sa json::onObject()
  * \sa json::onArray()
- * \sa Parser::parseFile(ValueVisitor&)
- * \sa Parser::parseValue(ValueVisitor&)
- * \sa Parser::parseArray(ValueVisitor&)
+ * \sa Parser::parseFile(Parser::ValueVisitor&)
+ * \sa Parser::parseValue(Parser::ValueVisitor&)
+ * \sa Parser::parseArray(Parser::ValueVisitor&)
  */
 template <typename Callback>
 [[nodiscard]] inline auto onBoolean(Callback callback) {
@@ -3315,9 +3315,9 @@ template <typename Callback>
  * \sa json::onNumber()
  * \sa json::onObject()
  * \sa json::onArray()
- * \sa Parser::parseFile(ValueVisitor&)
- * \sa Parser::parseValue(ValueVisitor&)
- * \sa Parser::parseArray(ValueVisitor&)
+ * \sa Parser::parseFile(Parser::ValueVisitor&)
+ * \sa Parser::parseValue(Parser::ValueVisitor&)
+ * \sa Parser::parseArray(Parser::ValueVisitor&)
  */
 template <typename Callback>
 [[nodiscard]] inline auto onString(Callback callback) {
@@ -3342,9 +3342,9 @@ template <typename Callback>
  * \sa json::onString()
  * \sa json::onObject()
  * \sa json::onArray()
- * \sa Parser::parseFile(ValueVisitor&)
- * \sa Parser::parseValue(ValueVisitor&)
- * \sa Parser::parseArray(ValueVisitor&)
+ * \sa Parser::parseFile(Parser::ValueVisitor&)
+ * \sa Parser::parseValue(Parser::ValueVisitor&)
+ * \sa Parser::parseArray(Parser::ValueVisitor&)
  */
 template <typename Callback>
 [[nodiscard]] inline auto onNumber(Callback callback) {
@@ -3369,9 +3369,9 @@ template <typename Callback>
  * \sa json::onString()
  * \sa json::onNumber()
  * \sa json::onArray()
- * \sa Parser::parseFile(ValueVisitor&)
- * \sa Parser::parseValue(ValueVisitor&)
- * \sa Parser::parseArray(ValueVisitor&)
+ * \sa Parser::parseFile(Parser::ValueVisitor&)
+ * \sa Parser::parseValue(Parser::ValueVisitor&)
+ * \sa Parser::parseArray(Parser::ValueVisitor&)
  */
 template <typename Callback>
 [[nodiscard]] inline auto onObject(Callback callback) {
@@ -3396,9 +3396,9 @@ template <typename Callback>
  * \sa json::onString()
  * \sa json::onNumber()
  * \sa json::onObject()
- * \sa Parser::parseFile(ValueVisitor&)
- * \sa Parser::parseValue(ValueVisitor&)
- * \sa Parser::parseArray(ValueVisitor&)
+ * \sa Parser::parseFile(Parser::ValueVisitor&)
+ * \sa Parser::parseValue(Parser::ValueVisitor&)
+ * \sa Parser::parseArray(Parser::ValueVisitor&)
  */
 template <typename Callback>
 [[nodiscard]] inline auto onArray(Callback callback) {
@@ -3418,7 +3418,7 @@ template <typename Callback>
  *
  * \throws any exception thrown by the move constructor of the callback type.
  *
- * \sa Parser::parseObject(ElementVisitor&)
+ * \sa Parser::parseObject(Parser::ElementVisitor&)
  */
 template <typename Callback>
 [[nodiscard]] inline auto onElement(Callback callback) {

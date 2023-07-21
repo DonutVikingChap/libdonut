@@ -81,7 +81,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * float.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -99,7 +99,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * vec2.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -117,7 +117,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * vec3.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -135,7 +135,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * vec4.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -153,7 +153,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * int.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -171,7 +171,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * ivec2.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -189,7 +189,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * ivec3.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -207,7 +207,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * ivec4.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -225,7 +225,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * uint.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -243,7 +243,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * uvec2.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -261,7 +261,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * uvec3.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -279,7 +279,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * uvec4.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -297,7 +297,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * mat2.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -315,7 +315,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * mat3.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.
@@ -333,7 +333,7 @@ public:
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
 	 * mat4.
 	 *
-	 * \param uniform shader variable to set.
+	 * \param parameter shader variable to set.
 	 * \param value new value to set the variable to.
 	 *
 	 * \throws std::bad_alloc on allocation failure.

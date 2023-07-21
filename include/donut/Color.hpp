@@ -345,7 +345,7 @@ public:
 	 * Add the component values of another color to the respective component
 	 * values of this color.
 	 *
-	 * \param color the other color to add to this color.
+	 * \param other the other color to add to this color.
 	 *
 	 * \return `*this`, for chaining.
 	 */
@@ -358,7 +358,7 @@ public:
 	 * Subtract the component values of another color from the respective
 	 * component values of this color.
 	 *
-	 * \param color the other color to subtract from this color.
+	 * \param other the other color to subtract from this color.
 	 *
 	 * \return `*this`, for chaining.
 	 */
@@ -371,7 +371,7 @@ public:
 	 * Multiply the component values of this color with the respective component
 	 * values of another color.
 	 *
-	 * \param color the other color to multiply this color by.
+	 * \param other the other color to multiply this color by.
 	 *
 	 * \return `*this`, for chaining.
 	 */
@@ -384,7 +384,7 @@ public:
 	 * Divide the component values of this color with the respective component
 	 * values of another color.
 	 *
-	 * \param color the other color to divide this color by.
+	 * \param other the other color to divide this color by.
 	 *
 	 * \return `*this`, for chaining.
 	 */
