@@ -1,3 +1,4 @@
+#include <donut/Time.hpp>
 #include <donut/application/Application.hpp>
 #include <donut/application/Error.hpp>
 #include <donut/application/Event.hpp>
@@ -337,10 +338,10 @@ void Application::run() {
 	latestMeasuredFps = 0u;
 	fpsCounter = 0u;
 	frameInfo.tickInfo.processedTickCount = 0u;
-	frameInfo.tickInfo.processedTickTime = 0.0f;
+	frameInfo.tickInfo.processedTickTime = {};
 	frameInfo.tickInterpolationAlpha = 0.0f;
-	frameInfo.elapsedTime = 0.0f;
-	frameInfo.deltaTime = 0.0f;
+	frameInfo.elapsedTime = {};
+	frameInfo.deltaTime = {};
 	running = true;
 
 #ifdef __EMSCRIPTEN__
@@ -395,7 +396,7 @@ bool Application::hasScreenKeyboardSupport() const noexcept {
 
 void Application::setFrameRateParameters(float tickRate, float minFps, float maxFps) {
 	tickClockInterval = static_cast<Uint64>(std::ceil(static_cast<float>(clockFrequency) / tickRate));
-	frameInfo.tickInfo.tickInterval = static_cast<float>(tickClockInterval) * clockInterval;
+	frameInfo.tickInfo.tickInterval = Time<float>::Duration{static_cast<float>(tickClockInterval) * clockInterval};
 	minFrameClockInterval = (maxFps == 0.0f) ? 0 : static_cast<Uint64>(std::ceil(static_cast<float>(clockFrequency) / maxFps));
 	maxTicksPerFrame = (minFps <= 0.0f || tickRate <= minFps) ? 1 : static_cast<Uint64>(tickRate / minFps);
 }
@@ -430,8 +431,8 @@ void Application::runFrame() {
 			fpsCounter = 0;
 		}
 
-		frameInfo.elapsedTime = static_cast<float>(currentClockTime - startClockTime) * clockInterval;
-		frameInfo.deltaTime = static_cast<float>(clockDeltaTime) * clockInterval;
+		frameInfo.elapsedTime = Time<float>::Duration{static_cast<float>(currentClockTime - startClockTime) * clockInterval};
+		frameInfo.deltaTime = Time<float>::Duration{static_cast<float>(clockDeltaTime) * clockInterval};
 
 		prepareForEvents(frameInfo);
 		for (SDL_Event event{}; SDL_PollEvent(&event) != 0;) {

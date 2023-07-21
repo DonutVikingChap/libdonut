@@ -39,7 +39,7 @@ Note: This library is currently a **work in progress** and makes no guarantees r
         - Provides a cleaner API than std::variant by adding the methods `is<T>()`, `as<T>()`, `get<T>()` and `get_if<T>()` as well as a freestanding `match` function.
         - Visitation is implemented through chaining of the conditional operator rather than virtual method dispatch, making it easier for compilers to generate a jump table than in most common std::variant implementations. This puts `match` on par with a raw switch statement in terms of performance.
         - Supports being used as a base class in user code.
-    - [Timer](include/donut/Timer.hpp) utility for counters that should trigger at a constant average interval, independent of the rate at which they are updated.
+    - [Time](include/donut/Time.hpp) duration wrapper including common utility functions for correctly handling discrete-time update loops.
     - [Base64](include/donut/base64.hpp) encoding and decoding.
     - [JSON](include/donut/json.hpp) utilities:
         - Writing/parsing to/from strings and iostreams.

@@ -2,6 +2,7 @@
 #define DONUT_AUDIO_SOUND_STAGE_HPP
 
 #include <donut/Resource.hpp>
+#include <donut/Time.hpp>
 #include <donut/audio/Listener.hpp>
 
 #include <glm/glm.hpp> // glm::...
@@ -89,7 +90,7 @@ public:
 	 * \note This function should typically be called once every frame during
 	 *       the application::Application::update() callback.
 	 */
-	void update(float deltaTime, const Listener& listener);
+	void update(Time<float> deltaTime, const Listener& listener);
 
 	/**
 	 * Create a new 3D sound instance and start playing it.
@@ -232,7 +233,7 @@ public:
 	 * \sa isSoundStopped()
 	 * \sa stopSound()
 	 */
-	void scheduleSoundStop(SoundInstanceId id, float timePointInSound);
+	void scheduleSoundStop(SoundInstanceId id, Time<float> timePointInSound);
 
 	/**
 	 * Schedule for a specific sound instance to pause itself when the playback
@@ -250,7 +251,7 @@ public:
 	 * \sa isSoundPaused()
 	 * \sa pauseSound()
 	 */
-	void scheduleSoundPause(SoundInstanceId id, float timePointInSound);
+	void scheduleSoundPause(SoundInstanceId id, Time<float> timePointInSound);
 
 	/**
 	 * Set the current playback time point for a specific sound instance.
@@ -265,7 +266,7 @@ public:
 	 * \note If the given sound instance doesn't exist, this function has no
 	 *       effect.
 	 */
-	void seekToSoundTime(SoundInstanceId id, float timePointInSound);
+	void seekToSoundTime(SoundInstanceId id, Time<float> timePointInSound);
 
 	/**
 	 * Set the current 3D position of a specific sound instance.
@@ -435,7 +436,7 @@ private:
 	using Engine = Resource<void*, EngineDeleter, nullptr>;
 
 	Engine engine{};
-	float time = 0.0f;
+	Time<float> time{};
 };
 
 } // namespace audio

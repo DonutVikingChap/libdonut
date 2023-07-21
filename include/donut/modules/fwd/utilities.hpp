@@ -98,8 +98,8 @@ struct Box;
 template <typename T>
 struct Rectangle;
 
-template <typename Duration>
-class Timer;
+template <typename T, typename Period>
+class Time;
 
 namespace unicode {
 

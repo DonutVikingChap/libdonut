@@ -20,6 +20,7 @@
 
 #include <array>                        // std::array
 #include <charconv>                     // std::from_chars_result, std::from_chars
+#include <chrono>                       // std::chrono_literals
 #include <cmath>                        // std::atan2
 #include <concepts>                     // std::integral
 #include <cstddef>                      // std::size_t
@@ -42,6 +43,8 @@
 #include <unordered_map>                // std::unordered_map
 
 namespace {
+
+using namespace std::chrono_literals;
 
 struct GameOptions {
 	app::ApplicationOptions applicationOptions{
@@ -141,8 +144,8 @@ protected:
 		carrotCakeCurrentPosition.z -= scrollInput * 0.25f * sprintInput;
 
 		const bool triggerInput = inputManager.isPressed(Action::CANCEL);
-		counterA += timerA.countUpLoopTrigger(frameInfo.deltaTime, 1.0f, triggerInput);
-		counterB += timerB.countDownLoopTrigger(frameInfo.deltaTime, 1.0f, triggerInput);
+		counterA += timerA.countUpLoop(frameInfo.deltaTime, 1s, triggerInput);
+		counterB += timerB.countDownLoop(frameInfo.deltaTime, 1s, triggerInput);
 	}
 
 	void tick(app::TickInfo tickInfo) override {
@@ -441,7 +444,7 @@ private:
 						.looping = true,
 					});
 				musicId = soundStage->createPausedSoundInBackground(*music);
-				soundStage->seekToSoundTime(musicId, 46.7f);
+				soundStage->seekToSoundTime(musicId, 46700ms);
 				soundStage->resumeSound(musicId);
 			}
 		}
@@ -568,7 +571,7 @@ private:
 		renderPass.draw(gfx::TextInstance{
 			.font = &mainFont,
 			.text = mainFont.shapeText(renderer, 8,
-				std::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", timerA.getTime(), counterA, timerB.getTime(), counterB)),
+				std::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", static_cast<float>(timerA), counterA, static_cast<float>(timerB), counterB)),
 			.position{410.0f, 240.0f},
 		});
 
@@ -703,10 +706,10 @@ private:
 	glm::vec3 carrotCakeDisplayPosition{0.0f, 0.0f, 0.0f};
 	glm::vec2 carrotCakeScale{1.0f, 1.0f};
 	glm::vec3 carrotCakeVelocity{0.0f, 0.0f, 0.0f};
-	Timer<float> timerA{};
-	Timer<float> timerB{};
-	unsigned counterA = 0u;
-	unsigned counterB = 0u;
+	Time<float> timerA{};
+	Time<float> timerB{};
+	std::size_t counterA = 0;
+	std::size_t counterB = 0;
 	LooseQuadtree<std::forward_list<Circle<float>>> quadtree{
 		Box<2, float>{.min{15.0f, 15.0f}, .max{15.0f + 380.0f, 15.0f + 450.0f}},
 		glm::vec2{32.0f, 32.0f},

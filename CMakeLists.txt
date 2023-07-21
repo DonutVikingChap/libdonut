@@ -76,7 +76,7 @@ if(DONUT_ENABLE_LIBRARY)
 		"include/donut/reflection.hpp"
 		"include/donut/Resource.hpp"
 		"include/donut/shapes.hpp"
-		"include/donut/Timer.hpp"
+		"include/donut/Time.hpp"
 		"include/donut/unicode.hpp"
 		"include/donut/Variant.hpp"
 		"include/donut/xml.hpp"

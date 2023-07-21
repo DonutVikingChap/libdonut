@@ -1,6 +1,9 @@
 #ifndef DONUT_APPLICATION_APPLICATION_HPP
 #define DONUT_APPLICATION_APPLICATION_HPP
 
+#include <donut/Time.hpp>
+
+#include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint64_t
 #include <glm/glm.hpp> // glm::...
 #include <string>      // std::string
@@ -18,13 +21,13 @@ struct TickInfo {
 	 * Number of ticks that have been fully processed since the start of the
 	 * application.
 	 */
-	unsigned processedTickCount;
+	std::size_t processedTickCount;
 
 	/**
-	 * The accumulated time, in seconds, of ticks that had been processed since
-	 * the start of the application at the beginning of the current tick.
+	 * The accumulated time, in seconds, of all ticks that had been processed
+	 * since the start of the application at the beginning of the current tick.
 	 */
-	float processedTickTime;
+	Time<float> processedTickTime;
 
 	/**
 	 * The average time, in seconds, that should elapse between each tick.
@@ -44,7 +47,7 @@ struct TickInfo {
 	 * Application::display() callback in order to smooth out the result of the
 	 * fixed-rate ticks when applicable.
 	 */
-	float tickInterval;
+	Time<float> tickInterval;
 };
 
 /**
@@ -66,13 +69,13 @@ struct FrameInfo {
 	 * The time, in seconds, that had elapsed since the start of the application
 	 * at the beginning of the current frame.
 	 */
-	float elapsedTime;
+	Time<float> elapsedTime;
 
 	/**
 	 * The time, in seconds, elapsed between the beginning of the previous frame
 	 * and the beginning of the current frame.
 	 */
-	float deltaTime;
+	Time<float> deltaTime;
 };
 
 /**

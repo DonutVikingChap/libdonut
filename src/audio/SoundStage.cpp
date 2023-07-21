@@ -1,3 +1,4 @@
+#include <donut/Time.hpp>
 #include <donut/audio/Error.hpp>
 #include <donut/audio/Listener.hpp>
 #include <donut/audio/Sound.hpp>
@@ -14,14 +15,14 @@ SoundStage::SoundStage(const SoundStageOptions& options)
 	: engine(new SoLoud::Soloud{}) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	if (const SoLoud::result errorCode = soloud.init(); errorCode != SoLoud::SO_NO_ERROR) {
-		throw Error{"Failed to initialize sound manager", errorCode};
+		throw Error{"Failed to initialize sound stage", errorCode};
 	}
 	setVolume(options.volume);
 	setSpeedOfSound(options.speedOfSound);
 	setMaxSimultaneousSounds(options.maxSimultaneousSounds);
 }
 
-void SoundStage::update(float deltaTime, const Listener& listener) {
+void SoundStage::update(Time<float> deltaTime, const Listener& listener) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 
 	time += deltaTime;
@@ -76,17 +77,17 @@ void SoundStage::resumeSound(SoundInstanceId id) {
 	soloud.setPause(id, false);
 }
 
-void SoundStage::scheduleSoundStop(SoundInstanceId id, float timePointInSound) {
+void SoundStage::scheduleSoundStop(SoundInstanceId id, Time<float> timePointInSound) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	soloud.scheduleStop(id, timePointInSound);
 }
 
-void SoundStage::scheduleSoundPause(SoundInstanceId id, float timePointInSound) {
+void SoundStage::scheduleSoundPause(SoundInstanceId id, Time<float> timePointInSound) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	soloud.schedulePause(id, timePointInSound);
 }
 
-void SoundStage::seekToSoundTime(SoundInstanceId id, float timePointInSound) {
+void SoundStage::seekToSoundTime(SoundInstanceId id, Time<float> timePointInSound) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	soloud.seek(id, timePointInSound);
 }

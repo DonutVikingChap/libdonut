@@ -55,7 +55,7 @@ using donut::Box; // NOLINT(misc-unused-using-decls)
 
 using donut::Rectangle; // NOLINT(misc-unused-using-decls)
 
-using donut::Timer; // NOLINT(misc-unused-using-decls)
+using donut::Time; // NOLINT(misc-unused-using-decls)
 
 using donut::Monostate; // NOLINT(misc-unused-using-decls)
 
