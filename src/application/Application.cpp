@@ -3,7 +3,6 @@
 #include <donut/application/Error.hpp>
 #include <donut/application/Event.hpp>
 #include <donut/application/Input.hpp>
-#include <donut/graphics/opengl.hpp>
 
 //
 #include <SDL.h> // SDL..., Uint8, Uint32, Uint64
