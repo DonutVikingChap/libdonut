@@ -413,17 +413,17 @@ TEST_SUITE("JSON") {
 					{"backwardsCompatible", "with JSON"},
 				}}.toString();
 			constexpr std::string_view EXPECTED_STRING =
-				"{\n"
-				"    \"andIn\": [\"arrays\"],\n"
-				"    \"andTrailing\": 8675309,\n"
-				"    \"backwardsCompatible\": \"with JSON\",\n"
-				"    \"hexadecimal\": 912559,\n"
-				"    \"leadingDecimalPoint\": 0.8675309,\n"
-				"    \"lineBreaks\": \"Look, Mom! No \\\\n's!\",\n"
-				"    \"positiveSign\": 1,\n"
-				"    \"singleQuotes\": \"I can use \\\"double quotes\\\" here\",\n"
-				"    \"trailingComma\": \"in objects\",\n"
-				"    \"unquoted\": \"and you can quote me on that\"\n"
+				"{\r\n"
+				"    \"andIn\": [\"arrays\"],\r\n"
+				"    \"andTrailing\": 8675309,\r\n"
+				"    \"backwardsCompatible\": \"with JSON\",\r\n"
+				"    \"hexadecimal\": 912559,\r\n"
+				"    \"leadingDecimalPoint\": 0.8675309,\r\n"
+				"    \"lineBreaks\": \"Look, Mom! No \\\\n's!\",\r\n"
+				"    \"positiveSign\": 1,\r\n"
+				"    \"singleQuotes\": \"I can use \\\"double quotes\\\" here\",\r\n"
+				"    \"trailingComma\": \"in objects\",\r\n"
+				"    \"unquoted\": \"and you can quote me on that\"\r\n"
 				"}";
 			CHECK(string == EXPECTED_STRING);
 		}
@@ -450,8 +450,8 @@ TEST_SUITE("JSON") {
 					{"image", json::Object{{"width", 1920}, {"height", 1080}, {"aspect-ratio", "16:9"}}},
 				}}.toString();
 			constexpr std::string_view EXPECTED_STRING =
-				"{\n"
-				"    \"image\": { \"aspect-ratio\": \"16:9\", \"height\": 1080, \"width\": 1920 }\n"
+				"{\r\n"
+				"    \"image\": { \"aspect-ratio\": \"16:9\", \"height\": 1080, \"width\": 1920 }\r\n"
 				"}";
 			CHECK(string == EXPECTED_STRING);
 		}
@@ -463,9 +463,9 @@ TEST_SUITE("JSON") {
 					json::Object{{"name", "Jane"}, {"age", 32}},
 				}}.toString();
 			constexpr std::string_view EXPECTED_STRING =
-				"[\n"
-				"    { \"age\": 27, \"name\": \"Joe\" },\n"
-				"    { \"age\": 32, \"name\": \"Jane\" }\n"
+				"[\r\n"
+				"    { \"age\": 27, \"name\": \"Joe\" },\r\n"
+				"    { \"age\": 32, \"name\": \"Jane\" }\r\n"
 				"]";
 			CHECK(string == EXPECTED_STRING);
 		}
@@ -489,9 +489,9 @@ TEST_SUITE("JSON") {
 					json::Array{4, "five", 0x6},
 				}}.toString();
 			constexpr std::string_view EXPECTED_STRING =
-				"[\n"
-				"    [1, true, \"three\"],\n"
-				"    [4, \"five\", 6]\n"
+				"[\r\n"
+				"    [1, true, \"three\"],\r\n"
+				"    [4, \"five\", 6]\r\n"
 				"]";
 			CHECK(string == EXPECTED_STRING);
 		}
@@ -517,11 +517,11 @@ TEST_SUITE("JSON") {
 					{"withExponent", 123e-45},
 				}}.toString();
 			constexpr std::string_view EXPECTED_STRING =
-				"{\n"
-				"    \"integer\": 123,\n"
-				"    \"onlyFractionPart\": 0.45,\n"
-				"    \"withExponent\": 1.23e-43,\n"
-				"    \"withFractionPart\": 123.45\n"
+				"{\r\n"
+				"    \"integer\": 123,\r\n"
+				"    \"onlyFractionPart\": 0.45,\r\n"
+				"    \"withExponent\": 1.23e-43,\r\n"
+				"    \"withFractionPart\": 123.45\r\n"
 				"}";
 			CHECK(string == EXPECTED_STRING);
 		}

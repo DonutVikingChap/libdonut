@@ -7,13 +7,18 @@
 
 #include <algorithm>        // std::sort, std::equal_range, std::lower_bound, std::upper_bound
 #include <array>            // std::array
+#include <charconv>         // std::from_chars_result, std::from_chars
+#include <cmath>            // std::isnan, std::isinf, std::signbit
 #include <compare>          // std::partial_ordering, std::compare_partial_order_fallback
 #include <cstddef>          // std::size_t, std::nullptr_t
-#include <cstdint>          // std::uint8_t
+#include <cstdint>          // std::uint8_t, std::uint32_t
+#include <cstdlib>          // std::strtoull, std::strtod
 #include <cstring>          // std::memcpy
+#include <format>           // std::format_to
 #include <initializer_list> // std::initializer_list
 #include <istream>          // std::istream
-#include <iterator>         // std::begin, std::end, std::istreambuf_iterator
+#include <iterator>         // std::begin, std::end, std::istreambuf_iterator, std::ostreambuf_iterator
+#include <limits>           // std::numeric_limits
 #include <numeric>          // std::accumulate
 #include <optional>         // std::optional
 #include <ostream>          // std::ostream
@@ -22,6 +27,7 @@
 #include <stdexcept>        // std::runtime_error, std::out_of_range
 #include <string>           // std::...string
 #include <string_view>      // std::...string_view
+#include <system_error>     // std::errc
 #include <tuple>            // std::forward_as_tuple
 #include <type_traits>      // std::is_same_v, std::is_arithmetic_v, std::is_pointer_v, std::is_aggregate_v, std::is_constructible_v, std::remove_cvref_t
 #include <utility>          // std::pair, std::move, std::forward, std::piecewise_construct
@@ -33,8 +39,15 @@ namespace json {
 namespace detail {
 
 template <typename T>
-concept number = std::is_arithmetic_v<T> && !
-std::is_same_v<T, bool> && !std::is_same_v<T, char> && !std::is_same_v<T, char8_t> && !std::is_same_v<T, char16_t> && !std::is_same_v<T, char32_t> && !std::is_same_v<T, wchar_t>;
+concept number = std::is_arithmetic_v<T> && !std::is_same_v<T, bool> && !std::is_same_v<T, char> && !std::is_same_v<T, char8_t> && !std::is_same_v<T, char16_t> &&
+                 !std::is_same_v<T, char32_t> && !std::is_same_v<T, wchar_t>;
+
+// clang-format off
+struct AlwaysTrue { constexpr bool operator()(const auto&...) const noexcept { return true; } };
+struct Get { constexpr const auto& operator()(const auto& value) const noexcept { return value; } };
+struct GetFirst { constexpr const auto& operator()(const auto& kv) const noexcept { return kv.first; } };
+struct GetSecond { constexpr const auto& operator()(const auto& kv) const noexcept { return kv.second; } };
+// clang-format on
 
 } // namespace detail
 
@@ -53,6 +66,15 @@ struct SourceLocation {
 	 * particular column.
 	 */
 	std::size_t columnNumber;
+
+	/**
+	 * Compare this source location to another for equality.
+	 *
+	 * \param other the source location to compare this one to.
+	 *
+	 * \return true if the source locations are equal, false otherwise.
+	 */
+	[[nodiscard]] constexpr bool operator==(const SourceLocation& other) const = default;
 };
 
 /**
@@ -503,9 +525,9 @@ public:
 	/**
 	 * Get a JSON string representation of the value.
 	 *
-	 * \return a JSON string containing a representation of the value that is as
-	 *         if the value had been serialized to an ASCII output stream with
-	 *         the default SerializationOptions.
+	 * \return a JSON string containing a representation of the value as it
+	 *         would be if it had been serialized to an output stream with the
+	 *         default SerializationOptions.
 	 *
 	 * \throws Error on failure to serialize the value.
 	 * \throws std::bad_alloc on allocation failure.
@@ -535,77 +557,487 @@ public:
 	}
 };
 
-namespace detail {
+/**
+ * Check if a Unicode code point is considered to be whitespace in JSON5.
+ *
+ * \param codePoint code point value to check.
+ *
+ * \return true if the code point is considered whitespace, false otherwise.
+ */
+[[nodiscard]] constexpr bool isWhitespaceCharacter(char32_t codePoint) noexcept {
+	return codePoint == '\t' || codePoint == '\n' || codePoint == '\v' || codePoint == '\f' || codePoint == '\r' || codePoint == ' ' || codePoint == 0x00A0 ||
+	       codePoint == 0x1680 || (codePoint >= 0x2000 && codePoint <= 0x200A) || codePoint == 0x2028 || codePoint == 0x2029 || codePoint == 0x202F || codePoint == 0x205F ||
+	       codePoint == 0x3000 || codePoint == 0xFEFF;
+}
 
+/**
+ * Check if a Unicode code point is considered to be punctuation in JSON5.
+ *
+ * \param codePoint code point value to check.
+ *
+ * \return true if the code point is considered punctuation, false otherwise.
+ */
+[[nodiscard]] constexpr bool isPunctuationCharacter(char32_t codePoint) noexcept {
+	return codePoint == ',' || codePoint == ':' || codePoint == '[' || codePoint == ']' || codePoint == '{' || codePoint == '}';
+}
+
+/**
+ * Check if a Unicode code point marks the beginning of a line terminator
+ * sequence in JSON5.
+ *
+ * \param codePoint code point value to check.
+ *
+ * \return true if the code point is considered a line terminator, false
+ *         otherwise.
+ */
+[[nodiscard]] constexpr bool isLineTerminatorCharacter(char32_t codePoint) noexcept {
+	return codePoint == '\n' || codePoint == '\r' || codePoint == 0x2028 || codePoint == 0x2029;
+}
+
+/**
+ * Type of a scanned JSON5 token.
+ */
 enum class TokenType : std::uint8_t {
-	END_OF_FILE,
-	IDENTIFIER_NULL,
-	IDENTIFIER_FALSE,
-	IDENTIFIER_TRUE,
-	IDENTIFIER_NAME,
-	PUNCTUATOR_COMMA,
-	PUNCTUATOR_COLON,
-	PUNCTUATOR_OPEN_SQUARE_BRACKET,
-	PUNCTUATOR_CLOSE_SQUARE_BRACKET,
-	PUNCTUATOR_OPEN_CURLY_BRACE,
-	PUNCTUATOR_CLOSE_CURLY_BRACE,
-	STRING,
-	NUMBER_BINARY,
-	NUMBER_OCTAL,
-	NUMBER_DECIMAL,
-	NUMBER_HEXADECIMAL,
-	NUMBER_POSITIVE_INFINITY,
-	NUMBER_NEGATIVE_INFINITY,
-	NUMBER_POSITIVE_NAN,
-	NUMBER_NEGATIVE_NAN,
+	END_OF_FILE,                     ///< End-of-file marker.
+	IDENTIFIER_NULL,                 ///< Keyword null.
+	IDENTIFIER_FALSE,                ///< Keyword false.
+	IDENTIFIER_TRUE,                 ///< Keyword true.
+	IDENTIFIER_NAME,                 ///< Unquoted identifier, e.g. abc.
+	PUNCTUATOR_COMMA,                ///< Comma ',' symbol.
+	PUNCTUATOR_COLON,                ///< Colon ':' symbol.
+	PUNCTUATOR_OPEN_SQUARE_BRACKET,  ///< Open square bracket '[' symbol.
+	PUNCTUATOR_CLOSE_SQUARE_BRACKET, ///< Closing square bracket ']' symbol.
+	PUNCTUATOR_OPEN_CURLY_BRACE,     ///< Open curly brace '{' symbol.
+	PUNCTUATOR_CLOSE_CURLY_BRACE,    ///< Closing curly brace '}' symbol.
+	STRING,                          ///< Quoted string literal, e.g. "abc".
+	NUMBER_BINARY,                   ///< Binary number literal, e.g. 0b0000000111111111.
+	NUMBER_OCTAL,                    ///< Octal number literal, e.g. 0777.
+	NUMBER_DECIMAL,                  ///< Decimal number literal, e.g. 511.
+	NUMBER_HEXADECIMAL,              ///< Hexadecimal number literal, e.g. 0x01FF.
+	NUMBER_POSITIVE_INFINITY,        ///< Keyword Infinity.
+	NUMBER_NEGATIVE_INFINITY,        ///< Keyword -Infinity.
+	NUMBER_POSITIVE_NAN,             /// Keyword NaN.
+	NUMBER_NEGATIVE_NAN,             /// Keyword -NaN.
 };
 
-template <typename It>
+/**
+ * Token data scanned from JSON.
+ */
 struct Token {
-	String string;
-	SourceLocation source;
-	TokenType type;
+	String string;         ///< Scanned string.
+	SourceLocation source; ///< Location of the scanned string in the JSON source string.
+	TokenType type;        ///< Scanned token type.
 };
 
+/**
+ * Lexical analyzer for scanning and tokenizing input in the JSON5 format.
+ *
+ * \tparam It iterator type of the underlying input source. Must be an input
+ *         iterator.
+ */
 template <typename It>
 class Lexer {
 public:
-	[[nodiscard]] constexpr bool isWhitespaceCharacter(char32_t codePoint) noexcept {
-		return codePoint == '\t' || codePoint == '\n' || codePoint == '\v' || codePoint == '\f' || codePoint == '\r' || codePoint == ' ' || codePoint == 0x00A0 ||
-		       codePoint == 0x1680 || (codePoint >= 0x2000 && codePoint <= 0x200A) || codePoint == 0x2028 || codePoint == 0x2029 || codePoint == 0x202F || codePoint == 0x205F ||
-		       codePoint == 0x3000 || codePoint == 0xFEFF;
+	/**
+	 * Construct a lexer with a Unicode iterator pair as input.
+	 *
+	 * \param it iterator to the beginning of the JSON input to scan.
+	 * \param end sentinel that marks the end of the JSON input to scan.
+	 * \param source initial source location corresponding to the current
+	 *               position of the iterator.
+	 *
+	 * \warning The iterator pair [it, end) must form a valid forward range.
+	 */
+	Lexer(unicode::UTF8Iterator<It> it, unicode::UTF8Sentinel end, const SourceLocation& source)
+		: it(std::move(it))
+		, end(end)
+		, source(source) {}
+
+	/**
+	 * Scan and consume the next token from the input.
+	 *
+	 * This advances the internal state of the lexer.
+	 *
+	 * \return the scanned token.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 */
+	Token scan() {
+		skipWhitespace();
+		if (hasReachedEnd()) {
+			return {.string{}, .source = source, .type = TokenType::END_OF_FILE};
+		}
+		switch (peek()) {
+			case '{': [[fallthrough]];
+			case '}': [[fallthrough]];
+			case '[': [[fallthrough]];
+			case ']': [[fallthrough]];
+			case ':': [[fallthrough]];
+			case ',': return scanPunctuator();
+			case '\"': [[fallthrough]];
+			case '\'': return scanString();
+			case '0': [[fallthrough]];
+			case '1': [[fallthrough]];
+			case '2': [[fallthrough]];
+			case '3': [[fallthrough]];
+			case '4': [[fallthrough]];
+			case '5': [[fallthrough]];
+			case '6': [[fallthrough]];
+			case '7': [[fallthrough]];
+			case '8': [[fallthrough]];
+			case '9': [[fallthrough]];
+			case '+': [[fallthrough]];
+			case '-': [[fallthrough]];
+			case '.': return scanNumber();
+			default: return scanIdentifier();
+		}
 	}
-
-	[[nodiscard]] constexpr bool isPunctuationCharacter(char32_t codePoint) noexcept {
-		return codePoint == ',' || codePoint == ':' || codePoint == '[' || codePoint == ']' || codePoint == '{' || codePoint == '}';
-	}
-
-	[[nodiscard]] constexpr bool isLineTerminatorCharacter(char32_t codePoint) noexcept {
-		return codePoint == '\n' || codePoint == '\r' || codePoint == 0x2028 || codePoint == 0x2029;
-	}
-
-	Lexer(unicode::UTF8Iterator<It> it, unicode::UTF8Sentinel end, const SourceLocation& source);
-
-	Token<It> scan();
 
 private:
-	void skipWhitespace();
+	void skipWhitespace() {
+		while (!hasReachedEnd()) {
+			if (isWhitespaceCharacter(peek())) {
+				if (isLineTerminatorCharacter(peek())) {
+					skipLineTerminatorSequence();
+				} else {
+					advance();
+				}
+			} else if (peek() == '/') {
+				advance();
+				if (hasReachedEnd()) {
+					throw Error{"Invalid token.", source};
+				}
+				if (peek() == '/') {
+					advance();
+					while (!hasReachedEnd()) {
+						if (isLineTerminatorCharacter(peek())) {
+							skipLineTerminatorSequence();
+							break;
+						}
+						advance();
+					}
+				} else if (peek() == '*') {
+					advance();
+					while (!hasReachedEnd()) {
+						if (isLineTerminatorCharacter(peek())) {
+							skipLineTerminatorSequence();
+						} else if (peek() == '*') {
+							advance();
+							if (!hasReachedEnd() && peek() == '/') {
+								advance();
+								break;
+							}
+						} else {
+							advance();
+						}
+					}
+				} else {
+					throw Error{"Invalid token.", source};
+				}
+			} else {
+				break;
+			}
+		}
+	}
 
-	void skipLineTerminatorSequence();
+	void skipLineTerminatorSequence() {
+		if (peek() == '\r') {
+			advance();
+			if (!hasReachedEnd() && peek() == '\n') {
+				advance();
+			}
+		} else {
+			advance();
+		}
+		++source.lineNumber;
+		source.columnNumber = 1;
+	}
 
-	void advance();
+	void advance() {
+		if (!currentCodePoint) {
+			++it;
+		}
+		currentCodePoint.reset();
+		++source.columnNumber;
+	}
 
-	[[nodiscard]] bool hasReachedEnd() const noexcept;
+	[[nodiscard]] bool hasReachedEnd() const noexcept {
+		return it == end && !currentCodePoint;
+	}
 
-	[[nodiscard]] char32_t peek() const;
-	[[nodiscard]] std::optional<char32_t> lookahead() const;
+	[[nodiscard]] char32_t peek() const {
+		if (!currentCodePoint) {
+			currentCodePoint = *it++;
+		}
+		return *currentCodePoint;
+	}
 
-	[[nodiscard]] Token<It> scanPunctuator();
-	[[nodiscard]] Token<It> scanString();
-	[[nodiscard]] Token<It> scanNumber();
-	[[nodiscard]] Token<It> scanIdentifier();
+	[[nodiscard]] std::optional<char32_t> lookahead() const {
+		if (!currentCodePoint) {
+			currentCodePoint = *it++;
+		}
+		if (it != end) {
+			return *it;
+		}
+		return {};
+	}
 
-	void scanNumericEscapeSequence(String& output, std::size_t minDigitCount, std::size_t maxDigitCount, int radix, bool (*isDigit)(char32_t) noexcept);
+	[[nodiscard]] Token scanPunctuator() {
+		String string{static_cast<char>(peek())};
+		const SourceLocation punctuatorSource = source;
+		TokenType type{};
+		switch (peek()) {
+			case ',': type = TokenType::PUNCTUATOR_COMMA; break;
+			case ':': type = TokenType::PUNCTUATOR_COLON; break;
+			case '[': type = TokenType::PUNCTUATOR_OPEN_SQUARE_BRACKET; break;
+			case ']': type = TokenType::PUNCTUATOR_CLOSE_SQUARE_BRACKET; break;
+			case '{': type = TokenType::PUNCTUATOR_OPEN_CURLY_BRACE; break;
+			case '}': type = TokenType::PUNCTUATOR_CLOSE_CURLY_BRACE; break;
+			default: break;
+		}
+		advance();
+		return {.string = std::move(string), .source = punctuatorSource, .type = type};
+	}
+
+	[[nodiscard]] Token scanString() {
+		const char32_t quoteCharacter = peek();
+		String string{};
+		const SourceLocation stringSource = source;
+		advance();
+		while (!hasReachedEnd()) {
+			if (!unicode::isValidCodePoint(peek())) {
+				throw Error{"Invalid UTF-8.", source};
+			}
+			if (peek() == quoteCharacter) {
+				advance();
+				return {.string = std::move(string), .source = stringSource, .type = TokenType::STRING};
+			}
+			if (isLineTerminatorCharacter(peek())) {
+				throw Error{"Unexpected line terminator in string.", source};
+			}
+			if (peek() != '\\') {
+				const unicode::EncodeUTF8FromCodePointResult codePointUTF8 = unicode::encodeUTF8FromCodePoint(peek());
+				string.append(std::string_view{reinterpret_cast<const char*>(codePointUTF8.codeUnits.data()), codePointUTF8.size});
+				advance();
+				continue;
+			}
+			advance();
+			if (hasReachedEnd()) {
+				throw Error{"Empty escape sequence.", source};
+			}
+			if (isLineTerminatorCharacter(peek())) {
+				skipLineTerminatorSequence();
+				continue;
+			}
+			switch (peek()) {
+				case '\"': string.push_back('\"'); break;
+				case '\'': string.push_back('\''); break;
+				case '\\': string.push_back('\\'); break;
+				case 'b': string.push_back('\b'); break;
+				case 'f': string.push_back('\f'); break;
+				case 'n': string.push_back('\n'); break;
+				case 'r': string.push_back('\r'); break;
+				case 't': string.push_back('\t'); break;
+				case 'v': string.push_back('\v'); break;
+				case '0': [[fallthrough]];
+				case '1': [[fallthrough]];
+				case '2': [[fallthrough]];
+				case '3': [[fallthrough]];
+				case '4': [[fallthrough]];
+				case '5': [[fallthrough]];
+				case '6': [[fallthrough]];
+				case '7': [[fallthrough]];
+				case '8': [[fallthrough]];
+				case '9': scanNumericEscapeSequence(string, 1, 3, 8, [](char32_t codePoint) noexcept -> bool { return (codePoint >= '0' && codePoint <= '7'); }); continue;
+				case 'x':
+					scanNumericEscapeSequence(string, 2, 2, 16, [](char32_t codePoint) noexcept -> bool {
+						return (codePoint >= '0' && codePoint <= '9') || (codePoint >= 'a' && codePoint <= 'f') || (codePoint >= 'A' && codePoint <= 'F');
+					});
+					continue;
+				case 'u':
+					scanNumericEscapeSequence(string, 4, 4, 16, [](char32_t codePoint) noexcept -> bool {
+						return (codePoint >= '0' && codePoint <= '9') || (codePoint >= 'a' && codePoint <= 'f') || (codePoint >= 'A' && codePoint <= 'F');
+					});
+					continue;
+				case 'U':
+					scanNumericEscapeSequence(string, 8, 8, 16, [](char32_t codePoint) noexcept -> bool {
+						return (codePoint >= '0' && codePoint <= '9') || (codePoint >= 'a' && codePoint <= 'f') || (codePoint >= 'A' && codePoint <= 'F');
+					});
+					continue;
+				default: {
+					const unicode::EncodeUTF8FromCodePointResult codePointUTF8 = unicode::encodeUTF8FromCodePoint(peek());
+					string.append(std::string_view{reinterpret_cast<const char*>(codePointUTF8.codeUnits.data()), codePointUTF8.size});
+					break;
+				}
+			}
+			advance();
+		}
+		throw Error{"Missing end of string quote character.", source};
+	}
+
+	[[nodiscard]] Token scanNumber() {
+		String string{};
+		const SourceLocation numberSource = source;
+		bool negative = false;
+		if (peek() == '+') {
+			advance();
+		} else if (peek() == '-') {
+			string.push_back('-');
+			advance();
+			negative = true;
+		}
+		if (hasReachedEnd()) {
+			throw Error{"Missing number.", source};
+		}
+		if (peek() == 'I') {
+			if (scanIdentifier().type == TokenType::NUMBER_POSITIVE_INFINITY) {
+				return {.string{}, .source = numberSource, .type = (negative) ? TokenType::NUMBER_NEGATIVE_INFINITY : TokenType::NUMBER_POSITIVE_INFINITY};
+			}
+			throw Error{"Invalid number.", numberSource};
+		}
+		if (peek() == 'N') {
+			if (scanIdentifier().type == TokenType::NUMBER_POSITIVE_NAN) {
+				return {.string{}, .source = numberSource, .type = (negative) ? TokenType::NUMBER_NEGATIVE_NAN : TokenType::NUMBER_POSITIVE_NAN};
+			}
+			throw Error{"Invalid number.", numberSource};
+		}
+		TokenType type = TokenType::NUMBER_DECIMAL;
+		if (!hasReachedEnd() && peek() == '0') {
+			string.push_back('0');
+			advance();
+			if (!hasReachedEnd() && (peek() == 'b' || peek() == 'B')) {
+				string.push_back('b');
+				advance();
+				type = TokenType::NUMBER_BINARY;
+			} else if (!hasReachedEnd() && (peek() == 'x' || peek() == 'X')) {
+				string.push_back('x');
+				advance();
+				type = TokenType::NUMBER_HEXADECIMAL;
+			} else if (hasReachedEnd() || peek() != '.') {
+				type = TokenType::NUMBER_OCTAL;
+			}
+		}
+		bool eNotation = false;
+		bool fraction = false;
+		while (!hasReachedEnd()) {
+			if (peek() == '.') {
+				if (lookahead() == '.') {
+					break;
+				}
+				if (type != TokenType::NUMBER_DECIMAL) {
+					break;
+				}
+				if (eNotation) {
+					throw Error{"Decimal point in E notation exponent.", source};
+				}
+				if (fraction) {
+					throw Error{"Multiple decimal points in number.", source};
+				}
+				string.push_back('.');
+				advance();
+				fraction = true;
+			} else if ((peek() == 'e' || peek() == 'E') && type != TokenType::NUMBER_HEXADECIMAL) {
+				if (type != TokenType::NUMBER_DECIMAL) {
+					break;
+				}
+				if (eNotation) {
+					throw Error{"Multiple exponent symbols in E notation.", source};
+				}
+				string.push_back('e');
+				advance();
+				eNotation = true;
+				fraction = true;
+				if (hasReachedEnd()) {
+					throw Error{"Missing exponent in E notation.", source};
+				}
+				if (peek() >= '0' && peek() <= '9') {
+					string.push_back(static_cast<char>(peek()));
+					advance();
+				} else if ((peek() == '+' || peek() == '-')) {
+					string.push_back(static_cast<char>(peek()));
+					advance();
+					if (!hasReachedEnd() && peek() >= '0' && peek() <= '9') {
+						string.push_back(static_cast<char>(peek()));
+						advance();
+					} else {
+						throw Error{"Missing exponent in E notation.", source};
+					}
+				}
+			} else if (                                                                    //
+				(type == TokenType::NUMBER_BINARY && (peek() == '0' || peek() == '1')) ||  //
+				(type == TokenType::NUMBER_OCTAL && (peek() >= '0' && peek() <= '7')) ||   //
+				(type == TokenType::NUMBER_DECIMAL && (peek() >= '0' && peek() <= '9')) || //
+				(type == TokenType::NUMBER_HEXADECIMAL && ((peek() >= '0' && peek() <= '9') || (peek() >= 'a' && peek() <= 'f') || (peek() >= 'A' && peek() <= 'F')))) {
+				string.push_back(static_cast<char>(peek()));
+				advance();
+			} else if (peek() == '_') {
+				advance();
+			} else {
+				break;
+			}
+		}
+		if (!hasReachedEnd()) {
+			if (!isWhitespaceCharacter(peek()) && !isPunctuationCharacter(peek()) && peek() != '\"' && peek() != '\'' && peek() != '/') {
+				throw Error{"Invalid character after number.", source};
+			}
+		}
+		return {.string = std::move(string), .source = numberSource, .type = type};
+	}
+
+	[[nodiscard]] Token scanIdentifier() {
+		String string{};
+		const SourceLocation identifierSource = source;
+		do {
+			if (!unicode::isValidCodePoint(peek())) {
+				throw Error{"Invalid UTF-8.", source};
+			}
+			const unicode::EncodeUTF8FromCodePointResult codePointUTF8 = unicode::encodeUTF8FromCodePoint(peek());
+			string.append(std::string_view{reinterpret_cast<const char*>(codePointUTF8.codeUnits.data()), codePointUTF8.size});
+			advance();
+		} while (!hasReachedEnd() && !isWhitespaceCharacter(peek()) && !isPunctuationCharacter(peek()) && peek() != '\"' && peek() != '\'' && peek() != '/');
+		TokenType type = TokenType::IDENTIFIER_NAME;
+		if (string == "null") {
+			string = {};
+			type = TokenType::IDENTIFIER_NULL;
+		} else if (string == "false") {
+			string = {};
+			type = TokenType::IDENTIFIER_FALSE;
+		} else if (string == "true") {
+			string = {};
+			type = TokenType::IDENTIFIER_TRUE;
+		} else if (string == "Infinity") {
+			string = {};
+			type = TokenType::NUMBER_POSITIVE_INFINITY;
+		} else if (string == "NaN") {
+			string = {};
+			type = TokenType::NUMBER_POSITIVE_NAN;
+		}
+		return {.string = std::move(string), .source = identifierSource, .type = type};
+	}
+
+	void scanNumericEscapeSequence(String& output, std::size_t minDigitCount, std::size_t maxDigitCount, int radix, bool (*isDigit)(char32_t) noexcept) {
+		const SourceLocation escapeSequenceSource = source;
+		std::string digits{};
+		digits.reserve(maxDigitCount);
+		while (digits.size() < maxDigitCount && !hasReachedEnd() && isDigit(peek())) {
+			digits.push_back(static_cast<char>(peek()));
+			advance();
+		}
+		if (digits.size() < minDigitCount) {
+			throw Error{"Invalid escape sequence length.", escapeSequenceSource};
+		}
+		const char* const digitsBegin = digits.data();
+		const char* const digitsEnd = digitsBegin + digits.size();
+		std::uint32_t codePointValue = 0;
+		if (const std::from_chars_result parseResult = std::from_chars(digitsBegin, digitsEnd, codePointValue, radix);
+			parseResult.ec != std::errc{} || parseResult.ptr != digitsEnd || !unicode::isValidCodePoint(static_cast<char32_t>(codePointValue))) {
+			throw Error{"Invalid code point value.", escapeSequenceSource};
+		}
+		const unicode::EncodeUTF8FromCodePointResult codePointUTF8 = unicode::encodeUTF8FromCodePoint(static_cast<char32_t>(codePointValue));
+		output.append(std::string_view{reinterpret_cast<const char*>(codePointUTF8.codeUnits.data()), codePointUTF8.size});
+	}
 
 	mutable unicode::UTF8Iterator<It> it;
 	unicode::UTF8Sentinel end;
@@ -613,52 +1045,947 @@ private:
 	mutable std::optional<char32_t> currentCodePoint{};
 };
 
+/**
+ * Syntactic analyzer for parsing input in the JSON5 format obtained from a
+ * json::Lexer.
+ *
+ * \tparam It iterator type of the underlying input source. Must be an input
+ *         iterator.
+ */
 template <typename It>
 class Parser {
 public:
-	explicit Parser(Lexer<It> lexer);
+	/**
+	 * Polymorphic interface for visitation-based parsing of JSON values.
+	 */
+	class ValueVisitor {
+	public:
+		/**
+		 * Callback for values of type Null.
+		 *
+		 * \param source location of the parsed value.
+		 * \param value parsed value.
+		 *
+		 * \throws json::Error on invalid input.
+		 * \throws any exception thrown by the concrete implementation.
+		 */
+		virtual void visitNull(const SourceLocation& source, Null value) {
+			(void)value;
+			throw Error{"Unexpected null.", source};
+		}
 
-	Value parseFile();
+		/**
+		 * Callback for values of type Boolean.
+		 *
+		 * \param source location of the parsed value.
+		 * \param value parsed value.
+		 *
+		 * \throws json::Error on invalid input.
+		 * \throws any exception thrown by the concrete implementation.
+		 */
+		virtual void visitBoolean(const SourceLocation& source, Boolean value) {
+			(void)value;
+			throw Error{"Unexpected boolean.", source};
+		}
 
-	std::pair<Null, SourceLocation> parseNull();
-	std::pair<Boolean, SourceLocation> parseBoolean();
-	std::pair<String, SourceLocation> parseString();
-	std::pair<Number, SourceLocation> parseNumber();
-	std::pair<Object, SourceLocation> parseObject();
-	std::pair<Array, SourceLocation> parseArray();
-	std::pair<Value, SourceLocation> parseValue();
+		/**
+		 * Callback for values of type String.
+		 *
+		 * \param source location of the parsed value.
+		 * \param value parsed value.
+		 *
+		 * \throws json::Error on invalid input.
+		 * \throws any exception thrown by the concrete implementation.
+		 */
+		virtual void visitString(const SourceLocation& source, String&& value) {
+			(void)std::move(value);
+			throw Error{"Unexpected string.", source};
+		}
 
-	void advance();
+		/**
+		 * Callback for values of type Number.
+		 *
+		 * \param source location of the parsed value.
+		 * \param value parsed value.
+		 *
+		 * \throws json::Error on invalid input.
+		 * \throws any exception thrown by the concrete implementation.
+		 */
+		virtual void visitNumber(const SourceLocation& source, Number value) {
+			(void)value;
+			throw Error{"Unexpected number.", source};
+		}
 
-	[[nodiscard]] const Token<It>& peek() const noexcept;
+		/**
+		 * Callback for objects.
+		 *
+		 * \param source location of the beginning of the encountered object.
+		 * \param parser parser that should be used to parse the object.
+		 *
+		 * \warning Implementations must advance the parser to the end of the
+		 *          encountered object, past the last closing curly brace.
+		 * \warning Implementations must not advance the parser past the end of
+		 *          the encountered object.
+		 *
+		 * \throws json::Error on invalid input.
+		 * \throws any exception thrown by the concrete implementation.
+		 */
+		virtual void visitObject(const SourceLocation& source, Parser& parser) {
+			(void)parser;
+			throw Error{"Unexpected object.", source};
+		}
 
-	[[nodiscard]] Token<It> eat();
+		/**
+		 * Callback for arrays.
+		 *
+		 * \param source location of the beginning of the encountered array.
+		 * \param parser parser that should be used to parse the array.
+		 *
+		 * \warning Implementations must advance the parser to the end of the
+		 *          encountered array, past the last closing square bracket.
+		 * \warning Implementations must not advance the parser past the end of
+		 *          the encountered array.
+		 *
+		 * \throws json::Error on invalid input.
+		 * \throws any exception thrown by the concrete implementation.
+		 */
+		virtual void visitArray(const SourceLocation& source, Parser& parser) {
+			(void)parser;
+			throw Error{"Unexpected array.", source};
+		}
+
+	protected:
+		~ValueVisitor() = default;
+	};
+
+	/**
+	 * Implementation of ValueVisitor for freestanding classes that implement
+	 * all or parts of its interface without directly inheriting from it.
+	 *
+	 * \tparam Visitor freestanding value visitor type to adapt.
+	 */
+	template <typename Visitor>
+	struct ConcreteValueVisitor final : ValueVisitor {
+		Visitor visitor;
+
+		ConcreteValueVisitor(Visitor visitor)
+			: visitor(std::move(visitor)) {}
+
+		void visitNull(const SourceLocation& source, Null value) override {
+			if constexpr (requires { visitor.visitNull(source, value); }) {
+				visitor.visitNull(source, value);
+			} else {
+				ValueVisitor::visitNull(source, value);
+			}
+		}
+
+		void visitBoolean(const SourceLocation& source, Boolean value) override {
+			if constexpr (requires { visitor.visitBoolean(source, value); }) {
+				visitor.visitBoolean(source, value);
+			} else {
+				ValueVisitor::visitBoolean(source, value);
+			}
+		}
+
+		void visitString(const SourceLocation& source, String&& value) override {
+			if constexpr (requires { visitor.visitString(source, std::move(value)); }) {
+				visitor.visitString(source, std::move(value));
+			} else {
+				ValueVisitor::visitString(source, std::move(value));
+			}
+		}
+
+		void visitNumber(const SourceLocation& source, Number value) override {
+			if constexpr (requires { visitor.visitNumber(source, value); }) {
+				visitor.visitNumber(source, value);
+			} else {
+				ValueVisitor::visitNumber(source, value);
+			}
+		}
+
+		void visitObject(const SourceLocation& source, Parser& parser) override {
+			if constexpr (requires { visitor.visitObject(source, parser); }) {
+				visitor.visitObject(source, parser);
+			} else {
+				ValueVisitor::visitObject(source, parser);
+			}
+		}
+
+		void visitArray(const SourceLocation& source, Parser& parser) override {
+			if constexpr (requires { visitor.visitArray(source, parser); }) {
+				visitor.visitArray(source, parser);
+			} else {
+				ValueVisitor::visitArray(source, parser);
+			}
+		}
+	};
+
+	/**
+	 * Polymorphic interface for visitation-based parsing of JSON object
+	 * elements.
+	 */
+	class ElementVisitor {
+	public:
+		/**
+		 * Callback for each object element.
+		 *
+		 * \param source location of the beginning of the element's value.
+		 * \param key the element's key string.
+		 * \param parser parser that should be used to parse the element's
+		 *        value.
+		 *
+		 * \warning Implementations must advance the parser to the end of the
+		 *          encountered value.
+		 * \warning Implementations must not advance the parser past the end of
+		 *          the element's value.
+		 *
+		 * \throws json::Error on invalid input.
+		 * \throws any exception thrown by the concrete implementation.
+		 */
+		virtual void visitElement(const SourceLocation& source, String&& key, Parser& parser) = 0;
+
+	protected:
+		~ElementVisitor() = default;
+	};
+
+	/**
+	 * Implementation of ElementVisitor for freestanding classes that implement
+	 * all or parts of its interface without directly inheriting from it.
+	 *
+	 * \tparam Visitor freestanding element visitor type to adapt.
+	 */
+	template <typename Visitor>
+	struct ConcreteElementVisitor final : ElementVisitor {
+		Visitor visitor;
+
+		ConcreteElementVisitor(Visitor visitor)
+			: visitor(std::move(visitor)) {}
+
+		void visitElement(const SourceLocation& source, String&& key, Parser& parser) override {
+			if constexpr (requires { visitor.visitElement(source, std::move(key), parser); }) {
+				visitor.visitElement(source, std::move(key), parser);
+			}
+		}
+	};
+
+	/**
+	 * Implementation of ValueVisitor that skips over the parsed value and
+	 * discards the result.
+	 */
+	struct SkipValueVisitor final : ValueVisitor {
+		// clang-format off
+		void visitNull(const SourceLocation& source, Null value) override { (void)source; (void)value; }
+		void visitBoolean(const SourceLocation& source, Boolean value) override { (void)source; (void)value; }
+		void visitString(const SourceLocation& source, String&& value) override { (void)source; (void)std::move(value); }
+		void visitNumber(const SourceLocation& source, Number value) override { (void)source; (void)value; }
+		void visitObject(const SourceLocation& source, Parser& parser) override { (void)source; parser.parseObject(SkipElementVisitor{}); }
+		void visitArray(const SourceLocation& source, Parser& parser) override { (void)source; parser.parseValue(SkipValueVisitor{}); }
+		// clang-format on
+	};
+
+	/**
+	 * Implementation of ElementVisitor that skips over the parsed element and
+	 * discards the result.
+	 */
+	struct SkipElementVisitor final : ElementVisitor {
+		// clang-format off
+		void visitElement(const SourceLocation& source, String&& key, Parser& parser) override { (void)source; (void)std::move(key); parser.parseValue(SkipValueVisitor{}); }
+		// clang-format on
+	};
+
+	/**
+	 * Construct a parser with an existing lexer as input.
+	 *
+	 * \param lexer lexer to scan JSON tokens from.
+	 */
+	explicit Parser(Lexer<It> lexer)
+		: lexer(std::move(lexer)) {}
+
+	/**
+	 * Construct a parser with a contiguous UTF-8 view as input.
+	 *
+	 * \param codePoints non-owning read-only view over the UTF-8 string to
+	 *        parse JSON tokens from.
+	 */
+	explicit Parser(unicode::UTF8View codePoints) requires(std::is_same_v<It, const char8_t*>)
+		: Parser(Lexer<It>{codePoints.begin(), codePoints.end(), SourceLocation{.lineNumber = 1, .columnNumber = 1}}) {}
+
+	/**
+	 * Construct a parser with a contiguous UTF-8 string as input.
+	 *
+	 * \param jsonString non-owning read-only view over the UTF-8 string to
+	 *        parse JSON tokens from.
+	 */
+	explicit Parser(std::u8string_view jsonString) requires(std::is_same_v<It, const char8_t*>)
+		: Parser(unicode::UTF8View{jsonString}) {}
+
+	/**
+	 * Construct a parser with a contiguous string of bytes, interpreted as
+	 * UTF-8, as input.
+	 *
+	 * \param jsonString non-owning read-only view over the byte string to parse
+	 *        JSON tokens from.
+	 */
+	explicit Parser(std::string_view jsonString) requires(std::is_same_v<It, const char8_t*>)
+		: Parser(unicode::UTF8View{jsonString}) {}
+
+	/**
+	 * Construct a parser with an input stream as input.
+	 *
+	 * \param stream input stream to parse JSON tokens from.
+	 */
+	explicit Parser(std::istream& stream) requires(std::is_same_v<It, std::istreambuf_iterator<char>>)
+		: Parser(Lexer<It>{unicode::UTF8Iterator<It>{It{stream}, It{}}, unicode::UTF8Sentinel{}, SourceLocation{.lineNumber = 1, .columnNumber = 1}}) {}
+
+	/**
+	 * Construct a parser with an input stream buffer as input.
+	 *
+	 * \param streambuf input stream buffer to parse JSON tokens from.
+	 */
+	explicit Parser(std::streambuf* streambuf) requires(std::is_same_v<It, std::istreambuf_iterator<char>>)
+		: Parser(Lexer<It>{unicode::UTF8Iterator<It>{It{streambuf}, It{}}, unicode::UTF8Sentinel{}, SourceLocation{.lineNumber = 1, .columnNumber = 1}}) {}
+
+	/**
+	 * Read a single JSON value from the input and visit it, then make sure the
+	 * rest of the input only consists of whitespace.
+	 *
+	 * \param visitor visitor to give the parsed value to.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 * \throws any exception thrown by the visitor.
+	 *
+	 * \sa json::onNull()
+	 * \sa json::onBoolean()
+	 * \sa json::onString()
+	 * \sa json::onNumber()
+	 * \sa json::onObject()
+	 * \sa json::onArray()
+	 * \sa parseFile()
+	 * \sa parseValue(ValueVisitor&)
+	 */
+	void parseFile(ValueVisitor& visitor) {
+		parseValue(visitor);
+		if (const Token& token = peek(); token.type != TokenType::END_OF_FILE) {
+			throw Error{"Multiple top-level values.", token.source};
+		}
+	}
+
+	/**
+	 * Read a single JSON value from the input and visit it.
+	 *
+	 * \param visitor visitor to give the parsed value to.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 * \throws any exception thrown by the visitor.
+	 *
+	 * \sa json::onNull()
+	 * \sa json::onBoolean()
+	 * \sa json::onString()
+	 * \sa json::onNumber()
+	 * \sa json::onObject()
+	 * \sa json::onArray()
+	 * \sa parseValue()
+	 * \sa parseFile(ValueVisitor&)
+	 */
+	void parseValue(ValueVisitor& visitor) {
+		switch (const Token& token = peek(); token.type) {
+			case TokenType::END_OF_FILE: throw Error{"Expected a value.", token.source};
+			case TokenType::IDENTIFIER_NULL:
+				advance();
+				visitor.visitNull(token.source, Null{});
+				break;
+			case TokenType::IDENTIFIER_FALSE:
+				advance();
+				visitor.visitBoolean(token.source, Boolean{false});
+				break;
+			case TokenType::IDENTIFIER_TRUE:
+				advance();
+				visitor.visitBoolean(token.source, Boolean{true});
+				break;
+			case TokenType::IDENTIFIER_NAME: throw Error{"Unexpected name identifier.", token.source};
+			case TokenType::PUNCTUATOR_COMMA: throw Error{"Unexpected comma.", token.source};
+			case TokenType::PUNCTUATOR_COLON: throw Error{"Unexpected colon.", token.source};
+			case TokenType::PUNCTUATOR_OPEN_SQUARE_BRACKET: {
+				const SourceLocation source = token.source;
+				visitor.visitArray(source, *this);
+				break;
+			}
+			case TokenType::PUNCTUATOR_CLOSE_SQUARE_BRACKET: throw Error{"Unexpected closing bracket.", token.source};
+			case TokenType::PUNCTUATOR_OPEN_CURLY_BRACE: {
+				const SourceLocation source = token.source;
+				visitor.visitObject(source, *this);
+				break;
+			}
+			case TokenType::PUNCTUATOR_CLOSE_CURLY_BRACE: throw Error{"Unexpected closing brace.", token.source};
+			case TokenType::STRING: visitor.visitString(token.source, std::move(eat().string)); break;
+			case TokenType::NUMBER_BINARY: visitor.visitNumber(token.source, parseNumberContents(eat(), 2)); break;
+			case TokenType::NUMBER_OCTAL: visitor.visitNumber(token.source, parseNumberContents(eat(), 8)); break;
+			case TokenType::NUMBER_DECIMAL: visitor.visitNumber(token.source, parseNumberContents(eat(), 10)); break;
+			case TokenType::NUMBER_HEXADECIMAL: visitor.visitNumber(token.source, parseNumberContents(eat(), 16)); break;
+			case TokenType::NUMBER_POSITIVE_INFINITY:
+				advance();
+				visitor.visitNumber(token.source, Number{std::numeric_limits<Number>::infinity()});
+				break;
+			case TokenType::NUMBER_NEGATIVE_INFINITY:
+				advance();
+				visitor.visitNumber(token.source, Number{-std::numeric_limits<Number>::infinity()});
+				break;
+			case TokenType::NUMBER_POSITIVE_NAN:
+				advance();
+				visitor.visitNumber(token.source, Number{std::numeric_limits<Number>::quiet_NaN()});
+				break;
+			case TokenType::NUMBER_NEGATIVE_NAN:
+				advance();
+				visitor.visitNumber(token.source, Number{-std::numeric_limits<Number>::quiet_NaN()});
+				break;
+		}
+	}
+
+	/**
+	 * Read a single JSON object from the input and visit each of its elements.
+	 *
+	 * \param visitor visitor to give each parsed element of the object to.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 * \throws any exception thrown by the visitor.
+	 *
+	 * \sa json::onElement()
+	 * \sa parseObject()
+	 */
+	void parseObject(ElementVisitor& visitor) {
+		if (const Token& token = peek(); token.type != TokenType::PUNCTUATOR_OPEN_CURLY_BRACE) {
+			throw Error{"Expected an object.", token.source};
+		}
+		advance();
+		while (true) {
+			String key{};
+			switch (const Token& token = peek(); token.type) {
+				case TokenType::END_OF_FILE: throw Error{"Missing end of object.", token.source};
+				case TokenType::IDENTIFIER_NULL: throw Error{"Unexpected null.", token.source};
+				case TokenType::IDENTIFIER_FALSE: throw Error{"Unexpected false.", token.source};
+				case TokenType::IDENTIFIER_TRUE: throw Error{"Unexpected true.", token.source};
+				case TokenType::IDENTIFIER_NAME: [[fallthrough]];
+				case TokenType::STRING: key = std::move(eat().string); break;
+				case TokenType::PUNCTUATOR_COMMA: [[fallthrough]];
+				case TokenType::PUNCTUATOR_COLON: [[fallthrough]];
+				case TokenType::PUNCTUATOR_OPEN_SQUARE_BRACKET: [[fallthrough]];
+				case TokenType::PUNCTUATOR_CLOSE_SQUARE_BRACKET: [[fallthrough]];
+				case TokenType::PUNCTUATOR_OPEN_CURLY_BRACE: throw Error{"Unexpected punctuator.", token.source};
+				case TokenType::PUNCTUATOR_CLOSE_CURLY_BRACE: advance(); return;
+				case TokenType::NUMBER_BINARY: [[fallthrough]];
+				case TokenType::NUMBER_OCTAL: [[fallthrough]];
+				case TokenType::NUMBER_DECIMAL: [[fallthrough]];
+				case TokenType::NUMBER_HEXADECIMAL: [[fallthrough]];
+				case TokenType::NUMBER_POSITIVE_INFINITY: [[fallthrough]];
+				case TokenType::NUMBER_NEGATIVE_INFINITY: [[fallthrough]];
+				case TokenType::NUMBER_POSITIVE_NAN: [[fallthrough]];
+				case TokenType::NUMBER_NEGATIVE_NAN: throw Error{"Unexpected number.", token.source};
+			}
+			if (const Token token = eat(); token.type != TokenType::PUNCTUATOR_COLON) {
+				throw Error{"Expected a colon.", token.source};
+			}
+			const SourceLocation source = peek().source;
+			visitor.visitElement(source, std::move(key), *this);
+			if (peek().source == source) {
+				struct SkipValue final : ValueVisitor {
+					// clang-format off
+					void visitNull(const SourceLocation& source, Null value) override { (void)source; (void)value; }
+					void visitBoolean(const SourceLocation& source, Boolean value) override { (void)source; (void)value; }
+					void visitString(const SourceLocation& source, String&& value) override { (void)source; (void)std::move(value); }
+					void visitNumber(const SourceLocation& source, Number value) override { (void)source; (void)value; }
+					void visitObject(const SourceLocation& source, Parser& parser) override { (void)source; (void)parser; }
+					void visitArray(const SourceLocation& source, Parser& parser) override { (void)source; (void)parser; }
+					// clang-format on
+				};
+				parseValue(SkipValue{});
+			}
+			if (const Token& token = peek(); token.type == TokenType::PUNCTUATOR_COMMA) {
+				advance();
+			} else if (token.type == TokenType::PUNCTUATOR_CLOSE_CURLY_BRACE) {
+				advance();
+				break;
+			} else {
+				throw Error{"Expected a comma or closing brace.", token.source};
+			}
+		}
+	}
+
+	/**
+	 * Read a single JSON array from the input and visit each of its values.
+	 *
+	 * \param visitor visitor to give each parsed value of the array to.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 * \throws any exception thrown by the visitor.
+	 *
+	 * \sa json::onNull()
+	 * \sa json::onBoolean()
+	 * \sa json::onString()
+	 * \sa json::onNumber()
+	 * \sa json::onObject()
+	 * \sa json::onArray()
+	 * \sa parseArray()
+	 */
+	void parseArray(ValueVisitor& visitor) {
+		if (const Token& token = peek(); token.type != TokenType::PUNCTUATOR_OPEN_SQUARE_BRACKET) {
+			throw Error{"Expected an array.", token.source};
+		}
+		advance();
+		while (true) {
+			if (peek().type == TokenType::PUNCTUATOR_CLOSE_SQUARE_BRACKET) {
+				advance();
+				return;
+			}
+			parseValue(visitor);
+			if (const Token& token = peek(); token.type == TokenType::PUNCTUATOR_COMMA) {
+				advance();
+			} else if (token.type == TokenType::PUNCTUATOR_CLOSE_SQUARE_BRACKET) {
+				advance();
+				break;
+			} else {
+				throw Error{"Expected a comma or closing bracket.", token.source};
+			}
+		}
+	}
+
+	/**
+	 * \sa parseFile(ValueVisitor&)
+	 */
+	void parseFile(ValueVisitor&& visitor) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+		parseFile(visitor);
+	}
+
+	/**
+	 * \sa parseValue(ValueVisitor&)
+	 */
+	void parseValue(ValueVisitor&& visitor) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+		parseValue(visitor);
+	}
+
+	/**
+	 * \sa parseObject(ElementVisitor&)
+	 */
+	void parseObject(ElementVisitor&& visitor) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+		parseObject(visitor);
+	}
+
+	/**
+	 * \sa parseArray(ValueVisitor&)
+	 */
+	void parseArray(ValueVisitor&& visitor) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+		parseArray(visitor);
+	}
+
+	/**
+	 * \sa parseFile(ValueVisitor&)
+	 */
+	template <typename Visitor>
+	void parseFile(Visitor visitor) {
+		parseFile(static_cast<ValueVisitor&&>(ConcreteValueVisitor<Visitor>{std::move(visitor)}));
+	}
+
+	/**
+	 * \sa parseValue(ValueVisitor&)
+	 */
+	template <typename Visitor>
+	void parseValue(Visitor visitor) {
+		parseValue(static_cast<ValueVisitor&&>(ConcreteValueVisitor<Visitor>{std::move(visitor)}));
+	}
+
+	/**
+	 * \sa parseObject(ElementVisitor&)
+	 */
+	template <typename Visitor>
+	void parseObject(Visitor visitor) {
+		parseObject(static_cast<ElementVisitor&&>(ConcreteElementVisitor<Visitor>{std::move(visitor)}));
+	}
+
+	/**
+	 * \sa parseArray(ValueVisitor&)
+	 */
+	template <typename Visitor>
+	void parseArray(Visitor visitor) {
+		parseArray(static_cast<ValueVisitor&&>(ConcreteValueVisitor<Visitor>{std::move(visitor)}));
+	}
+
+	/**
+	 * Parse a single JSON value from the input and discard the result, then
+	 * make sure the rest of the input only consists of whitespace.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \sa parseFile()
+	 * \sa skipValue()
+	 */
+	void skipFile() {
+		parseFile(SkipValueVisitor{});
+	}
+
+	/**
+	 * Parse a single JSON value from the input and discard the result.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \sa parseValue()
+	 * \sa skipFile()
+	 */
+	void skipValue() {
+		parseValue(SkipValueVisitor{});
+	}
+
+	/**
+	 * Read a single JSON value from the input and make sure the rest of the
+	 * input only consists of whitespace.
+	 *
+	 * \return the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \sa parseFile(ValueVisitor&)
+	 * \sa parseValue()
+	 * \sa skipFile()
+	 */
+	Value parseFile() {
+		Value result = parseValue();
+		if (const Token& token = peek(); token.type != TokenType::END_OF_FILE) {
+			throw Error{"Multiple top-level values.", token.source};
+		}
+		return result;
+	}
+
+	/**
+	 * Read a single JSON value from the input.
+	 *
+	 * \return the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \sa parseValue(ValueVisitor&)
+	 * \sa parseFile()
+	 * \sa parseNull()
+	 * \sa parseBoolean()
+	 * \sa parseString()
+	 * \sa parseNumber()
+	 * \sa parseObject()
+	 * \sa parseArray()
+	 * \sa skipValue()
+	 */
+	Value parseValue() {
+		struct Visitor final : ValueVisitor {
+			Value& result;
+
+			explicit Visitor(Value& result) noexcept
+				: result(result) {}
+
+			// clang-format off
+			void visitNull(const SourceLocation&, Null value) override { result = value; }
+			void visitBoolean(const SourceLocation&, Boolean value) override { result = value; }
+			void visitString(const SourceLocation&, String&& value) override { result = std::move(value); }
+			void visitNumber(const SourceLocation&, Number value) override { result = value; }
+			void visitObject(const SourceLocation&, Parser& parser) override { result = parser.parseObject(); }
+			void visitArray(const SourceLocation&, Parser& parser) override { result = parser.parseArray(); }
+			// clang-format on
+		};
+		Value result{};
+		parseValue(Visitor{result});
+		return result;
+	}
+
+	/**
+	 * Read a single JSON value of type Null from the input.
+	 *
+	 * \return the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \sa parseValue()
+	 */
+	Null parseNull() {
+		const Token token = eat();
+		switch (token.type) {
+			case TokenType::IDENTIFIER_NULL: return Null{};
+			default: break;
+		}
+		throw Error{"Expected a null.", token.source};
+	}
+
+	/**
+	 * Read a single JSON value of type Boolean from the input.
+	 *
+	 * \return the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \sa parseValue()
+	 */
+	Boolean parseBoolean() {
+		const Token token = eat();
+		switch (token.type) {
+			case TokenType::IDENTIFIER_FALSE: return Boolean{false};
+			case TokenType::IDENTIFIER_TRUE: return Boolean{true};
+			default: break;
+		}
+		throw Error{"Expected a boolean.", token.source};
+	}
+
+	/**
+	 * Read a single JSON value of type String from the input.
+	 *
+	 * \return the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \sa parseValue()
+	 */
+	String parseString() {
+		Token token = eat();
+		switch (token.type) {
+			case TokenType::STRING: return std::move(token.string);
+			default: break;
+		}
+		throw Error{"Expected a string.", token.source};
+	}
+
+	/**
+	 * Read a single JSON value of type Number from the input.
+	 *
+	 * \return the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \sa parseValue()
+	 */
+	Number parseNumber() {
+		Token token = eat();
+		switch (token.type) {
+			case TokenType::NUMBER_BINARY: return parseNumberContents(std::move(token), 2);
+			case TokenType::NUMBER_OCTAL: return parseNumberContents(std::move(token), 8);
+			case TokenType::NUMBER_DECIMAL: return parseNumberContents(std::move(token), 10);
+			case TokenType::NUMBER_HEXADECIMAL: return parseNumberContents(std::move(token), 16);
+			case TokenType::NUMBER_POSITIVE_INFINITY: return std::numeric_limits<Number>::infinity();
+			case TokenType::NUMBER_NEGATIVE_INFINITY: return -std::numeric_limits<Number>::infinity();
+			case TokenType::NUMBER_POSITIVE_NAN: return std::numeric_limits<Number>::quiet_NaN();
+			case TokenType::NUMBER_NEGATIVE_NAN: return -std::numeric_limits<Number>::quiet_NaN();
+			default: break;
+		}
+		throw Error{"Expected a number.", token.source};
+	}
+
+	/**
+	 * Read a single JSON value of type Object from the input.
+	 *
+	 * \return the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \sa parseObject(ElementVisitor&)
+	 * \sa parseValue()
+	 */
+	Object parseObject() {
+		const Token& token = peek();
+		switch (token.type) {
+			case TokenType::PUNCTUATOR_OPEN_CURLY_BRACE: {
+				struct Visitor final : ElementVisitor {
+					Object& result;
+
+					explicit Visitor(Object& result) noexcept
+						: result(result) {}
+
+					void visitElement(const SourceLocation&, String&& key, Parser& parser) override {
+						result.emplace(std::move(key), std::move(parser.parseValue()));
+					}
+				};
+				Object result{};
+				parseObject(Visitor{result});
+				return result;
+			}
+			default: break;
+		}
+		throw Error{"Expected an object.", token.source};
+	}
+
+	/**
+	 * Read a single JSON value of type Array from the input.
+	 *
+	 * \return the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \sa parseArray(ValueVisitor&)
+	 * \sa parseValue()
+	 */
+	Array parseArray() {
+		const Token& token = peek();
+		switch (token.type) {
+			case TokenType::PUNCTUATOR_OPEN_SQUARE_BRACKET: {
+				Array result{};
+				struct Visitor final : ValueVisitor {
+					Array& result;
+
+					explicit Visitor(Array& result) noexcept
+						: result(result) {}
+
+					// clang-format off
+					void visitNull(const SourceLocation&, Null value) override { result.emplace_back(value); }
+					void visitBoolean(const SourceLocation&, Boolean value) override { result.emplace_back(value); }
+					void visitString(const SourceLocation&, String&& value) override { result.emplace_back(std::move(value)); }
+					void visitNumber(const SourceLocation&, Number value) override { result.emplace_back(value); }
+					void visitObject(const SourceLocation&, Parser& parser) override { result.emplace_back(parser.parseObject()); }
+					void visitArray(const SourceLocation&, Parser& parser) override { result.emplace_back(parser.parseArray()); }
+					// clang-format on
+				};
+				parseArray(Visitor{result});
+				return result;
+			}
+			default: break;
+		}
+		throw Error{"Expected an array.", token.source};
+	}
+
+	/**
+	 * Advance the internal state of the underlying lexer by one token.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 */
+	void advance() {
+		if (!currentToken) {
+			lexer.scan();
+		}
+		currentToken.reset();
+	}
+
+	/**
+	 * Peek the next token without advancing the internal state of the
+	 * underlying lexer.
+	 *
+	 * \return a read-only reference to the next token to be read that is valid
+	 *         until the next call to advance() or eat(), or until the parser is
+	 *         moved from or destroyed, whichever happens first.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 *
+	 * \warning Although it is const, this function is not thread-safe since it
+	 *          mutates an internal lookahead buffer. Exclusive access is
+	 *          therefore required for safety.
+	 */
+	[[nodiscard]] const Token& peek() const noexcept {
+		if (!currentToken) {
+			currentToken = lexer.scan();
+		}
+		return *currentToken;
+	}
+
+	/**
+	 * Scan and consume the next token from the input.
+	 *
+	 * This advances the internal state of the underlying lexer.
+	 *
+	 * \return the scanned token.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 */
+	[[nodiscard]] Token eat() {
+		if (!currentToken) {
+			currentToken = lexer.scan();
+		}
+		Token result = std::move(*currentToken);
+		currentToken.reset();
+		return result;
+	}
 
 private:
-	[[nodiscard]] static Number parseNumberContents(Token<It> token, int radix);
-
-	[[nodiscard]] Object parseObjectContents();
-	[[nodiscard]] Array parseArrayContents();
+	[[nodiscard]] static Number parseNumberContents(Token token, int radix) {
+		const char* numberStringBegin = token.string.c_str();
+		char* const numberStringEnd = token.string.data() + token.string.size();
+		char* endPointer = numberStringEnd;
+		if (radix == 10) {
+			const double number_value = std::strtod(numberStringBegin, &endPointer);
+			if (endPointer != numberStringEnd) {
+				throw Error{"Invalid number.", token.source};
+			}
+			return Number{number_value};
+		}
+		bool negative = false;
+		if (!token.string.empty() && token.string.front() == '-') {
+			negative = true;
+			++numberStringBegin;
+		}
+		const unsigned long long integerNumberValue = std::strtoull(numberStringBegin, &endPointer, radix);
+		if (endPointer != numberStringEnd) {
+			throw Error{"Invalid number.", token.source};
+		}
+		const double numberValue = static_cast<double>(integerNumberValue);
+		return Number{(negative) ? -numberValue : numberValue};
+	}
 
 	mutable Lexer<It> lexer;
-	mutable std::optional<Token<It>> currentToken{};
+	mutable std::optional<Token> currentToken{};
 };
 
-template <typename T>
-[[nodiscard]] std::size_t getRecursiveSize(const T& value);
+/**
+ * Parser for reading contiguous UTF-8-encoded JSON strings.
+ */
+using StringParser = Parser<const char8_t*>;
+
+/**
+ * Parser for reading UTF-8-encoded JSON input stream buffers.
+ */
+using StreamParser = Parser<std::istreambuf_iterator<char>>;
+
+namespace detail {
+
+template <typename T, typename ObjectElementFilter = detail::AlwaysTrue, typename ArrayElementFilter = detail::AlwaysTrue>
+[[nodiscard]] std::size_t getRecursiveSize(const T& value, ObjectElementFilter objectElementFilter, ArrayElementFilter arrayElementFilter);
 
 } // namespace detail
 
 /**
  * Base template to specialize in order to implement JSON serialization for a
- * specific type. The specialization should have a member function with one of
- * the following signatures:
+ * specific type.
+ *
+ * The specialization should have a member function with one of the following
+ * signatures:
  * ```
- * void serialize(SerializationState& state, const T& value)
- * void serialize(SerializationState& state, T value)
+ * void serialize(Writer& writer, const T& value)
+ * void serialize(Writer& writer, T value)
  * ```
- * where T is the specialized template type parameter, and should write the
- * output using the provided SerializationState.
+ * where T is the specialized template type parameter.
+ *
+ * The implementation should write the output using the provided Writer.
  *
  * \tparam T the type that this serializer serializes.
  */
@@ -667,13 +1994,16 @@ struct Serializer;
 
 /**
  * Base template to specialize in order to implement JSON deserialization for a
- * specific type. The specialization should have a member function with the
- * following signature:
+ * specific type.
+ *
+ * The specialization should have a member function with the following
+ * signature:
  * ```
- * void deserialize(DeserializationState& state, T& value)
+ * void deserialize(Reader& reader, T& value)
  * ```
- * where T is the specialized template type parameter, and should read the
- * input using the provided DeserializationState.
+ * where T is the specialized template type parameter.
+ *
+ * The implementation should read the input using the provided Reader.
  *
  * \tparam T the type that this deserializer deserializes.
  */
@@ -702,10 +2032,43 @@ struct SerializationOptions {
 	char indentationCharacter = ' ';
 
 	/**
-	 * Format the output in a way that is nicely human-readable. Disable to use
-	 * a more compact layout without whitespace or indentation.
+	 * Format the output in a way that is nicely human-readable.
+	 *
+	 * Disable to use a more compact layout without whitespace or indentation.
+	 *
+	 * \sa prettyPrintMaxSingleLineObjectElementCount
+	 * \sa prettyPrintMaxSingleLineArrayElementCount
+	 * \sa prettyPrintMaxSingleLineAggregateElementCount
 	 */
 	bool prettyPrint = true;
+
+	/**
+	 * Maximum size of an object before it is split into multiple lines when
+	 * pretty printing.
+	 *
+	 * When set to a positive value, objects at or below this size will be
+	 * written in a single line. Set to 0 to always split non-empty objects into
+	 * multiple lines regardless of size.
+	 *
+	 * \note This option only applies when #prettyPrint is true.
+	 *
+	 * \sa prettyPrint
+	 */
+	std::size_t prettyPrintMaxSingleLineObjectElementCount = 4;
+
+	/**
+	 * Maximum size of an array before it is split into multiple lines when
+	 * pretty printing.
+	 *
+	 * When set to a positive value, arrays at or below this size will be
+	 * written in a single line. Set to 0 to always split non-empty arrays into
+	 * multiple lines regardless of size.
+	 *
+	 * \note This option only applies when #prettyPrint is true.
+	 *
+	 * \sa prettyPrint
+	 */
+	std::size_t prettyPrintMaxSingleLineArrayElementCount = 4;
 };
 
 /**
@@ -714,7 +2077,7 @@ struct SerializationOptions {
 struct DeserializationOptions {};
 
 /**
- * Serialize a value of any JSON-serializable type to an ASCII output stream.
+ * Serialize a value of any JSON-serializable type to an output stream.
  *
  * \param stream stream to write the output to.
  * \param value value to serialize.
@@ -733,7 +2096,7 @@ template <typename T>
 void serialize(std::ostream& stream, const T& value, const SerializationOptions& options = {});
 
 /**
- * Deserialize a value of any JSON-serializable type from an ASCII input stream.
+ * Deserialize a value of any JSON-serializable type from an input stream.
  *
  * \param stream stream to read the input from.
  * \param value value to deserialize to.
@@ -753,7 +2116,7 @@ template <typename T>
 void deserialize(std::istream& stream, T& value, const DeserializationOptions& options = {});
 
 /**
- * Write a JSON value to an ASCII output stream using the default serialization
+ * Write a JSON value to an output stream using the default serialization
  * options.
  *
  * \param stream stream to write the output to.
@@ -771,8 +2134,8 @@ inline std::ostream& operator<<(std::ostream& stream, const Value& value) {
 }
 
 /**
- * Read a JSON value from an ASCII input stream using the default
- * deserialization options.
+ * Read a JSON value from an input stream using the default deserialization
+ * options.
  *
  * If the function fails to parse a JSON value from the stream,
  * std::ios_base::failbit is set on the stream, which may or may not
@@ -796,9 +2159,9 @@ inline std::istream& operator>>(std::istream& stream, Value& value) {
 }
 
 /**
- * Stateful wrapper object of an ASCII output stream for JSON serialization.
+ * Stateful wrapper object of an output stream for JSON serialization.
  */
-struct SerializationState {
+struct Writer {
 private:
 	std::ostream& stream;
 
@@ -808,28 +2171,92 @@ public:
 	 */
 	SerializationOptions options;
 
+	/**
+	 * Construct a writer with an output stream as output.
+	 *
+	 * \param stream output stream to write to.
+	 * \param options output options, see SerializationOptions.
+	 */
+	Writer(std::ostream& stream, const SerializationOptions& options = {})
+		: stream(stream)
+		, options(options) {}
+
+	/**
+	 * Write a single raw byte to the output without any extra formatting.
+	 *
+	 * \param byte value to write.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 */
 	void write(char byte) {
 		stream << byte;
 	}
 
+	/**
+	 * Write a raw sequence of bytes to the output without any extra formatting.
+	 *
+	 * \param bytes values to write.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 */
 	void write(std::string_view bytes) {
 		stream << bytes;
 	}
 
+	/**
+	 * Write a sequence of indentation characters to the output.
+	 *
+	 * The length of the sequence matches the current indentation level
+	 * specified in the options.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 *
+	 * \sa SerializationOptions::indentation
+	 * \sa SerializationOptions::indentationCharacter
+	 */
 	void writeIndentation() {
 		for (std::size_t i = 0; i < options.indentation; ++i) {
 			write(options.indentationCharacter);
 		}
 	}
 
+	/**
+	 * Write a raw CRLF newline sequence to the output.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 */
+	void writeNewline() {
+		write("\r\n");
+	}
+
+	/**
+	 * Write a single JSON value of type Null to the output.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 */
 	void writeNull() {
 		write("null");
 	}
 
+	/**
+	 * Write a single JSON value of type Boolean to the output.
+	 *
+	 * \param value value to write.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 */
 	void writeBoolean(Boolean value) {
 		write((value) ? "true" : "false");
 	}
 
+	/**
+	 * Write a single JSON value of type String to the output from a raw byte
+	 * string.
+	 *
+	 * \param bytes raw string value to write.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 */
 	void writeString(std::string_view bytes) {
 		constexpr std::array<char, 16> HEXADECIMAL_DIGITS{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 		write('\"');
@@ -859,12 +2286,30 @@ public:
 		write('\"');
 	}
 
+	/**
+	 * Write a single JSON value of type String to the output from a raw string,
+	 * interpreted as raw bytes.
+	 *
+	 * \param value raw string value whose bytes to write.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 */
 	template <typename CharT, typename Traits>
 	void writeString(std::basic_string_view<CharT, Traits> value) requires(!std::is_same_v<CharT, char> || !std::is_same_v<Traits, std::char_traits<char>>) {
 		const std::span<const std::byte> bytes = std::as_bytes(std::span{value.data(), value.size()});
 		writeString(std::string_view{reinterpret_cast<const char*>(bytes.data()), bytes.size()});
 	}
 
+	/**
+	 * Write a single JSON value of type String to the output from any
+	 * string-view-like or JSON-serializable value.
+	 *
+	 * \param value value to write.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 * \throws any exception thrown by the underlying string view conversion or
+	 *         Serializer implementation of the given value type.
+	 */
 	void writeString(const auto& value) {
 		if constexpr (requires { std::string_view{value}; }) {
 			writeString(std::string_view{value});
@@ -883,104 +2328,195 @@ public:
 		}
 	}
 
-	void writeNumber(Number value);
+	/**
+	 * Write a single JSON value of type Number to the output.
+	 *
+	 * \param value value to write.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 */
+	void writeNumber(Number value) {
+		if (std::isnan(value)) {
+			if (std::signbit(value)) {
+				stream << "-NaN";
+			} else {
+				stream << "NaN";
+			}
+		} else if (std::isinf(value)) {
+			if (std::signbit(value)) {
+				stream << "-Infinity";
+			} else {
+				stream << "Infinity";
+			}
+		} else {
+			[[likely]] std::format_to(std::ostreambuf_iterator{stream}, "{}", value);
+		}
+	}
 
-	void writeObject(const auto& value) {
+	/**
+	 * Write a single JSON object to the output from any range of
+	 * JSON-serializable key-value pairs.
+	 *
+	 * \param value range to write as an object.
+	 * \param elementFilter predicate that each key-value pair from the range
+	 *        must pass in order to be included in the output. Defaults to
+	 *        always pass.
+	 * \param getKey function for getting the key from each key-value pair.
+	 *        Defaults to returning pair.first.
+	 * \param getValue function for getting the value from each key-value pair.
+	 *        Defaults to returning pair.second.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 * \throws any exception thrown by the Serializer implementations of the
+	 *         given key/value types.
+	 */
+	template <typename ElementFilter = detail::AlwaysTrue, typename GetKey = detail::GetFirst, typename GetValue = detail::GetSecond>
+	void writeObject(const auto& value, ElementFilter elementFilter = {}, GetKey getKey = {}, GetValue getValue = {}) {
 		auto it = std::begin(value);
 		const auto end = std::end(value);
+		while (it != end && !elementFilter(*it)) {
+			++it;
+		}
 		if (options.prettyPrint) {
 			if (it == end) {
 				write("{}");
-			} else if (detail::getRecursiveSize(value) <= 4) {
+			} else if (detail::getRecursiveSize(value, elementFilter, {}) <= options.prettyPrintMaxSingleLineObjectElementCount) {
 				write("{ ");
-				writeString(it->first);
+				writeString(getKey(*it));
 				write(": ");
-				serialize(it->second);
+				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					write(", ");
-					writeString(it->first);
-					write(": ");
-					serialize(it->second);
+					if (elementFilter(*it)) {
+						write(", ");
+						writeString(getKey(*it));
+						write(": ");
+						serialize(getValue(*it));
+					}
 				}
 				write(" }");
 			} else {
-				write("{\n");
+				write('{');
+				writeNewline();
 				options.indentation += options.relativeIndentation;
 				writeIndentation();
-				writeString(it->first);
+				writeString(getKey(*it));
 				write(": ");
-				serialize(it->second);
+				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					write(",\n");
-					writeIndentation();
-					writeString(it->first);
-					write(": ");
-					serialize(it->second);
+					if (elementFilter(*it)) {
+						write(',');
+						writeNewline();
+						writeIndentation();
+						writeString(getKey(*it));
+						write(": ");
+						serialize(getValue(*it));
+					}
 				}
-				write('\n');
+				writeNewline();
 				options.indentation -= options.relativeIndentation;
 				writeIndentation();
 				write('}');
 			}
 		} else {
 			write('{');
-			if (!value.empty()) {
-				writeString(it->first);
+			if (it != end) {
+				writeString(getKey(*it));
 				write(':');
-				serialize(it->second);
+				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					write(',');
-					writeString(it->first);
-					write(':');
-					serialize(it->second);
+					if (elementFilter(*it)) {
+						write(',');
+						writeString(getKey(*it));
+						write(':');
+						serialize(getValue(*it));
+					}
 				}
 			}
 			write('}');
 		}
 	}
 
-	void writeArray(const auto& value) {
+	/**
+	 * Write a single JSON array to the output from any range of
+	 * JSON-serializable values.
+	 *
+	 * \param value range to write as an array.
+	 * \param elementFilter predicate that each value from the range must pass
+	 *        in order to be included in the output. Defaults to always pass.
+	 * \param getValue function for getting the value from each value of the
+	 *        range. Defaults to returning each value without modification.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 * \throws any exception thrown by the Serializer implementation of the
+	 *         element type of the given value type.
+	 */
+	template <typename ElementFilter = detail::AlwaysTrue, typename GetValue = detail::Get>
+	void writeArray(const auto& value, ElementFilter elementFilter = {}, GetValue getValue = {}) {
 		auto it = std::begin(value);
 		const auto end = std::end(value);
+		while (it != end && !elementFilter(*it)) {
+			++it;
+		}
 		if (options.prettyPrint) {
 			if (it == end) {
 				write("[]");
-			} else if (detail::getRecursiveSize(value) <= 4) {
-				write("[");
-				serialize(*it);
+			} else if (detail::getRecursiveSize(value, {}, elementFilter) <= options.prettyPrintMaxSingleLineArrayElementCount) {
+				write('[');
+				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					write(", ");
-					serialize(*it);
+					if (elementFilter(*it)) {
+						write(", ");
+						serialize(getValue(*it));
+					}
 				}
-				write("]");
+				write(']');
 			} else {
-				write("[\n");
+				write('[');
+				writeNewline();
 				options.indentation += options.relativeIndentation;
 				writeIndentation();
-				serialize(*it);
+				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					write(",\n");
-					writeIndentation();
-					serialize(*it);
+					if (elementFilter(*it)) {
+						write(',');
+						writeNewline();
+						writeIndentation();
+						serialize(getValue(*it));
+					}
 				}
-				write("\n");
+				writeNewline();
 				options.indentation -= options.relativeIndentation;
 				writeIndentation();
-				write("]");
+				write(']');
 			}
 		} else {
-			write("[");
-			if (!value.empty()) {
-				serialize(*it);
+			write('[');
+			if (it != end) {
+				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					write(",");
-					serialize(*it);
+					if (elementFilter(*it)) {
+						write(',');
+						serialize(getValue(*it));
+					}
 				}
 			}
-			write("]");
+			write(']');
 		}
 	}
 
+	/**
+	 * Write a single JSON value to the output from any value that supports
+	 * conversion to bool and the dereference operator.
+	 *
+	 * If the value evaluates to true when converted to bool, the value is
+	 * dereferenced and serialized normally. Otherwise, null is written.
+	 *
+	 * \param value value to write.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 * \throws any exception thrown by the Serializer implementation of the
+	 *         dereferenced type of the given value type.
+	 */
 	void writeOptional(const auto& value) {
 		if (value) {
 			serialize(*value);
@@ -989,6 +2525,15 @@ public:
 		}
 	}
 
+	/**
+	 * Write a single JSON value to the output from any value of aggregate type.
+	 *
+	 * \param value aggregate whose fields to write.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 * \throws any exception thrown by the Serializer implementations of the
+	 *         given field types.
+	 */
 	template <typename T>
 	void writeAggregate(const T& value) {
 		if constexpr (reflection::aggregate_size_v<T> == 0) {
@@ -997,8 +2542,8 @@ public:
 			const auto& [v] = value;
 			serialize(v);
 		} else if (options.prettyPrint) {
-			if (detail::getRecursiveSize(value) <= 4) {
-				write("[");
+			if (detail::getRecursiveSize(value, {}, {}) <= options.prettyPrintMaxSingleLineArrayElementCount) {
+				write('[');
 				bool successor = false;
 				reflection::forEach(reflection::fields(value), [&](const auto& v) {
 					if (successor) {
@@ -1007,61 +2552,63 @@ public:
 					successor = true;
 					serialize(v);
 				});
-				write("]");
+				write(']');
 			} else {
-				write("[\n");
+				write('[');
+				writeNewline();
 				options.indentation += options.relativeIndentation;
 				bool successor = false;
 				reflection::forEach(reflection::fields(value), [&](const auto& v) {
 					if (successor) {
-						write(",\n");
+						write(',');
+						writeNewline();
 					}
 					successor = true;
 					writeIndentation();
 					serialize(v);
 				});
-				write("\n");
+				writeNewline();
 				options.indentation -= options.relativeIndentation;
 				writeIndentation();
-				write("]");
+				write(']');
 			}
 		} else {
-			write("[");
+			write('[');
 			bool successor = false;
 			reflection::forEach(reflection::fields(value), [&](const auto& v) {
 				if (successor) {
-					write(",");
+					write(',');
 				}
 				successor = true;
 				serialize(v);
 			});
-			write("]");
+			write(']');
 		}
 	}
 
+	/**
+	 * Write any JSON-serializable value to the output using its corresponding
+	 * implementation of Serializer.
+	 *
+	 * \param value value to write.
+	 *
+	 * \throws any exception thrown by the underlying output stream.
+	 * \throws any exception thrown by the Serializer implementation of T.
+	 */
 	template <typename T>
 	void serialize(const T& value) {
 		json::Serializer<std::remove_cvref_t<T>>{}.serialize(*this, value);
 	}
-
-private:
-	template <typename T>
-	friend void serialize(std::ostream& stream, const T& value, const SerializationOptions& options);
-
-	SerializationState(std::ostream& stream, const SerializationOptions& options)
-		: stream(stream)
-		, options(options) {}
 };
 
 /**
- * Stateful wrapper object of an ASCII input stream for JSON deserialization.
+ * Stateful wrapper object of an input stream for JSON deserialization.
  */
-struct DeserializationState {
+struct Reader {
 private:
-	using TokenType = detail::TokenType;
-	using Token = detail::Token<std::istreambuf_iterator<char>>;
+	using It = std::istreambuf_iterator<char>;
 
-	detail::Parser<std::istreambuf_iterator<char>> parser;
+	Parser<It> parser;
 
 public:
 	/**
@@ -1069,23 +2616,90 @@ public:
 	 */
 	DeserializationOptions options;
 
+	/**
+	 * Construct a reader with an input stream as input.
+	 *
+	 * \param stream input stream to write to.
+	 * \param options input options, see DeserializationOptions.
+	 */
+	Reader(std::istream& stream, const DeserializationOptions& options)
+		: parser(stream)
+		, options(options) {}
+
+	/**
+	 * Read a single JSON value of type Null from the input.
+	 *
+	 * \return the location of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input stream.
+	 *
+	 * \sa Parser::parseNull()
+	 * \sa readValue()
+	 */
 	SourceLocation readNull() {
-		const auto [null, source] = parser.parseNull();
+		const SourceLocation source = parser.peek().source;
+		parser.parseNull();
 		return source;
 	}
 
+	/**
+	 * Read a single JSON value of type Boolean from the input.
+	 *
+	 * \param value reference to the output value to write the parsed result to.
+	 *
+	 * \return the location of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input stream.
+	 *
+	 * \note If any exception is thrown, the output value is left unmodified.
+	 *
+	 * \sa Parser::parseBoolean()
+	 */
 	SourceLocation readBoolean(Boolean& value) {
-		const auto [boolean, source] = parser.parseBoolean();
-		value = boolean;
+		const SourceLocation source = parser.peek().source;
+		value = parser.parseBoolean();
 		return source;
 	}
 
+	/**
+	 * Read a single JSON value of type String from the input.
+	 *
+	 * \param value reference to the output value to write the parsed result to.
+	 *
+	 * \return the location of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input stream.
+	 *
+	 * \note If any exception is thrown, the output value is left unmodified.
+	 *
+	 * \sa Parser::parseString()
+	 */
 	SourceLocation readString(String& value) {
-		auto [string, source] = parser.parseString();
-		value = std::move(string);
+		const SourceLocation source = parser.peek().source;
+		value = parser.parseString();
 		return source;
 	}
 
+	/**
+	 * Read a single JSON value of type String from the input into any value
+	 * that can be assigned from a standard string or deserialized from JSON.
+	 *
+	 * \param value reference to the output value to write the parsed result to.
+	 *
+	 * \return the location of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 * \throws any exception thrown by the underlying assignment operator or
+	 *         Deserializer implementation of the given value type.
+	 */
 	SourceLocation readString(auto& value) {
 		String string{};
 		const SourceLocation source = readString(string);
@@ -1117,18 +2731,47 @@ public:
 			std::memcpy(temporaryString.data(), string.data(), string.size());
 			value = std::move(temporaryString);
 		} else {
-			std::istringstream stringStream{std::move(string)};
+			std::istringstream stringStream{std::move(string)}; // NOLINT(performance-move-const-arg)
 			json::deserialize(stringStream, value);
 		}
 		return source;
 	}
 
+	/**
+	 * Read a single JSON value of type Number from the input.
+	 *
+	 * \param value reference to the output value to write the parsed result to.
+	 *
+	 * \return the location of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input stream.
+	 *
+	 * \note If any exception is thrown, the output value is left unmodified.
+	 *
+	 * \sa Parser::parseNumber()
+	 */
 	SourceLocation readNumber(Number& value) {
-		const auto [number, source] = parser.parseNumber();
-		value = number;
+		const SourceLocation source = parser.peek().source;
+		value = parser.parseNumber();
 		return source;
 	}
 
+	/**
+	 * Read a single JSON value of type Number from the input into any value
+	 * that Number can be explicitly converted to.
+	 *
+	 * \param value reference to the output value to write the parsed result to.
+	 *
+	 * \return the location of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 * \throws any exception thrown by the underlying conversion or assignment
+	 *         operator of the given value type.
+	 */
 	template <typename T>
 	SourceLocation readNumber(T& value) {
 		Number number{};
@@ -1137,12 +2780,52 @@ public:
 		return source;
 	}
 
+	/**
+	 * Read a single JSON value of type Object from the input.
+	 *
+	 * \param value reference to the output value to write the parsed result to.
+	 *
+	 * \return the location of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input stream.
+	 *
+	 * \note If any exception is thrown, the output value is left unmodified.
+	 *
+	 * \sa Parser::parseObject()
+	 */
 	SourceLocation readObject(Object& value) {
-		auto [object, source] = parser.parseObject();
-		value = std::move(object);
+		const SourceLocation source = parser.peek().source;
+		value = parser.parseObject();
 		return source;
 	}
 
+	/**
+	 * Read a single JSON object from the input into any container of key-value
+	 * pairs where the key and value types are default-constructible and
+	 * deserializable from JSON, and where the container supports `clear()` and
+	 * `emplace(std::move(key), std::move(value))`.
+	 *
+	 * \param value reference to the output container to write the parsed results
+	 *        into.
+	 *
+	 * \return the location of the beginning of the parsed object.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 * \throws any exception thrown by the default constructors of the given
+	 *         key/value types.
+	 * \throws any exception thrown by the Deserializer implementations of the
+	 *         given key/value types.
+	 * \throws any exception thrown by `clear()` or
+	 *         `emplace(std::move(key), std::move(value))`.
+	 *
+	 * \warning If an exception is thrown, the output value may be left empty or
+	 *          with some successfully parsed elements added to it, since they
+	 *          are not removed automatically if a later operation fails.
+	 */
 	SourceLocation readObject(auto& value) {
 		const SourceLocation source = parser.peek().source;
 		if (const Token token = parser.eat(); token.type != TokenType::PUNCTUATOR_OPEN_CURLY_BRACE) {
@@ -1176,12 +2859,50 @@ public:
 		return source;
 	}
 
+	/**
+	 * Read a single JSON value of type Array from the input.
+	 *
+	 * \param value reference to the output value to write the parsed result to.
+	 *
+	 * \return the location of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input stream.
+	 *
+	 * \note If any exception is thrown, the output value is left unmodified.
+	 *
+	 * \sa Parser::parseArray()
+	 */
 	SourceLocation readArray(Array& value) {
-		auto [array, source] = parser.parseArray();
-		value = std::move(array);
+		const SourceLocation source = parser.peek().source;
+		value = parser.parseArray();
 		return source;
 	}
 
+	/**
+	 * Read a single JSON array from the input into any container of elements
+	 * that are default-constructible and deserializable from JSON, where the
+	 * container supports `clear()` and `push_back(std::move(element))`.
+	 *
+	 * \param value reference to the output container to write the parsed results
+	 *        into.
+	 *
+	 * \return the location of the beginning of the parsed array.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 * \throws any exception thrown by the default constructor of the given
+	 *         element type.
+	 * \throws any exception thrown by the Deserializer implementation of the
+	 *         given element type.
+	 * \throws any exception thrown by `clear()` or `push_back(std::move(element))`.
+	 *
+	 * \warning If an exception is thrown, the output value may be left empty or
+	 *          with some successfully parsed elements added to it, since they
+	 *          are not removed automatically if a later operation fails.
+	 */
 	SourceLocation readArray(auto& value) {
 		const SourceLocation source = parser.peek().source;
 		if (const Token token = parser.eat(); token.type != TokenType::PUNCTUATOR_OPEN_SQUARE_BRACKET) {
@@ -1210,12 +2931,50 @@ public:
 		return source;
 	}
 
+	/**
+	 * Read a single JSON value from the input.
+	 *
+	 * \param value reference to the output value to write the parsed result to.
+	 *
+	 * \return the location of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input stream.
+	 *
+	 * \note If any exception is thrown, the output value is left unmodified.
+	 *
+	 * \sa Parser::parseValue()
+	 */
 	SourceLocation readValue(Value& value) {
-		auto [v, source] = parser.parseValue();
-		value = std::move(v);
+		const SourceLocation source = parser.peek().source;
+		value = parser.parseValue();
 		return source;
 	}
 
+	/**
+	 * Read a single nullable JSON value from the input into any value that is
+	 * default-constructible, move-assignable and dereferencable, and where the
+	 * dereferenced value type is default-constructible, deserializable from
+	 * JSON and can be move-assigned into the value.
+	 *
+	 * If a null value is read, the output is assigned a default-constructed
+	 * value of its own type.
+	 *
+	 * \param value reference to the output value to write the result to.
+	 *
+	 * \return the location of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 * \throws any exception thrown by the default constructor of the given
+	 *         value type or its dereferenced type.
+	 * \throws any exception thrown by the Deserializer implementation of the
+	 *         given value's dereferenced type.
+	 * \throws any exception thrown by the assignment operator of the given
+	 *         value type.
+	 */
 	template <typename T>
 	SourceLocation readOptional(T& value) {
 		const SourceLocation source = parser.peek().source;
@@ -1223,12 +2982,32 @@ public:
 			parser.advance();
 			value = T{};
 		} else {
-			value = std::remove_cvref_t<decltype(*value)>{};
-			deserialize(*value);
+			std::remove_cvref_t<decltype(*value)> result{};
+			deserialize(result);
+			value = std::move(result);
 		}
 		return source;
 	}
 
+	/**
+	 * Read a single JSON value from the input into any value of aggregate type
+	 * whose fields are deserializable from JSON.
+	 *
+	 * \param value reference to the output value whose fields to write the
+	 *        parsed results into.
+	 *
+	 * \return the location of the beginning of the parsed value.
+	 *
+	 * \throws json::Error on invalid input.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the underlying input iterator.
+	 * \throws any exception thrown by the Deserializer implementations of the
+	 *         given field types.
+	 *
+	 * \warning If an exception is thrown, the output value may be left with
+	 *          some successfully parsed fields, since they are
+	 *          not reset automatically if a later operation fails.
+	 */
 	template <typename T>
 	SourceLocation readAggregate(T& value) {
 		const SourceLocation source = parser.peek().source;
@@ -1260,38 +3039,397 @@ public:
 		return source;
 	}
 
+	/**
+	 * Read a JSON value from the input into any value that is deserializable
+	 * from JSON using its corresponding implementation of Deserializer.
+	 *
+	 * \param value reference to the output value to write the parsed result to.
+	 *
+	 * \throws any exception thrown by the underlying input stream.
+	 * \throws any exception thrown by the Deserializer implementation of T.
+	 */
 	template <typename T>
 	void deserialize(T& value) {
 		json::Deserializer<std::remove_cvref_t<T>>{}.deserialize(*this, value);
 	}
-
-private:
-	template <typename T>
-	friend void deserialize(std::istream& stream, T& value, const DeserializationOptions& options);
-
-	DeserializationState(std::istream& stream, const DeserializationOptions& options)
-		: parser({{{stream}, {}}, {}, {.lineNumber = 1, .columnNumber = 1}})
-		, options(options) {}
 };
 
+/**
+ * Write any JSON-serializable value to an output stream using its corresponding
+ * implementation of Serializer.
+ *
+ * \param stream stream to write into.
+ * \param value value to write.
+ * \param options output options, see SerializationOptions.
+ *
+ * \throws any exception thrown by the underlying output stream.
+ * \throws any exception thrown by the Serializer implementation of T.
+ *
+ * \sa Writer
+ */
 template <typename T>
 inline void serialize(std::ostream& stream, const T& value, const SerializationOptions& options) {
-	SerializationState state{stream, options};
-	state.serialize(value);
+	Writer{stream, options}.serialize(value);
 }
 
+/**
+ * Read a JSON value from an input stream into any value that is deserializable
+ * from JSON using its corresponding implementation of Deserializer.
+ *
+ * \param stream stream to read from.
+ * \param value reference to the output value to write the parsed result to.
+ * \param options input options, see DeserializationOptions.
+ *
+ * \throws any exception thrown by the underlying input stream.
+ * \throws any exception thrown by the Deserializer implementation of T.
+ *
+ * \sa Reader
+ */
 template <typename T>
 inline void deserialize(std::istream& stream, T& value, const DeserializationOptions& options) {
-	DeserializationState state{stream, options};
-	state.deserialize(value);
+	Reader{stream, options}.deserialize(value);
+}
+
+namespace detail {
+
+struct NoVisitor {};
+
+template <typename Base, typename Callback>
+struct VisitNull : Base {
+	[[no_unique_address]] Callback callback;
+
+	VisitNull(Callback callback)
+		: callback(std::move(callback)) {}
+
+	VisitNull(Base base, Callback callback)
+		: Base(std::move(base))
+		, callback(std::move(callback)) {}
+
+	void visitNull(const SourceLocation& source, Null value) {
+		callback(source, value);
+	}
+
+	template <typename NewBase>
+	[[nodiscard]] auto operator|(NewBase other) && {
+		return VisitNull<NewBase, Callback>{std::move(other), std::move(callback)};
+	}
+};
+
+template <typename Base, typename Callback>
+struct VisitBoolean : Base {
+	[[no_unique_address]] Callback callback;
+
+	VisitBoolean(Callback callback)
+		: callback(std::move(callback)) {}
+
+	VisitBoolean(Base base, Callback callback)
+		: Base(std::move(base))
+		, callback(std::move(callback)) {}
+
+	void visitBoolean(const SourceLocation& source, Boolean value) {
+		callback(source, value);
+	}
+
+	template <typename NewBase>
+	[[nodiscard]] auto operator|(NewBase other) && {
+		return VisitBoolean<NewBase, Callback>{std::move(other), std::move(callback)};
+	}
+};
+
+template <typename Base, typename Callback>
+struct VisitString : Base {
+	[[no_unique_address]] Callback callback;
+
+	VisitString(Callback callback)
+		: callback(std::move(callback)) {}
+
+	VisitString(Base base, Callback callback)
+		: Base(std::move(base))
+		, callback(std::move(callback)) {}
+
+	void visitString(const SourceLocation& source, String&& value) {
+		callback(source, std::move(value));
+	}
+
+	template <typename NewBase>
+	[[nodiscard]] auto operator|(NewBase other) && {
+		return VisitString<NewBase, Callback>{std::move(other), std::move(callback)};
+	}
+};
+
+template <typename Base, typename Callback>
+struct VisitNumber : Base {
+	[[no_unique_address]] Callback callback;
+
+	VisitNumber(Callback callback)
+		: callback(std::move(callback)) {}
+
+	VisitNumber(Base base, Callback callback)
+		: Base(std::move(base))
+		, callback(std::move(callback)) {}
+
+	void visitNumber(const SourceLocation& source, Number value) {
+		callback(source, value);
+	}
+
+	template <typename NewBase>
+	[[nodiscard]] auto operator|(NewBase other) && {
+		return VisitNumber<NewBase, Callback>{std::move(other), std::move(callback)};
+	}
+};
+
+template <typename Base, typename Callback>
+struct VisitObject : Base {
+	[[no_unique_address]] Callback callback;
+
+	VisitObject(Callback callback)
+		: callback(std::move(callback)) {}
+
+	VisitObject(Base base, Callback callback)
+		: Base(std::move(base))
+		, callback(std::move(callback)) {}
+
+	void visitObject(const SourceLocation& source, auto& parser) {
+		callback(source, parser);
+	}
+
+	template <typename NewBase>
+	[[nodiscard]] auto operator|(NewBase other) && {
+		return VisitObject<NewBase, Callback>{std::move(other), std::move(callback)};
+	}
+};
+
+template <typename Base, typename Callback>
+struct VisitArray : Base {
+	[[no_unique_address]] Callback callback;
+
+	VisitArray(Callback callback)
+		: callback(std::move(callback)) {}
+
+	VisitArray(Base base, Callback callback)
+		: Base(std::move(base))
+		, callback(std::move(callback)) {}
+
+	void visitArray(const SourceLocation& source, auto& parser) {
+		callback(source, parser);
+	}
+
+	template <typename NewBase>
+	[[nodiscard]] auto operator|(NewBase other) && {
+		return VisitArray<NewBase, Callback>{std::move(other), std::move(callback)};
+	}
+};
+
+template <typename Base, typename Callback>
+struct VisitElement : Base {
+	[[no_unique_address]] Callback callback;
+
+	VisitElement(Callback callback)
+		: callback(std::move(callback)) {}
+
+	VisitElement(Base base, Callback callback)
+		: Base(std::move(base))
+		, callback(std::move(callback)) {}
+
+	void visitElement(const SourceLocation& source, String&& key, auto& parser) {
+		callback(source, std::move(key), parser);
+	}
+
+	template <typename NewBase>
+	[[nodiscard]] auto operator|(NewBase other) && {
+		return VisitElement<NewBase, Callback>{std::move(other), std::move(callback)};
+	}
+};
+
+} // namespace detail
+
+/**
+ * Build a Parser::ValueVisitor that handles Null values with a given callback
+ * function.
+ *
+ * \param callback function object that is callable with the same signature as
+ *        ValueVisitor::visitNull() and has the same semantics.
+ *
+ * \return a visitor that uses the given callback for visiting values of type
+ *         Null. This visitor can be combined with other related visitors using
+ *         the pipe operator '|'.
+ *
+ * \throws any exception thrown by the move constructor of the callback type.
+ *
+ * \sa json::onBoolean()
+ * \sa json::onString()
+ * \sa json::onNumber()
+ * \sa json::onObject()
+ * \sa json::onArray()
+ * \sa Parser::parseFile(ValueVisitor&)
+ * \sa Parser::parseValue(ValueVisitor&)
+ * \sa Parser::parseArray(ValueVisitor&)
+ */
+template <typename Callback>
+[[nodiscard]] inline auto onNull(Callback callback) {
+	return detail::VisitNull<detail::NoVisitor, Callback>{std::move(callback)};
+}
+
+/**
+ * Build a Parser::ValueVisitor that handles Boolean values with a given
+ * callback function.
+ *
+ * \param callback function object that is callable with the same signature as
+ *        ValueVisitor::visitBoolean() and has the same semantics.
+ *
+ * \return a visitor that uses the given callback for visiting values of type
+ *         Boolean. This visitor can be combined with other related visitors
+ *         using the pipe operator '|'.
+ *
+ * \throws any exception thrown by the move constructor of the callback type.
+ *
+ * \sa json::onNull()
+ * \sa json::onString()
+ * \sa json::onNumber()
+ * \sa json::onObject()
+ * \sa json::onArray()
+ * \sa Parser::parseFile(ValueVisitor&)
+ * \sa Parser::parseValue(ValueVisitor&)
+ * \sa Parser::parseArray(ValueVisitor&)
+ */
+template <typename Callback>
+[[nodiscard]] inline auto onBoolean(Callback callback) {
+	return detail::VisitBoolean<detail::NoVisitor, Callback>{std::move(callback)};
+}
+
+/**
+ * Build a Parser::ValueVisitor that handles String values with a given
+ * callback function.
+ *
+ * \param callback function object that is callable with the same signature as
+ *        ValueVisitor::visitString() and has the same semantics.
+ *
+ * \return a visitor that uses the given callback for visiting values of type
+ *         String. This visitor can be combined with other related visitors using the
+ *         pipe operator '|'.
+ *
+ * \throws any exception thrown by the move constructor of the callback type.
+ *
+ * \sa json::onNull()
+ * \sa json::onBoolean()
+ * \sa json::onNumber()
+ * \sa json::onObject()
+ * \sa json::onArray()
+ * \sa Parser::parseFile(ValueVisitor&)
+ * \sa Parser::parseValue(ValueVisitor&)
+ * \sa Parser::parseArray(ValueVisitor&)
+ */
+template <typename Callback>
+[[nodiscard]] inline auto onString(Callback callback) {
+	return detail::VisitString<detail::NoVisitor, Callback>{std::move(callback)};
+}
+
+/**
+ * Build a Parser::ValueVisitor that handles Number values with a given
+ * callback function.
+ *
+ * \param callback function object that is callable with the same signature as
+ *        ValueVisitor::visitNumber() and has the same semantics.
+ *
+ * \return a visitor that uses the given callback for visiting values of type
+ *         Number. This visitor can be combined with other related visitors
+ *         using the pipe operator '|'.
+ *
+ * \throws any exception thrown by the move constructor of the callback type.
+ *
+ * \sa json::onNull()
+ * \sa json::onBoolean()
+ * \sa json::onString()
+ * \sa json::onObject()
+ * \sa json::onArray()
+ * \sa Parser::parseFile(ValueVisitor&)
+ * \sa Parser::parseValue(ValueVisitor&)
+ * \sa Parser::parseArray(ValueVisitor&)
+ */
+template <typename Callback>
+[[nodiscard]] inline auto onNumber(Callback callback) {
+	return detail::VisitNumber<detail::NoVisitor, Callback>{std::move(callback)};
+}
+
+/**
+ * Build a Parser::ValueVisitor that handles objects with a given callback
+ * function.
+ *
+ * \param callback function object that is callable with the same signature as
+ *        ValueVisitor::visitObject() and has the same semantics.
+ *
+ * \return a visitor that uses the given callback for visiting objects. This
+ *         visitor can be combined with other related visitors using the pipe
+ *         operator '|'.
+ *
+ * \throws any exception thrown by the move constructor of the callback type.
+ *
+ * \sa json::onNull()
+ * \sa json::onBoolean()
+ * \sa json::onString()
+ * \sa json::onNumber()
+ * \sa json::onArray()
+ * \sa Parser::parseFile(ValueVisitor&)
+ * \sa Parser::parseValue(ValueVisitor&)
+ * \sa Parser::parseArray(ValueVisitor&)
+ */
+template <typename Callback>
+[[nodiscard]] inline auto onObject(Callback callback) {
+	return detail::VisitObject<detail::NoVisitor, Callback>{std::move(callback)};
+}
+
+/**
+ * Build a Parser::ValueVisitor that handles arrays with a given callback
+ * function.
+ *
+ * \param callback function object that is callable with the same signature as
+ *        ValueVisitor::visitArray() and has the same semantics.
+ *
+ * \return a visitor that uses the given callback for visiting arrays. This
+ *         visitor can be combined with other related visitors using the pipe
+ *         operator '|'.
+ *
+ * \throws any exception thrown by the move constructor of the callback type.
+ *
+ * \sa json::onNull()
+ * \sa json::onBoolean()
+ * \sa json::onString()
+ * \sa json::onNumber()
+ * \sa json::onObject()
+ * \sa Parser::parseFile(ValueVisitor&)
+ * \sa Parser::parseValue(ValueVisitor&)
+ * \sa Parser::parseArray(ValueVisitor&)
+ */
+template <typename Callback>
+[[nodiscard]] inline auto onArray(Callback callback) {
+	return detail::VisitArray<detail::NoVisitor, Callback>{std::move(callback)};
+}
+
+/**
+ * Build a Parser::ElementVisitor that handles object elements with a given
+ * callback function.
+ *
+ * \param callback function object that is callable with the same signature as
+ *        ElementVisitor::visitElement() and has the same semantics.
+ *
+ * \return a visitor that uses the given callback for visiting arrays. This
+ *         visitor can be combined with other related visitors using the pipe
+ *         operator '|'.
+ *
+ * \throws any exception thrown by the move constructor of the callback type.
+ *
+ * \sa Parser::parseObject(ElementVisitor&)
+ */
+template <typename Callback>
+[[nodiscard]] inline auto onElement(Callback callback) {
+	return detail::VisitElement<detail::NoVisitor, Callback>{std::move(callback)};
 }
 
 namespace detail {
 
 template <typename T>
-concept nullable = //
-	!
-std::is_arithmetic_v<T>&& //
+concept nullable =              //
+	!std::is_arithmetic_v<T> && //
 	requires(const T& value) {
 		static_cast<bool>(value);
 		static_cast<bool>(!value);
@@ -1319,64 +3457,63 @@ concept deserializable_as_string =                      //
 template <typename T>
 concept serializable_as_object = //
 	std::is_same_v<T, Object> || //
-	requires(SerializationState& state, const T& value) {
-		state.writeString(std::begin(value)->first);
-		state.serialize(std::begin(value)->second);
+	requires(Writer& writer, const T& value) {
+		writer.writeString(std::begin(value)->first);
+		writer.serialize(std::begin(value)->second);
 	};
 
 template <typename T>
 concept deserializable_as_object = //
 	std::is_same_v<T, Object> ||   //
-	requires(DeserializationState& state, T& value) {
+	requires(Reader& reader, T& value) {
 		value.clear();
 		std::remove_cvref_t<decltype(std::begin(value)->first)>{};
 		std::remove_cvref_t<decltype(std::begin(value)->second)>{};
-		state.readString(std::begin(value)->first);
-		state.deserialize(std::begin(value)->second);
+		reader.readString(std::begin(value)->first);
+		reader.deserialize(std::begin(value)->second);
 		value.emplace(std::remove_cvref_t<decltype(std::begin(value)->first)>{}, std::remove_cvref_t<decltype(std::begin(value)->second)>{});
 	};
 
 template <typename T>
 concept serializable_as_array = //
 	std::is_same_v<T, Array> || //
-	requires(SerializationState& state, const T& value) { state.serialize(*std::begin(value)); };
+	requires(Writer& writer, const T& value) { writer.serialize(*std::begin(value)); };
 
 template <typename T>
 concept deserializable_as_array = //
 	std::is_same_v<T, Array> ||   //
-	requires(DeserializationState& state, T& value) {
+	requires(Reader& reader, T& value) {
 		value.clear();
 		std::remove_cvref_t<decltype(*std::begin(value))>{};
-		state.deserialize(*std::begin(value));
+		reader.deserialize(*std::begin(value));
 		value.push_back(std::remove_cvref_t<decltype(*std::begin(value))>{});
 	};
 
 template <typename T>
 concept serializable_as_optional = //
-	!
-std::is_pointer_v<T>&& //
-	requires(SerializationState& state, const T& value) {
+	!std::is_pointer_v<T> &&       //
+	requires(Writer& writer, const T& value) {
 		static_cast<bool>(value);
-		state.serialize(*value);
+		writer.serialize(*value);
 	};
 
 template <typename T>
 concept deserializable_as_optional = //
-	!
-std::is_pointer_v<T>&& //
-	requires(DeserializationState& state, T& value) {
+	!std::is_pointer_v<T> &&         //
+	requires(Reader& reader, T& value, std::remove_cvref_t<decltype(*value)> result) {
 		value = T{};
-		value = std::remove_cvref_t<decltype(*value)>{};
-		state.deserialize(*value);
+		std::remove_cvref_t<decltype(*value)>{};
+		reader.deserialize(result);
+		value = std::move(result);
 	};
 
 template <typename T>
 inline constexpr bool always_false_v = false;
 
-template <typename T>
-inline std::size_t getRecursiveSize(const T& value) {
+template <typename T, typename ObjectElementFilter, typename ArrayElementFilter>
+inline std::size_t getRecursiveSize(const T& value, ObjectElementFilter objectElementFilter, ArrayElementFilter arrayElementFilter) {
 	if constexpr (std::is_same_v<T, Value>) {
-		return match(value)([&](const auto& v) -> std::size_t { return getRecursiveSize(v); });
+		return match(value)([&](const auto& v) -> std::size_t { return getRecursiveSize(v, objectElementFilter, arrayElementFilter); });
 	} else if constexpr (serializable_as_string<T>) {
 		return 1;
 	} else if constexpr (serializable_as_object<T>) {
@@ -1385,15 +3522,24 @@ inline std::size_t getRecursiveSize(const T& value) {
 				return 1;
 			}
 		}
-		return std::accumulate(std::begin(value), std::end(value), std::size_t{1},
-			[](std::size_t count, const auto& kv) -> std::size_t { return count + getRecursiveSize(kv.second); });
+		return std::accumulate(std::begin(value), std::end(value), std::size_t{1}, [&](std::size_t count, const auto& kv) -> std::size_t {
+			if (objectElementFilter(kv)) {
+				count += getRecursiveSize(kv.second, {}, {});
+			}
+			return count;
+		});
 	} else if constexpr (serializable_as_array<T>) {
 		if constexpr (nullable<T>) {
 			if (!value) {
 				return 1;
 			}
 		}
-		return std::accumulate(std::begin(value), std::end(value), std::size_t{1}, [](std::size_t count, const auto& v) -> std::size_t { return count + getRecursiveSize(v); });
+		return std::accumulate(std::begin(value), std::end(value), std::size_t{1}, [&](std::size_t count, const auto& v) -> std::size_t {
+			if (arrayElementFilter(v)) {
+				count += getRecursiveSize(v, {}, {});
+			}
+			return count;
+		});
 	} else if constexpr (serializable_as_optional<T>) {
 		return 1;
 	} else if constexpr (std::is_aggregate_v<T>) {
@@ -1403,7 +3549,7 @@ inline std::size_t getRecursiveSize(const T& value) {
 			}
 		}
 		std::size_t result = 1;
-		reflection::forEach(reflection::fields(value), [&](const auto& v) -> void { result += getRecursiveSize(v); });
+		reflection::forEach(reflection::fields(value), [&](const auto& v) -> void { result += getRecursiveSize(v, {}, {}); });
 		return result;
 	} else {
 		return 1;
@@ -1414,23 +3560,23 @@ inline std::size_t getRecursiveSize(const T& value) {
 
 template <typename T>
 struct Serializer {
-	void serialize(SerializationState& state, const T& value) {
+	void serialize(Writer& writer, const T& value) {
 		if constexpr (detail::nullable<T>) {
 			if (!value) {
-				state.writeNull();
+				writer.writeNull();
 				return;
 			}
 		}
 		if constexpr (detail::serializable_as_string<T>) {
-			state.writeString(value);
+			writer.writeString(value);
 		} else if constexpr (detail::serializable_as_object<T>) {
-			state.writeObject(value);
+			writer.writeObject(value);
 		} else if constexpr (detail::serializable_as_array<T>) {
-			state.writeArray(value);
+			writer.writeArray(value);
 		} else if constexpr (detail::serializable_as_optional<T>) {
-			state.writeOptional(value);
+			writer.writeOptional(value);
 		} else if constexpr (std::is_aggregate_v<T>) {
-			state.writeAggregate(value);
+			writer.writeAggregate(value);
 		} else {
 			static_assert(detail::always_false_v<T>, "JSON serialization is not implemented for the given type.");
 		}
@@ -1439,17 +3585,17 @@ struct Serializer {
 
 template <typename T>
 struct Deserializer {
-	void deserialize(DeserializationState& state, T& value) {
+	void deserialize(Reader& reader, T& value) {
 		if constexpr (detail::serializable_as_string<T>) {
-			state.readString(value);
+			reader.readString(value);
 		} else if constexpr (detail::serializable_as_object<T>) {
-			state.readObject(value);
+			reader.readObject(value);
 		} else if constexpr (detail::serializable_as_array<T>) {
-			state.readArray(value);
+			reader.readArray(value);
 		} else if constexpr (detail::serializable_as_optional<T>) {
-			state.readOptional(value);
+			reader.readOptional(value);
 		} else if constexpr (std::is_aggregate_v<T>) {
-			state.readAggregate(value);
+			reader.readAggregate(value);
 		} else {
 			static_assert(detail::always_false_v<T>, "JSON deserialization is not implemented for the given type.");
 		}
@@ -1459,71 +3605,71 @@ struct Deserializer {
 /// \cond
 template <>
 struct Serializer<Null> {
-	void serialize(SerializationState& state, Null) {
-		state.writeNull();
+	void serialize(Writer& writer, Null) {
+		writer.writeNull();
 	}
 };
 
 template <>
 struct Serializer<std::nullptr_t> {
-	void serialize(SerializationState& state, std::nullptr_t) {
-		state.writeNull();
+	void serialize(Writer& writer, std::nullptr_t) {
+		writer.writeNull();
 	}
 };
 
 template <>
 struct Serializer<Boolean> {
-	void serialize(SerializationState& state, Boolean value) {
-		state.writeBoolean(value);
+	void serialize(Writer& writer, Boolean value) {
+		writer.writeBoolean(value);
 	}
 };
 
 template <detail::number Num>
 struct Serializer<Num> {
-	void serialize(SerializationState& state, Num value) {
-		state.writeNumber(static_cast<Number>(value));
+	void serialize(Writer& writer, Num value) {
+		writer.writeNumber(static_cast<Number>(value));
 	}
 };
 
 template <>
 struct Serializer<char> {
-	void serialize(SerializationState& state, char value) {
-		state.writeString(std::string_view{&value, 1});
+	void serialize(Writer& writer, char value) {
+		writer.writeString(std::string_view{&value, 1});
 	}
 };
 
 template <>
 struct Serializer<char8_t> {
-	void serialize(SerializationState& state, char8_t value) {
-		state.writeString(std::u8string_view{&value, 1});
+	void serialize(Writer& writer, char8_t value) {
+		writer.writeString(std::u8string_view{&value, 1});
 	}
 };
 
 template <>
 struct Serializer<char16_t> {
-	void serialize(SerializationState& state, char16_t value) {
-		state.writeString(std::u16string_view{&value, 1});
+	void serialize(Writer& writer, char16_t value) {
+		writer.writeString(std::u16string_view{&value, 1});
 	}
 };
 
 template <>
 struct Serializer<char32_t> {
-	void serialize(SerializationState& state, char32_t value) {
-		state.writeString(std::u32string_view{&value, 1});
+	void serialize(Writer& writer, char32_t value) {
+		writer.writeString(std::u32string_view{&value, 1});
 	}
 };
 
 template <>
 struct Serializer<wchar_t> {
-	void serialize(SerializationState& state, wchar_t value) {
-		state.writeString(std::wstring_view{&value, 1});
+	void serialize(Writer& writer, wchar_t value) {
+		writer.writeString(std::wstring_view{&value, 1});
 	}
 };
 
 template <>
 struct Serializer<Value> {
-	void serialize(SerializationState& state, const Value& value) {
-		match(value)([&](const auto& v) -> void { state.serialize(v); });
+	void serialize(Writer& writer, const Value& value) {
+		match(value)([&](const auto& v) -> void { writer.serialize(v); });
 	}
 };
 /// \endcond
@@ -1531,37 +3677,37 @@ struct Serializer<Value> {
 /// \cond
 template <>
 struct Deserializer<Null> {
-	void deserialize(DeserializationState& state, Null&) {
-		state.readNull();
+	void deserialize(Reader& reader, Null&) {
+		reader.readNull();
 	}
 };
 
 template <>
 struct Deserializer<std::nullptr_t> {
-	void deserialize(DeserializationState& state, std::nullptr_t&) {
-		state.readNull();
+	void deserialize(Reader& reader, std::nullptr_t&) {
+		reader.readNull();
 	}
 };
 
 template <>
 struct Deserializer<Boolean> {
-	void deserialize(DeserializationState& state, Boolean& value) {
-		state.readBoolean(value);
+	void deserialize(Reader& reader, Boolean& value) {
+		reader.readBoolean(value);
 	}
 };
 
 template <detail::number Num>
 struct Deserializer<Num> {
-	void deserialize(DeserializationState& state, Num& value) {
-		state.readNumber(value);
+	void deserialize(Reader& reader, Num& value) {
+		reader.readNumber(value);
 	}
 };
 
 template <>
 struct Deserializer<char> {
-	void deserialize(DeserializationState& state, char& value) {
+	void deserialize(Reader& reader, char& value) {
 		String string{};
-		const SourceLocation source = state.readString(string);
+		const SourceLocation source = reader.readString(string);
 		if (string.size() != 1) {
 			throw Error{"Expected only a single character.", source};
 		}
@@ -1571,9 +3717,9 @@ struct Deserializer<char> {
 
 template <>
 struct Deserializer<char8_t> {
-	void deserialize(DeserializationState& state, char8_t& value) {
+	void deserialize(Reader& reader, char8_t& value) {
 		String string{};
-		const SourceLocation source = state.readString(string);
+		const SourceLocation source = reader.readString(string);
 		if (string.size() != sizeof(char8_t)) {
 			throw Error{"Expected only a single UTF-8 code unit.", source};
 		}
@@ -1583,9 +3729,9 @@ struct Deserializer<char8_t> {
 
 template <>
 struct Deserializer<char16_t> {
-	void deserialize(DeserializationState& state, char16_t& value) {
+	void deserialize(Reader& reader, char16_t& value) {
 		String string{};
-		const SourceLocation source = state.readString(string);
+		const SourceLocation source = reader.readString(string);
 		if (string.size() != sizeof(char16_t)) {
 			throw Error{"Expected only a single UTF-16 code unit.", source};
 		}
@@ -1595,9 +3741,9 @@ struct Deserializer<char16_t> {
 
 template <>
 struct Deserializer<char32_t> {
-	void deserialize(DeserializationState& state, char32_t& value) {
+	void deserialize(Reader& reader, char32_t& value) {
 		String string{};
-		const SourceLocation source = state.readString(string);
+		const SourceLocation source = reader.readString(string);
 		if (string.size() != sizeof(char32_t)) {
 			throw Error{"Expected only a single UTF-32 code unit.", source};
 		}
@@ -1607,9 +3753,9 @@ struct Deserializer<char32_t> {
 
 template <>
 struct Deserializer<wchar_t> {
-	void deserialize(DeserializationState& state, wchar_t& value) {
+	void deserialize(Reader& reader, wchar_t& value) {
 		String string{};
-		const SourceLocation source = state.readString(string);
+		const SourceLocation source = reader.readString(string);
 		if (string.size() != sizeof(wchar_t)) {
 			throw Error{"Expected only a single wide character.", source};
 		}
@@ -1619,8 +3765,8 @@ struct Deserializer<wchar_t> {
 
 template <>
 struct Deserializer<Value> {
-	void deserialize(DeserializationState& state, Value& value) {
-		state.readValue(value);
+	void deserialize(Reader& reader, Value& value) {
+		reader.readValue(value);
 	}
 };
 /// \endcond
@@ -1745,7 +3891,7 @@ inline std::pair<Object::iterator, bool> Object::insert(P&& value) {
 
 template <typename P>
 inline Object::iterator Object::insert(const_iterator pos, P&& value) {
-	return emplace_hint(pos, std::move(value));
+	return emplace_hint(pos, std::forward<P>(value));
 }
 
 template <typename InputIt>
@@ -2126,6 +4272,17 @@ inline void Array::resize(size_type count) {
 
 inline void Array::resize(size_type count, const Value& value) {
 	values.resize(count, value);
+}
+
+inline Value Value::parse(std::u8string_view jsonString) {
+	unicode::UTF8View codePoints{jsonString};
+	return Parser<const char8_t*>{{codePoints.begin(), codePoints.end(), {.lineNumber = 1, .columnNumber = 1}}}.parseFile();
+}
+
+inline Value Value::parse(std::string_view jsonString) {
+	static_assert(sizeof(char) == sizeof(char8_t));
+	static_assert(alignof(char) == alignof(char8_t));
+	return parse(std::u8string_view{reinterpret_cast<const char8_t*>(jsonString.data()), jsonString.size()});
 }
 
 inline std::string Value::toString() const {

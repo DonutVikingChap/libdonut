@@ -5,7 +5,7 @@ add_subdirectory(glm)
 add_subdirectory(physfs)
 add_subdirectory(schrift)
 add_subdirectory(SDL)
-add_subdirectory(SoLoud) # Depends on SDL2.
+add_subdirectory(SoLoud) # Depends on SDL.
 add_subdirectory(stb)
 
 set(DONUT_INTERFACE_DEPENDENCIES ${DONUT_INTERFACE_DEPENDENCIES} PARENT_SCOPE)

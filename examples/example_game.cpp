@@ -398,30 +398,21 @@ private:
 			{"scroll_down", Action::SCROLL_DOWN},
 		};
 
-		const std::string bindingsFileContents = InputFileStream::open(filepath).readAllIntoString();
 		try {
-			const json::Value bindingsValue = json::Value::parse(bindingsFileContents);
-			if (!bindingsValue.is<json::Object>()) {
-				throw std::runtime_error{"Invalid bindings type."};
-			}
-			for (const auto& [inputIdentifier, actions] : bindingsValue.as<json::Object>()) {
-				const std::optional<app::Input> input = app::findInput(inputIdentifier);
-				if (!input) {
-					throw std::runtime_error{std::format("Invalid input identifier \"{}\".", inputIdentifier)};
-				}
-				const std::span<const json::Value> actionValues = (actions.is<json::Array>()) ? actions.as<json::Array>() : std::span{&actions, 1};
-				for (const json::Value& actionValue : actionValues) {
-					if (!actionValue.is<json::String>()) {
-						throw std::runtime_error{"Invalid actions type."};
+			json::StringParser{InputFileStream::open(filepath).readAllIntoString()}.parseObject(
+				json::onElement([&](const json::SourceLocation&, const json::String& key, json::StringParser& parser) -> void {
+					if (const std::optional<app::Input> input = app::findInput(key)) {
+						const auto bindAction = [&](const json::SourceLocation&, const json::String& value) -> void {
+							if (const auto it = actionsByIdentifier.find(value); it != actionsByIdentifier.end()) {
+								inputManager.addBinding(*input, it->second);
+							} else {
+								throw std::runtime_error{std::format("Invalid action identifier \"{}\".", value)};
+							}
+						};
+						parser.parseValue(json::onArray([&](const json::SourceLocation&, json::StringParser& parser) -> void { parser.parseArray(json::onString(bindAction)); }) |
+										  json::onString(bindAction));
 					}
-					const json::String& actionIdentifier = actionValue.as<json::String>();
-					const auto it = actionsByIdentifier.find(actionIdentifier);
-					if (it == actionsByIdentifier.end()) {
-						throw std::runtime_error{std::format("Invalid action identifier \"{}\".", actionIdentifier)};
-					}
-					inputManager.addBinding(*input, it->second);
-				}
-			}
+				}));
 		} catch (const json::Error& e) {
 			throw std::runtime_error{std::format("{}:{}:{}: {}", filepath, e.source.lineNumber, e.source.columnNumber, e.what())};
 		} catch (const std::exception& e) {

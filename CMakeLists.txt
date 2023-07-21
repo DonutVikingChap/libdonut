@@ -108,7 +108,6 @@ if(DONUT_ENABLE_LIBRARY)
 		"src/base64.cpp"
 		"src/File.cpp"
 		"src/InputFileStream.cpp"
-		"src/json.cpp"
 		"src/obj.cpp"
 		"src/OutputFileStream.cpp"
 		"src/xml.cpp")
