@@ -138,7 +138,7 @@ Libdonut is distributed under the **MIT License**. See the included [LICENSE](LI
 
 ### External libraries
 
-Libdonut depends on the C++ standard library, for which any compatible implementation may be used, as well as the following specific third-party libraries, each one having its own license, with some including further dependencies:
+Libdonut depends on the C++ standard library, for which any C++20-compatible implementation may be used, as well as the following specific third-party libraries, each one having its own license, with some including further dependencies:
 
 - [glad](https://github.com/Dav1dde/glad) (glad/gl.h is Public Domain, khrplatform.h is under MIT License)
 - [GLM](https://github.com/g-truc/glm) (MIT License)
@@ -147,3 +147,5 @@ Libdonut depends on the C++ standard library, for which any compatible implement
 - [SDL](https://github.com/libsdl-org/SDL) (zlib License)
 - [SoLoud](https://github.com/jarikomppa/soloud) (zlib License)
 - [stb](https://github.com/nothings/stb) (Public Domain)
+
+For graphics, libdonut expects the end user to have an available graphics driver installed that implements the [OpenGL](https://www.khronos.org/opengl/) Graphics System (Version 3.3 (Core Profile)) as [specified](https://registry.khronos.org/OpenGL/specs/gl/glspec33.core.pdf) by The Khronos Group Inc. The GL library is loaded at runtime through glad, using the function loader provided by SDL.
