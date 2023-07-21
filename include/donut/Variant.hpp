@@ -1540,6 +1540,29 @@ template <typename... Ts>
 }
 
 /**
+ * Compare two variants for inequality.
+ *
+ * \param a first variant.
+ * \param b second variant.
+ *
+ * \return true if the first and second variant hold different alternatives or
+ *         if their values do not compare equal, false otherwise.
+ *
+ * \throw any exception thrown by the underlying comparison operator of the
+ *        relevant alternative type.
+ */
+template <typename... Ts>
+[[nodiscard]] constexpr bool operator!=(const Variant<Ts...>& a, const Variant<Ts...>& b) {
+	if (a.index() != b.index()) {
+		return true;
+	}
+	if (a.valueless_by_exception()) {
+		return false;
+	}
+	return visit([&]<typename T>(const T& value) -> bool { return value != b.template as<T>(); }, a);
+}
+
+/**
  * Check if a variant is less than another variant.
  *
  * \param a first variant.
