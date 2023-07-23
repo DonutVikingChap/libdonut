@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 project("libdonut"
-	VERSION 0.2.9
+	VERSION 1.0.0
 	DESCRIPTION "Application framework for cross-platform game development"
 	LANGUAGES C CXX)
 
