@@ -4,8 +4,7 @@
 #include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Handle.hpp>
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 class Texture; // Forward declaration, to avoid including Texture.hpp.
 class Window;  // Forward declaration, to avoid a circular include of Window.hpp.
@@ -85,7 +84,6 @@ private:
 	UniqueHandle<Handle, FramebufferDeleter> fbo{};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

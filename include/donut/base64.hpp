@@ -4,8 +4,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
-namespace donut {
-namespace base64 {
+namespace donut::base64 {
 
 /**
  * Encode arbitrary data into a Base64 string.
@@ -35,7 +34,6 @@ std::string encode(std::string_view data);
  */
 std::string decode(std::string_view string);
 
-} // namespace base64
-} // namespace donut
+} // namespace donut::base64
 
 #endif

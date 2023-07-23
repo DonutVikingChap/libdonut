@@ -1,16 +1,15 @@
 #ifndef DONUT_GRAPHICS_MODEL_HPP
 #define DONUT_GRAPHICS_MODEL_HPP
 
+#include <donut/Filesystem.hpp>
 #include <donut/graphics/Mesh.hpp>
 #include <donut/graphics/Texture.hpp>
+#include <donut/math.hpp>
 
-#include <cstddef>     // std::size_t
-#include <cstdint>     // std::int32_t, std::uint32_t
-#include <glm/glm.hpp> // glm::...
-#include <vector>      // std::vector
+#include <cstddef> // std::size_t
+#include <vector>  // std::vector
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Container for a set of 3D triangle meshes stored on the GPU, combined with
@@ -31,11 +30,11 @@ struct Model {
 		 *       concept.
 		 */
 		struct Vertex {
-			glm::vec3 position;           ///< Position relative to the model origin.
-			glm::vec3 normal;             ///< Unit vector pointing away from the vertex surface.
-			glm::vec3 tangent;            ///< Unit vector pointing in some direction along the vertex surface.
-			glm::vec3 bitangent;          ///< Unit vector that is the cross product of the normal and the tangent.
-			glm::vec2 textureCoordinates; ///< Texture UV coordinates that map to this vertex.
+			vec3 position;           ///< Position relative to the model origin.
+			vec3 normal;             ///< Unit vector pointing away from the vertex surface.
+			vec3 tangent;            ///< Unit vector pointing in some direction along the vertex surface.
+			vec3 bitangent;          ///< Unit vector that is the cross product of the normal and the tangent.
+			vec2 textureCoordinates; ///< Texture UV coordinates that map to this vertex.
 		};
 
 		/**
@@ -44,7 +43,7 @@ struct Model {
 		 * \note Meets the requirements of the donut::graphics::mesh_index
 		 *       concept.
 		 */
-		using Index = std::uint32_t;
+		using Index = u32;
 
 		/**
 		 * Data layout for the attributes of a single instance of the mesh.
@@ -53,9 +52,9 @@ struct Model {
 		 *       concept.
 		 */
 		struct Instance {
-			glm::mat4 transformation; ///< Model transformation matrix.
-			glm::mat3 normalMatrix;   ///< Transposed 3x3 basis of the model transformation matrix.
-			glm::vec4 tintColor;      ///< Tint color to use when rendering.
+			mat4 transformation; ///< Model transformation matrix.
+			mat3 normalMatrix;   ///< Transposed 3x3 basis of the model transformation matrix.
+			vec4 tintColor;      ///< Tint color to use when rendering.
 		};
 
 		/**
@@ -109,7 +108,8 @@ struct Model {
 	 * The supported file formats are:
 	 * - Wavefront OBJ (.obj)
 	 *
-	 * \param filepath virtual filepath of the model file to load, see File.
+	 * \param filesystem virtual filepath to load the files from.
+	 * \param filepath virtual filepath of the model file to load.
 	 *
 	 * \throws File::Error on failure to open the file.
 	 * \throws graphics::Error on failure to load a model from the file.
@@ -121,7 +121,7 @@ struct Model {
 	 *       model are also loaded as needed. See the documentation of Image for
 	 *       a description of the supported image file formats.
 	 */
-	explicit Model(const char* filepath);
+	explicit Model(const Filesystem& filesystem, const char* filepath);
 
 	/**
 	 * List of objects defined by the loaded model.
@@ -129,7 +129,6 @@ struct Model {
 	std::vector<Object> objects;
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

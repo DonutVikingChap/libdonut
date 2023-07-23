@@ -5,8 +5,7 @@
 #include <donut/graphics/ShaderParameter.hpp>
 #include <donut/graphics/ShaderProgram.hpp>
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 class Renderer; // Forward declaration, to avoid a circular include of Renderer.hpp.
 
@@ -122,7 +121,6 @@ private:
 	static void destroySharedShaders() noexcept;
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

@@ -1,21 +1,20 @@
-#ifndef DONUT_APPLICATION_INPUT_MANAGER_HPP
-#define DONUT_APPLICATION_INPUT_MANAGER_HPP
+#ifndef DONUT_EVENTS_INPUT_MANAGER_HPP
+#define DONUT_EVENTS_INPUT_MANAGER_HPP
 
 #include <donut/UniqueHandle.hpp>
-#include <donut/application/Event.hpp>
-#include <donut/application/Input.hpp>
+#include <donut/events/Event.hpp>
+#include <donut/events/Input.hpp>
+#include <donut/math.hpp>
 
 #include <array>         // std::array
 #include <bitset>        // std::bitset
 #include <cstddef>       // std::size_t
-#include <glm/glm.hpp>   // glm::...
 #include <optional>      // std::optional
 #include <type_traits>   // std::is_enum_v, std::underlying_type_t
 #include <unordered_map> // std::unordered_map
 #include <vector>        // std::vector
 
-namespace donut {
-namespace application {
+namespace donut::events {
 
 /**
  * Configuration options for an InputManager.
@@ -30,7 +29,7 @@ struct InputManagerOptions {
 	 * it becomes more in line with the typical 0-1 range of a key press or
 	 * joystick axis.
 	 */
-	float mouseSensitivity = 0.005f;
+	float mouseSensitivity = 0.00038397243543875251f;
 
 	/**
 	 * Controller left analog stick sensitivity coefficient.
@@ -111,20 +110,21 @@ struct InputManagerOptions {
  * numbers and processing input events that control their associated values.
  *
  * By keeping an instance of this class and continuously feeding it the events
- * received from an Application through the prepareForEvents() and handleEvent()
- * functions, it can serve as the main source of user input for the whole
- * program. After the event processing phase of an Application frame, the input
+ * received from an EventPump, it can serve as the main source of user input for
+ * the whole program. After handling the events received in a frame, the input
  * manager can be queried for the current state of any specific physical inputs,
  * or the values of the abstract outputs to which they are bound, as well as the
  * corresponding state of the previous frame. This combination allows the inputs
  * or outputs which were just triggered since the previous frame to be derived
  * as well.
  *
- * The supported control types include keyboard, mouse and game controller
- * devices, and it is possible for the value of a given output to be affected by
- * the input of different device types simultaneously. However, differentiating
- * the source of an input between multiple connected devices of the same type is
- * currently not supported.
+ * The supported control types include keyboard, mouse, touch and game
+ * controller devices, and it is possible for the value of a given output to be
+ * affected by the input of different device types simultaneously. However,
+ * differentiating the source of an input between multiple connected devices of
+ * the same type is not possible. Therefore, if any filtering of events by their
+ * source is desired, it needs to be done _before_ feeding the events to the
+ * input manager.
  */
 class InputManager {
 public:
@@ -157,10 +157,25 @@ public:
 	 * \param options initial configuration of the input manager, see
 	 *        InputManagerOptions.
 	 *
-	 * \throws application::Error on failure to initialize the required global
+	 * \throws events::Error on failure to initialize the required global
 	 *         subsystems.
 	 */
 	InputManager(const InputManagerOptions& options = {});
+
+	/** Destructor. */
+	~InputManager();
+
+	/** Copying an input manager is not allowed, since it manages global state. */
+	InputManager(const InputManager&) = delete;
+
+	/** Moving an input manager is not allowed, since it manages global state. */
+	InputManager(InputManager&&) = delete;
+
+	/** Copying an input manager is not allowed, since it manages global state. */
+	InputManager& operator=(const InputManager&) = delete;
+
+	/** Moving an input manager is not allowed, since it manages global state. */
+	InputManager& operator=(InputManager&&) = delete;
 
 	/**
 	 * Update the internal state to prepare for the input events of the current
@@ -171,21 +186,21 @@ public:
 	 * state.
 	 *
 	 * \note This function should typically be called once every frame during
-	 *       the Application::prepareForEvents() callback.
+	 *       the application::Application::update() callback.
 	 *
 	 * \sa handleEvent()
 	 */
 	void prepareForEvents();
 
 	/**
-	 * Handle an event from the Application, which may cause updates to the
+	 * Handle an event from an EventPump, which may cause updates to the
 	 * internal input/output state of the current frame.
 	 *
-	 * \param event a reference to the application::Event that was received in
-	 *        an Application::handleEvent() callback.
+	 * \param event event to handle.
 	 *
 	 * \note This function should typically be called during the
-	 *       Application::handleEvent() callback.
+	 *       application::Application::update() callback, after polling events
+	 *       from an EventPump.
 	 *
 	 * \sa prepareForEvents()
 	 */
@@ -262,7 +277,7 @@ public:
 	 * \sa set()
 	 * \sa resetAllInputs()
 	 */
-	void press(Input input, glm::i32 offset = 32767) noexcept;
+	void press(Input input, i32 offset = 32767) noexcept;
 
 	/**
 	 * Subtract from an input and apply an offset to all of its bound outputs.
@@ -281,7 +296,7 @@ public:
 	 * \sa set()
 	 * \sa resetAllInputs()
 	 */
-	void release(Input input, glm::i32 offset = -32767) noexcept;
+	void release(Input input, i32 offset = -32767) noexcept;
 
 	/**
 	 * Trigger a transient activation of an input that only lasts for the current
@@ -300,7 +315,7 @@ public:
 	 * \sa set()
 	 * \sa resetAllInputs()
 	 */
-	void move(Input input, glm::i32 offset) noexcept;
+	void move(Input input, i32 offset) noexcept;
 
 	/**
 	 * Set the absolute value of all outputs bound to a specific input, without
@@ -317,7 +332,7 @@ public:
 	 * \sa unbindAll()
 	 * \sa resetAllInputs()
 	 */
-	void set(Input input, glm::i32 value) noexcept;
+	void set(Input input, i32 value) noexcept;
 
 	/**
 	 * Reset the internal state of all inputs and outputs for both the current
@@ -462,7 +477,7 @@ public:
 	 *
 	 * \sa mouseJustMoved()
 	 */
-	[[nodiscard]] std::optional<glm::vec2> getMousePosition() const noexcept;
+	[[nodiscard]] std::optional<vec2> getMousePosition() const noexcept;
 
 	/**
 	 * Check if the mouse just moved on the current frame.
@@ -538,7 +553,7 @@ public:
 	 * \sa isControllerConnected()
 	 * \sa controllerLeftStickJustMoved()
 	 */
-	[[nodiscard]] std::optional<glm::vec2> getControllerLeftStickPosition() const noexcept;
+	[[nodiscard]] std::optional<vec2> getControllerLeftStickPosition() const noexcept;
 
 	/**
 	 * Get the latest known position of the right analog stick of the connected
@@ -557,7 +572,7 @@ public:
 	 * \sa isControllerConnected()
 	 * \sa controllerRightStickJustMoved()
 	 */
-	[[nodiscard]] std::optional<glm::vec2> getControllerRightStickPosition() const noexcept;
+	[[nodiscard]] std::optional<vec2> getControllerRightStickPosition() const noexcept;
 
 	/**
 	 * Get the latest known position of the left trigger of the connected
@@ -685,7 +700,7 @@ public:
 	 * \sa touchJustMoved()
 	 * \sa touchJustChangedPressure()
 	 */
-	[[nodiscard]] std::optional<glm::vec2> getTouchPosition() const noexcept;
+	[[nodiscard]] std::optional<vec2> getTouchPosition() const noexcept;
 
 	/**
 	 * Get the latest known touch finger pressure processed by the input
@@ -874,7 +889,7 @@ public:
 	 * \sa getAbsoluteVector()
 	 * \sa getRelativeVector()
 	 */
-	[[nodiscard]] glm::i32 getAbsoluteValue(std::size_t output) const noexcept;
+	[[nodiscard]] i32 getAbsoluteValue(std::size_t output) const noexcept;
 
 	/**
 	 * Get the current raw total relative value of a specific output, which
@@ -897,7 +912,7 @@ public:
 	 * \sa getAbsoluteVector()
 	 * \sa getRelativeVector()
 	 */
-	[[nodiscard]] glm::i32 getRelativeValue(std::size_t output) const noexcept;
+	[[nodiscard]] i32 getRelativeValue(std::size_t output) const noexcept;
 
 	/**
 	 * Get the current scaled absolute value of a specific output in a single
@@ -1020,7 +1035,7 @@ public:
 	 * \sa getRelativeValue()
 	 * \sa getRelativeVector()
 	 */
-	[[nodiscard]] glm::vec2 getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept;
+	[[nodiscard]] vec2 getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept;
 
 	/**
 	 * Get the current combined scaled relative value of four specific outputs
@@ -1045,19 +1060,92 @@ public:
 	 *         component is usually between -1 and 1 when only a single input is
 	 *         controlling each direction, though it could be any value.
 	 *
-	 * \remark This function is useful for controlling 2D movement based on four
-	 *         directional inputs such as the arrow keys, a D-pad or a joystick.
-	 *         When used for this purpose, it might be necessary to clamp the
-	 *         length of the vector to a length of 1 before using it, to make
-	 *         sure that the user cannot achieve a higher speed than intended by
-	 *         binding multiple inputs to one direction and pressing them at the
-	 *         same time such that they increase the accumulated value above 1.
+	 * \sa getAbsoluteValue()
+	 * \sa getRelativeValue()
+	 * \sa getAbsoluteVector()
+	 */
+	[[nodiscard]] vec2 getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept;
+
+	/**
+	 * Get the current combined scaled absolute value of six specific outputs
+	 * in orthogonal directions, which consist of the accumulated contributions
+	 * from all of their bound inputs.
+	 *
+	 * \param outputNegativeX valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the negative contribution to
+	 *        the x component of the resulting vector.
+	 * \param outputPositiveX valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the positive contribution to
+	 *        the x component of the resulting vector.
+	 * \param outputNegativeY valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the negative contribution to
+	 *        the y component of the resulting vector.
+	 * \param outputPositiveY valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the positive contribution to
+	 *        the y component of the resulting vector.
+	 * \param outputNegativeZ valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the negative contribution to
+	 *        the z component of the resulting vector.
+	 * \param outputPositiveZ valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the positive contribution to
+	 *        the z component of the resulting vector.
+	 *
+	 * \return the accumulated scaled absolute floating-point value of the given
+	 *         outputs as a 3D vector, where each component is usually between
+	 *         -1 and 1 when only a single input is controlling each direction,
+	 *         though it could be any value.
+	 *
+	 * \remark This function is useful for controlling 3D translation based on
+	 *         six directional inputs such as the arrow keys combined with two
+	 *         extra keys for vertical motion. When used for this purpose, it
+	 *         might be necessary to clamp the length of the vector to a length
+	 *         of 1 before using it, to make sure that the user cannot achieve a
+	 *         higher speed than intended by binding multiple inputs to one
+	 *         direction and pressing them at the same time such that they
+	 *         increase the accumulated value above 1.
+	 *
+	 * \sa getAbsoluteValue()
+	 * \sa getRelativeValue()
+	 * \sa getRelativeVector()
+	 */
+	[[nodiscard]] vec3 getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY,
+		std::size_t outputNegativeZ, std::size_t outputPositiveZ) const noexcept;
+
+	/**
+	 * Get the current combined scaled relative value of six specific outputs
+	 * in orthogonal directions, which consist of the accumulated contributions
+	 * from all of their bound inputs.
+	 *
+	 * \param outputNegativeX valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the negative contribution to
+	 *        the x component of the resulting vector.
+	 * \param outputPositiveX valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the positive contribution to
+	 *        the x component of the resulting vector.
+	 * \param outputNegativeY valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the negative contribution to
+	 *        the y component of the resulting vector.
+	 * \param outputPositiveY valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the positive contribution to
+	 *        the y component of the resulting vector.
+	 * \param outputNegativeZ valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the negative contribution to
+	 *        the z component of the resulting vector.
+	 * \param outputPositiveZ valid output number between 0 (inclusive) and
+	 *        #OUTPUT_COUNT (exclusive) to use for the positive contribution to
+	 *        the z component of the resulting vector.
+	 *
+	 * \return the accumulated scaled relative floating-point offset of the
+	 *         given outputs since the previous frame as a 3D vector, where each
+	 *         component is usually between -1 and 1 when only a single input is
+	 *         controlling each direction, though it could be any value.
 	 *
 	 * \sa getAbsoluteValue()
 	 * \sa getRelativeValue()
 	 * \sa getAbsoluteVector()
 	 */
-	[[nodiscard]] glm::vec2 getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept;
+	[[nodiscard]] vec3 getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY,
+		std::size_t outputNegativeZ, std::size_t outputPositiveZ) const noexcept;
 
 	/**
 	 * Check if a specific input is currently in a pressed state.
@@ -1192,7 +1280,7 @@ public:
 	 * \sa getAbsoluteValue(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] glm::i32 getAbsoluteValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] i32 getAbsoluteValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
 		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
 	}
 
@@ -1204,7 +1292,7 @@ public:
 	 * \sa getRelativeValue(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] glm::i32 getRelativeValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] i32 getRelativeValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
 		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
 	}
 
@@ -1268,7 +1356,7 @@ public:
 	 *     std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] glm::vec2 getAbsoluteVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
+	[[nodiscard]] vec2 getAbsoluteVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
 		requires(std::is_enum_v<Action>) {
 		return getAbsoluteVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
@@ -1286,7 +1374,7 @@ public:
 	 *     std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] glm::vec2 getRelativeVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
+	[[nodiscard]] vec2 getRelativeVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
 		requires(std::is_enum_v<Action>) {
 		return getRelativeVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
@@ -1294,41 +1382,81 @@ public:
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveY)));
 	}
 
+	/**
+	 * Like getAbsoluteVector(std::size_t, std::size_t, std::size_t,
+	 * std::size_t, std::size_t, std::size_t) const, but accepts "actions" of
+	 * any enum type, which are interpreted as corresponding to the output
+	 * numbers equal to their underlying values.
+	 *
+	 * \sa getAbsoluteVector(std::size_t, std::size_t, std::size_t,
+	 *     std::size_t, std::size_t, std::size_t) const
+	 */
+	template <typename Action>
+	[[nodiscard]] vec3 getAbsoluteVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY, Action actionNegativeZ,
+		Action actionPositiveZ) const noexcept requires(std::is_enum_v<Action>) {
+		return getAbsoluteVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveY)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeZ)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveZ)));
+	}
+
+	/**
+	 * Like getRelativeVector(std::size_t, std::size_t, std::size_t,
+	 * std::size_t, std::size_t, std::size_t) const, but accepts "actions" of
+	 * any enum type, which are interpreted as corresponding to the output
+	 * numbers equal to their underlying values.
+	 *
+	 * \sa getRelativeVector(std::size_t, std::size_t, std::size_t,
+	 *     std::size_t, std::size_t, std::size_t) const
+	 */
+	template <typename Action>
+	[[nodiscard]] vec3 getRelativeVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY, Action actionNegativeZ,
+		Action actionPositiveZ) const noexcept requires(std::is_enum_v<Action>) {
+		return getRelativeVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveY)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeZ)),
+			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveZ)));
+	}
+
 private:
 	struct ControllerDeleter {
 		void operator()(void* handle) const noexcept;
 	};
 
-	using Controller = UniqueHandle<void*, ControllerDeleter, nullptr>;
+	using Controller = UniqueHandle<void*, ControllerDeleter>;
 
-	void setMousePosition(glm::vec2 position) noexcept;
+	void setMousePosition(vec2 position, vec2 relativeMotion) noexcept;
 	void scrollMouseWheelHorizontally(float offset) noexcept;
 	void scrollMouseWheelVertically(float offset) noexcept;
 
-	void setControllerLeftStickPosition(glm::vec2 position) noexcept;
-	void setControllerRightStickPosition(glm::vec2 position) noexcept;
+	void setControllerLeftStickPosition(vec2 position) noexcept;
+	void setControllerRightStickPosition(vec2 position) noexcept;
 	void setControllerLeftTriggerPosition(float position) noexcept;
 	void setControllerRightTriggerPosition(float position) noexcept;
 
-	void setTouchPosition(glm::vec2 position) noexcept;
+	void setTouchPosition(vec2 position) noexcept;
 	void setTouchPressure(float pressure) noexcept;
 
 	InputManagerOptions options;
 	std::unordered_map<Input, Outputs> bindings{};
-	std::optional<glm::vec2> mousePosition{};
+	std::optional<vec2> mousePosition{};
 	Controller controller{};
-	std::optional<glm::vec2> controllerLeftStickPosition{};
-	std::optional<glm::vec2> controllerRightStickPosition{};
+	std::optional<vec2> controllerLeftStickPosition{};
+	std::optional<vec2> controllerRightStickPosition{};
 	std::optional<float> controllerLeftTriggerPosition{};
 	std::optional<float> controllerRightTriggerPosition{};
-	std::optional<glm::vec2> touchPosition{};
+	std::optional<vec2> touchPosition{};
 	std::optional<float> touchPressure{};
 	Outputs currentPersistentOutputs{};
 	Outputs previousPersistentOutputs{};
 	Outputs transientOutputs{};
-	std::array<glm::i32, OUTPUT_COUNT> outputAbsoluteValues{};
-	std::array<glm::i32, OUTPUT_COUNT> outputRelativeValues{};
-	std::array<std::uint8_t, OUTPUT_COUNT> outputPersistentPresses{};
+	std::array<i32, OUTPUT_COUNT> outputAbsoluteValues{};
+	std::array<i32, OUTPUT_COUNT> outputRelativeValues{};
+	std::array<u8, OUTPUT_COUNT> outputPersistentPresses{};
 	std::bitset<INPUT_COUNT> currentPersistentInputs{};
 	std::bitset<INPUT_COUNT> previousPersistentInputs{};
 	std::bitset<INPUT_COUNT> transientInputs{};
@@ -1343,7 +1471,6 @@ private:
 	bool touchTransientPressure = false;
 };
 
-} // namespace application
-} // namespace donut
+} // namespace donut::events
 
 #endif

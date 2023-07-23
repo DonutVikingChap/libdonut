@@ -1,32 +1,40 @@
-#include <donut/Variant.hpp>
-#include <donut/application/Input.hpp>
-#include <donut/application/InputManager.hpp>
+#include <donut/events/Error.hpp>
+#include <donut/events/Input.hpp>
+#include <donut/events/InputManager.hpp>
+#include <donut/math.hpp>
 
-#include <SDL.h>       // SDL...
-#include <cstddef>     // std::size_t
-#include <glm/glm.hpp> // glm::...
-#include <optional>    // std::optional
-#include <vector>      // std::vector
+#include <SDL.h>    // SDL...
+#include <cstddef>  // std::size_t
+#include <format>   // std::format
+#include <optional> // std::optional
+#include <vector>   // std::vector
 
-namespace donut {
-namespace application {
+namespace donut::events {
 
 namespace {
 
 constexpr float DIAGONAL_RATIO = 0.41421356237f; // sqrt(2) - 1 or tan(pi / 8)
 
-[[nodiscard]] glm::i32 getIntegerValue(float value) noexcept {
-	return static_cast<glm::i32>(glm::floor(value * 32767.5f));
+[[nodiscard]] i32 getIntegerValue(float value) noexcept {
+	return static_cast<i32>(floor(value * 32767.5f));
 }
 
-[[nodiscard]] float getFloatValue(glm::i32 value) noexcept {
+[[nodiscard]] float getFloatValue(i32 value) noexcept {
 	return (static_cast<float>(value) + 0.5f) / 32767.5f;
 }
 
 } // namespace
 
 InputManager::InputManager(const InputManagerOptions& options)
-	: options(options) {}
+	: options(options) {
+	if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0) {
+		throw Error{std::format("Failed to initialize SDL gamecontroller subsystem:\n{}", SDL_GetError())};
+	}
+}
+
+InputManager::~InputManager() {
+	SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+}
 
 void InputManager::prepareForEvents() {
 	previousPersistentOutputs = currentPersistentOutputs;
@@ -56,7 +64,8 @@ void InputManager::handleEvent(const Event& event) {
 		[&](const KeyPressedEvent& pressed) -> void { press(pressed.physicalKeyInput); },      //
 		[&](const KeyReleasedEvent& released) -> void { release(released.physicalKeyInput); }, //
 		[&](const MouseMovedEvent& moved) -> void {
-			setMousePosition({static_cast<float>(moved.mousePosition.x), static_cast<float>(moved.mousePosition.y)});
+			setMousePosition({static_cast<float>(moved.mousePosition.x), static_cast<float>(moved.mousePosition.y)},
+				{static_cast<float>(moved.relativeMouseMotion.x), static_cast<float>(moved.relativeMouseMotion.y)});
 		},                                                                                                     //
 		[&](const MouseButtonPressedEvent& pressed) -> void { press(pressed.physicalMouseButtonInput); },      //
 		[&](const MouseButtonReleasedEvent& released) -> void { release(released.physicalMouseButtonInput); }, //
@@ -80,7 +89,7 @@ void InputManager::handleEvent(const Event& event) {
 		}, //
 		[&](const ControllerAxisMovedEvent& moved) -> void {
 			if (controller && moved.controllerId == SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(static_cast<SDL_GameController*>(controller.get())))) {
-				const float value = getFloatValue(static_cast<glm::i32>(moved.axisValue));
+				const float value = getFloatValue(static_cast<i32>(moved.axisValue));
 				switch (moved.axis) {
 					case ControllerAxisMovedEvent::ControllerAxis::LEFT_STICK_X:
 						setControllerLeftStickPosition({value, (controllerLeftStickPosition) ? controllerLeftStickPosition->y : 0});
@@ -126,13 +135,11 @@ void InputManager::handleEvent(const Event& event) {
 }
 
 void InputManager::bind(Input input, Outputs outputs) {
-	bindings.insert_or_assign(input, outputs);
+	bindings[input] = outputs;
 }
 
 void InputManager::addBinding(Input input, Outputs outputs) {
-	if (const auto [it, inserted] = bindings.emplace(input, outputs); !inserted) {
-		it->second |= outputs;
-	}
+	bindings[input] |= outputs;
 }
 
 void InputManager::unbind(Input input) {
@@ -143,7 +150,7 @@ void InputManager::unbindAll() noexcept {
 	bindings.clear();
 }
 
-void InputManager::press(Input input, glm::i32 offset) noexcept {
+void InputManager::press(Input input, i32 offset) noexcept {
 	const std::size_t inputIndex = getInputIndex(input);
 	const bool wasReleased = !currentPersistentInputs.test(inputIndex);
 	currentPersistentInputs.set(inputIndex);
@@ -162,7 +169,7 @@ void InputManager::press(Input input, glm::i32 offset) noexcept {
 	}
 }
 
-void InputManager::release(Input input, glm::i32 offset) noexcept {
+void InputManager::release(Input input, i32 offset) noexcept {
 	const std::size_t inputIndex = getInputIndex(input);
 	const bool wasPressed = currentPersistentInputs.test(inputIndex);
 	currentPersistentInputs.set(inputIndex, false);
@@ -185,7 +192,7 @@ void InputManager::release(Input input, glm::i32 offset) noexcept {
 	}
 }
 
-void InputManager::move(Input input, glm::i32 offset) noexcept {
+void InputManager::move(Input input, i32 offset) noexcept {
 	if (offset > 0) {
 		const std::size_t inputIndex = getInputIndex(input);
 		transientInputs.set(inputIndex);
@@ -201,7 +208,7 @@ void InputManager::move(Input input, glm::i32 offset) noexcept {
 	}
 }
 
-void InputManager::set(Input input, glm::i32 value) noexcept {
+void InputManager::set(Input input, i32 value) noexcept {
 	if (const auto it = bindings.find(input); it != bindings.end()) {
 		const Outputs outputs = it->second;
 		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
@@ -283,7 +290,7 @@ std::optional<InputManager::Outputs> InputManager::findBinding(Input input) cons
 	return {};
 }
 
-std::optional<glm::vec2> InputManager::getMousePosition() const noexcept {
+std::optional<vec2> InputManager::getMousePosition() const noexcept {
 	return mousePosition;
 }
 
@@ -303,11 +310,11 @@ bool InputManager::isControllerConnected() const noexcept {
 	return static_cast<bool>(controller);
 }
 
-std::optional<glm::vec2> InputManager::getControllerLeftStickPosition() const noexcept {
+std::optional<vec2> InputManager::getControllerLeftStickPosition() const noexcept {
 	return controllerLeftStickPosition;
 }
 
-std::optional<glm::vec2> InputManager::getControllerRightStickPosition() const noexcept {
+std::optional<vec2> InputManager::getControllerRightStickPosition() const noexcept {
 	return controllerRightStickPosition;
 }
 
@@ -335,7 +342,7 @@ bool InputManager::controllerRightTriggerJustMoved() const noexcept {
 	return controllerRightTriggerTransientMotion;
 }
 
-std::optional<glm::vec2> InputManager::getTouchPosition() const noexcept {
+std::optional<vec2> InputManager::getTouchPosition() const noexcept {
 	return touchPosition;
 }
 
@@ -379,20 +386,20 @@ bool InputManager::justReleased(std::size_t output) const noexcept {
 	return getJustReleasedOutputs().test(output);
 }
 
-glm::i32 InputManager::getAbsoluteValue(std::size_t output) const noexcept {
+i32 InputManager::getAbsoluteValue(std::size_t output) const noexcept {
 	return outputAbsoluteValues[output];
 }
 
-glm::i32 InputManager::getRelativeValue(std::size_t output) const noexcept {
+i32 InputManager::getRelativeValue(std::size_t output) const noexcept {
 	return outputRelativeValues[output];
 }
 
 float InputManager::getAbsoluteVector(std::size_t outputPositive) const noexcept {
-	return getFloatValue(glm::max(glm::i32{0}, getAbsoluteValue(outputPositive)));
+	return getFloatValue(max(i32{0}, getAbsoluteValue(outputPositive)));
 }
 
 float InputManager::getRelativeVector(std::size_t outputPositive) const noexcept {
-	return getFloatValue(glm::max(glm::i32{0}, getRelativeValue(outputPositive)));
+	return getFloatValue(max(i32{0}, getRelativeValue(outputPositive)));
 }
 
 float InputManager::getAbsoluteVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
@@ -403,17 +410,35 @@ float InputManager::getRelativeVector(std::size_t outputNegative, std::size_t ou
 	return getRelativeVector(outputPositive) - getRelativeVector(outputNegative);
 }
 
-glm::vec2 InputManager::getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
+vec2 InputManager::getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
 	return {
 		getAbsoluteVector(outputNegativeX, outputPositiveX),
 		getAbsoluteVector(outputNegativeY, outputPositiveY),
 	};
 }
 
-glm::vec2 InputManager::getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
+vec2 InputManager::getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
 	return {
 		getRelativeVector(outputNegativeX, outputPositiveX),
 		getRelativeVector(outputNegativeY, outputPositiveY),
+	};
+}
+
+vec3 InputManager::getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY,
+	std::size_t outputNegativeZ, std::size_t outputPositiveZ) const noexcept {
+	return {
+		getAbsoluteVector(outputNegativeX, outputPositiveX),
+		getAbsoluteVector(outputNegativeY, outputPositiveY),
+		getAbsoluteVector(outputNegativeZ, outputPositiveZ),
+	};
+}
+
+vec3 InputManager::getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY,
+	std::size_t outputNegativeZ, std::size_t outputPositiveZ) const noexcept {
+	return {
+		getRelativeVector(outputNegativeX, outputPositiveX),
+		getRelativeVector(outputNegativeY, outputPositiveY),
+		getRelativeVector(outputNegativeZ, outputPositiveZ),
 	};
 }
 
@@ -433,11 +458,10 @@ void InputManager::ControllerDeleter::operator()(void* handle) const noexcept {
 	SDL_GameControllerClose(static_cast<SDL_GameController*>(handle));
 }
 
-void InputManager::setMousePosition(glm::vec2 position) noexcept {
-	const float sensitivity = options.mouseSensitivity;
-	const glm::vec2 offset = (mousePosition) ? (position - *mousePosition) * sensitivity : glm::vec2{0.0f, 0.0f};
+void InputManager::setMousePosition(vec2 position, vec2 relativeMotion) noexcept {
 	mousePosition = position;
 	mouseTransientMotion = true;
+	const vec2 offset = relativeMotion * options.mouseSensitivity;
 	move(Input::MOUSE_MOTION_UP, getIntegerValue(-offset.y));
 	move(Input::MOUSE_MOTION_DOWN, getIntegerValue(offset.y));
 	move(Input::MOUSE_MOTION_LEFT, getIntegerValue(-offset.x));
@@ -456,24 +480,24 @@ void InputManager::scrollMouseWheelVertically(float offset) noexcept {
 	move(Input::MOUSE_SCROLL_UP, getIntegerValue(offset));
 }
 
-void InputManager::setControllerLeftStickPosition(glm::vec2 position) noexcept {
+void InputManager::setControllerLeftStickPosition(vec2 position) noexcept {
 	const float sensitivity = options.controllerLeftStickSensitivity;
 	const float deadzone = options.controllerLeftStickDeadzone;
-	const glm::vec2 oldPosition = controllerLeftStickPosition.value_or(glm::vec2{0.0f, 0.0f});
-	const float oldLength = glm::length(oldPosition);
-	const float length = glm::length(position);
-	const glm::vec2 oldAdjustedPosition = (oldLength > deadzone) ? oldPosition * (sensitivity * ((oldLength - deadzone) / (oldLength * (1.0f - deadzone)))) : glm::vec2{0.0f, 0.0f};
-	const glm::vec2 adjustedPosition = (length > deadzone) ? position * (sensitivity * ((length - deadzone) / (length * (1.0f - deadzone)))) : glm::vec2{0.0f, 0.0f};
-	const glm::i32vec2 oldIntegerPosition{getIntegerValue(oldAdjustedPosition.x), getIntegerValue(oldAdjustedPosition.y)};
-	const glm::i32vec2 integerPosition{getIntegerValue(adjustedPosition.x), getIntegerValue(adjustedPosition.y)};
-	const glm::i32vec2 offset = integerPosition - oldIntegerPosition;
-	const glm::i32vec2 clampedOffsetNegative = glm::max(glm::min(glm::i32vec2{0, 0}, oldIntegerPosition), glm::min(-offset, -offset - oldIntegerPosition));
-	const glm::i32vec2 clampedOffsetPositive = glm::max(glm::min(glm::i32vec2{0, 0}, -oldIntegerPosition), glm::min(offset, offset + oldIntegerPosition));
+	const vec2 oldPosition = controllerLeftStickPosition.value_or(vec2{0.0f, 0.0f});
+	const float oldLength = length(oldPosition);
+	const float newLength = length(position);
+	const vec2 oldAdjustedPosition = (oldLength > deadzone) ? oldPosition * (sensitivity * ((oldLength - deadzone) / (oldLength * (1.0f - deadzone)))) : vec2{0.0f, 0.0f};
+	const vec2 newAdjustedPosition = (newLength > deadzone) ? position * (sensitivity * ((newLength - deadzone) / (newLength * (1.0f - deadzone)))) : vec2{0.0f, 0.0f};
+	const i32vec2 oldIntegerPosition{getIntegerValue(oldAdjustedPosition.x), getIntegerValue(oldAdjustedPosition.y)};
+	const i32vec2 newIntegerPosition{getIntegerValue(newAdjustedPosition.x), getIntegerValue(newAdjustedPosition.y)};
+	const i32vec2 offset = newIntegerPosition - oldIntegerPosition;
+	const i32vec2 clampedOffsetNegative = max(min(i32vec2{0, 0}, oldIntegerPosition), min(-offset, -offset - oldIntegerPosition));
+	const i32vec2 clampedOffsetPositive = max(min(i32vec2{0, 0}, -oldIntegerPosition), min(offset, offset + oldIntegerPosition));
 	controllerLeftStickPosition = position;
 	controllerLeftStickTransientMotion = true;
-	if (length > deadzone) {
-		if (glm::abs(static_cast<float>(integerPosition.x) / static_cast<float>(integerPosition.y)) > DIAGONAL_RATIO) {
-			if (integerPosition.x < 0) {
+	if (newLength > deadzone) {
+		if (abs(static_cast<float>(newIntegerPosition.x) / static_cast<float>(newIntegerPosition.y)) > DIAGONAL_RATIO) {
+			if (newIntegerPosition.x < 0) {
 				press(Input::CONTROLLER_AXIS_LEFT_STICK_LEFT, clampedOffsetNegative.x);
 				release(Input::CONTROLLER_AXIS_LEFT_STICK_RIGHT, clampedOffsetPositive.x);
 			} else {
@@ -484,8 +508,8 @@ void InputManager::setControllerLeftStickPosition(glm::vec2 position) noexcept {
 			release(Input::CONTROLLER_AXIS_LEFT_STICK_LEFT, clampedOffsetNegative.x);
 			release(Input::CONTROLLER_AXIS_LEFT_STICK_RIGHT, clampedOffsetPositive.x);
 		}
-		if (glm::abs(static_cast<float>(integerPosition.y) / static_cast<float>(integerPosition.x)) > DIAGONAL_RATIO) {
-			if (integerPosition.y < 0) {
+		if (abs(static_cast<float>(newIntegerPosition.y) / static_cast<float>(newIntegerPosition.x)) > DIAGONAL_RATIO) {
+			if (newIntegerPosition.y < 0) {
 				press(Input::CONTROLLER_AXIS_LEFT_STICK_UP, clampedOffsetNegative.y);
 				release(Input::CONTROLLER_AXIS_LEFT_STICK_DOWN, clampedOffsetPositive.y);
 			} else {
@@ -504,24 +528,24 @@ void InputManager::setControllerLeftStickPosition(glm::vec2 position) noexcept {
 	}
 }
 
-void InputManager::setControllerRightStickPosition(glm::vec2 position) noexcept {
+void InputManager::setControllerRightStickPosition(vec2 position) noexcept {
 	const float sensitivity = options.controllerRightStickSensitivity;
 	const float deadzone = options.controllerRightStickDeadzone;
-	const glm::vec2 oldPosition = controllerRightStickPosition.value_or(glm::vec2{0.0f, 0.0f});
-	const float oldLength = glm::length(oldPosition);
-	const float length = glm::length(position);
-	const glm::vec2 oldAdjustedPosition = (oldLength > deadzone) ? oldPosition * (sensitivity * ((oldLength - deadzone) / (oldLength * (1.0f - deadzone)))) : glm::vec2{0.0f, 0.0f};
-	const glm::vec2 adjustedPosition = (length > deadzone) ? position * (sensitivity * ((length - deadzone) / (length * (1.0f - deadzone)))) : glm::vec2{0.0f, 0.0f};
-	const glm::i32vec2 oldIntegerPosition{getIntegerValue(oldAdjustedPosition.x), getIntegerValue(oldAdjustedPosition.y)};
-	const glm::i32vec2 integerPosition{getIntegerValue(adjustedPosition.x), getIntegerValue(adjustedPosition.y)};
-	const glm::i32vec2 offset = integerPosition - oldIntegerPosition;
-	const glm::i32vec2 clampedOffsetNegative = glm::max(glm::min(glm::i32vec2{0, 0}, oldIntegerPosition), glm::min(-offset, -offset - oldIntegerPosition));
-	const glm::i32vec2 clampedOffsetPositive = glm::max(glm::min(glm::i32vec2{0, 0}, -oldIntegerPosition), glm::min(offset, offset + oldIntegerPosition));
+	const vec2 oldPosition = controllerRightStickPosition.value_or(vec2{0.0f, 0.0f});
+	const float oldLength = length(oldPosition);
+	const float newLength = length(position);
+	const vec2 oldAdjustedPosition = (oldLength > deadzone) ? oldPosition * (sensitivity * ((oldLength - deadzone) / (oldLength * (1.0f - deadzone)))) : vec2{0.0f, 0.0f};
+	const vec2 newAdjustedPosition = (newLength > deadzone) ? position * (sensitivity * ((newLength - deadzone) / (newLength * (1.0f - deadzone)))) : vec2{0.0f, 0.0f};
+	const i32vec2 oldIntegerPosition{getIntegerValue(oldAdjustedPosition.x), getIntegerValue(oldAdjustedPosition.y)};
+	const i32vec2 newIntegerPosition{getIntegerValue(newAdjustedPosition.x), getIntegerValue(newAdjustedPosition.y)};
+	const i32vec2 offset = newIntegerPosition - oldIntegerPosition;
+	const i32vec2 clampedOffsetNegative = max(min(i32vec2{0, 0}, oldIntegerPosition), min(-offset, -offset - oldIntegerPosition));
+	const i32vec2 clampedOffsetPositive = max(min(i32vec2{0, 0}, -oldIntegerPosition), min(offset, offset + oldIntegerPosition));
 	controllerRightStickPosition = position;
 	controllerRightStickTransientMotion = true;
-	if (length > deadzone) {
-		if (glm::abs(static_cast<float>(integerPosition.x) / static_cast<float>(integerPosition.y)) > DIAGONAL_RATIO) {
-			if (integerPosition.x < 0) {
+	if (newLength > deadzone) {
+		if (abs(static_cast<float>(newIntegerPosition.x) / static_cast<float>(newIntegerPosition.y)) > DIAGONAL_RATIO) {
+			if (newIntegerPosition.x < 0) {
 				press(Input::CONTROLLER_AXIS_RIGHT_STICK_LEFT, clampedOffsetNegative.x);
 				release(Input::CONTROLLER_AXIS_RIGHT_STICK_RIGHT, clampedOffsetPositive.x);
 			} else {
@@ -532,8 +556,8 @@ void InputManager::setControllerRightStickPosition(glm::vec2 position) noexcept 
 			release(Input::CONTROLLER_AXIS_RIGHT_STICK_LEFT, clampedOffsetNegative.x);
 			release(Input::CONTROLLER_AXIS_RIGHT_STICK_RIGHT, clampedOffsetPositive.x);
 		}
-		if (glm::abs(static_cast<float>(integerPosition.y) / static_cast<float>(integerPosition.x)) > DIAGONAL_RATIO) {
-			if (integerPosition.y < 0) {
+		if (abs(static_cast<float>(newIntegerPosition.y) / static_cast<float>(newIntegerPosition.x)) > DIAGONAL_RATIO) {
+			if (newIntegerPosition.y < 0) {
 				press(Input::CONTROLLER_AXIS_RIGHT_STICK_UP, clampedOffsetNegative.y);
 				release(Input::CONTROLLER_AXIS_RIGHT_STICK_DOWN, clampedOffsetPositive.y);
 			} else {
@@ -555,9 +579,9 @@ void InputManager::setControllerRightStickPosition(glm::vec2 position) noexcept 
 void InputManager::setControllerLeftTriggerPosition(float position) noexcept {
 	const float deadzone = options.controllerLeftTriggerDeadzone;
 	const float oldPosition = controllerLeftTriggerPosition.value_or(0.0f);
-	const glm::i32 oldAdjustedPosition = getIntegerValue((oldPosition - deadzone) / (1.0f - deadzone));
-	const glm::i32 adjustedPosition = getIntegerValue((position - deadzone) / (1.0f - deadzone));
-	const glm::i32 offset = adjustedPosition - oldAdjustedPosition;
+	const i32 oldAdjustedPosition = getIntegerValue((oldPosition - deadzone) / (1.0f - deadzone));
+	const i32 adjustedPosition = getIntegerValue((position - deadzone) / (1.0f - deadzone));
+	const i32 offset = adjustedPosition - oldAdjustedPosition;
 	controllerLeftTriggerPosition = position;
 	controllerLeftTriggerTransientMotion = true;
 	if (position > deadzone) {
@@ -570,9 +594,9 @@ void InputManager::setControllerLeftTriggerPosition(float position) noexcept {
 void InputManager::setControllerRightTriggerPosition(float position) noexcept {
 	const float deadzone = options.controllerRightTriggerDeadzone;
 	const float oldPosition = controllerRightTriggerPosition.value_or(0.0f);
-	const glm::i32 oldAdjustedPosition = getIntegerValue((oldPosition - deadzone) / (1.0f - deadzone));
-	const glm::i32 adjustedPosition = getIntegerValue((position - deadzone) / (1.0f - deadzone));
-	const glm::i32 offset = adjustedPosition - oldAdjustedPosition;
+	const i32 oldAdjustedPosition = getIntegerValue((oldPosition - deadzone) / (1.0f - deadzone));
+	const i32 adjustedPosition = getIntegerValue((position - deadzone) / (1.0f - deadzone));
+	const i32 offset = adjustedPosition - oldAdjustedPosition;
 	controllerRightTriggerPosition = position;
 	controllerRightTriggerTransientMotion = true;
 	if (position > deadzone) {
@@ -582,9 +606,9 @@ void InputManager::setControllerRightTriggerPosition(float position) noexcept {
 	}
 }
 
-void InputManager::setTouchPosition(glm::vec2 position) noexcept {
+void InputManager::setTouchPosition(vec2 position) noexcept {
 	const float sensitivity = options.touchMotionSensitivity;
-	const glm::vec2 offset = (touchPosition) ? (position - *touchPosition) * sensitivity : glm::vec2{0.0f, 0.0f};
+	const vec2 offset = (touchPosition) ? (position - *touchPosition) * sensitivity : vec2{0.0f, 0.0f};
 	touchPosition = position;
 	touchTransientMotion = true;
 	move(Input::TOUCH_FINGER_MOTION_UP, getIntegerValue(-offset.y));
@@ -596,9 +620,9 @@ void InputManager::setTouchPosition(glm::vec2 position) noexcept {
 void InputManager::setTouchPressure(float pressure) noexcept {
 	const float deadzone = options.touchPressureDeadzone;
 	const float oldPressure = touchPressure.value_or(0.0f);
-	const glm::i32 oldAdjustedPressure = getIntegerValue((oldPressure - deadzone) / (1.0f - deadzone));
-	const glm::i32 adjustedPressure = getIntegerValue((pressure - deadzone) / (1.0f - deadzone));
-	const glm::i32 offset = adjustedPressure - oldAdjustedPressure;
+	const i32 oldAdjustedPressure = getIntegerValue((oldPressure - deadzone) / (1.0f - deadzone));
+	const i32 adjustedPressure = getIntegerValue((pressure - deadzone) / (1.0f - deadzone));
+	const i32 offset = adjustedPressure - oldAdjustedPressure;
 	touchPressure = pressure;
 	touchTransientPressure = true;
 	if (pressure > deadzone) {
@@ -608,5 +632,4 @@ void InputManager::setTouchPressure(float pressure) noexcept {
 	}
 }
 
-} // namespace application
-} // namespace donut
+} // namespace donut::events

@@ -4,8 +4,7 @@
 #include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Handle.hpp>
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Unique resource handle with exclusive ownership of a GPU vertex array.
@@ -39,7 +38,6 @@ private:
 	UniqueHandle<Handle, VertexArrayDeleter> vao{};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

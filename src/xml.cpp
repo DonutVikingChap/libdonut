@@ -10,8 +10,7 @@
 #include <system_error> // std::errc
 #include <utility>      // std::move
 
-namespace donut {
-namespace xml {
+namespace donut::xml {
 
 namespace {
 
@@ -318,5 +317,4 @@ Document Document::parse(std::string_view xmlString) {
 	return result;
 }
 
-} // namespace xml
-} // namespace donut
+} // namespace donut::xml

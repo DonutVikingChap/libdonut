@@ -33,8 +33,7 @@
 #include <utility>          // std::pair, std::move, std::forward, std::piecewise_construct
 #include <vector>           // std::vector, std::erase(std::vector), std::erase_if(std::vector)
 
-namespace donut {
-namespace json {
+namespace donut::json {
 
 namespace detail {
 
@@ -2038,7 +2037,6 @@ struct SerializationOptions {
 	 *
 	 * \sa prettyPrintMaxSingleLineObjectElementCount
 	 * \sa prettyPrintMaxSingleLineArrayElementCount
-	 * \sa prettyPrintMaxSingleLineAggregateElementCount
 	 */
 	bool prettyPrint = true;
 
@@ -4291,7 +4289,6 @@ inline std::string Value::toString() const {
 	return std::move(stream).str();
 }
 
-} // namespace json
-} // namespace donut
+} // namespace donut::json
 
 #endif

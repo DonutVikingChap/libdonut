@@ -1,3 +1,4 @@
+#include <donut/donut.hpp>
 #include <donut/graphics/Error.hpp>
 #include <donut/graphics/Window.hpp>
 #include <donut/graphics/opengl.hpp>
@@ -11,14 +12,16 @@
 #endif
 //
 
-#include <cstdint>     // std::uint32_t
-#include <format>      // std::format
-#include <glm/glm.hpp> // glm::...
+#include <cstdint> // std::uint32_t
+#include <format>  // std::format
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 Window::Window(const WindowOptions& options) {
+	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
+		throw Error{std::format("Failed to initialize SDL video subsystem:\n{}", SDL_GetError())};
+	}
+
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
@@ -65,6 +68,10 @@ Window::Window(const WindowOptions& options) {
 	setVSync(options.vSync);
 }
 
+Window::~Window() {
+	SDL_QuitSubSystem(SDL_INIT_VIDEO);
+}
+
 void Window::present() {
 	SDL_GL_SwapWindow(static_cast<SDL_Window*>(window.get()));
 }
@@ -73,7 +80,7 @@ void Window::setTitle(const char* title) {
 	SDL_SetWindowTitle(static_cast<SDL_Window*>(window.get()), title);
 }
 
-void Window::setSize(glm::ivec2 size) {
+void Window::setSize(ivec2 size) {
 	SDL_SetWindowSize(static_cast<SDL_Window*>(window.get()), size.x, size.y);
 }
 
@@ -121,21 +128,21 @@ void Window::setVSync(bool vSync) {
 	return (flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP)) != 0;
 }
 
-[[nodiscard]] glm::ivec2 Window::getSize() const noexcept {
+[[nodiscard]] ivec2 Window::getSize() const noexcept {
 	int width = 0;
 	int height = 0;
 	SDL_GetWindowSize(static_cast<SDL_Window*>(window.get()), &width, &height);
 	return {width, height};
 }
 
-[[nodiscard]] glm::ivec2 Window::getDrawableSize() const noexcept {
+[[nodiscard]] ivec2 Window::getDrawableSize() const noexcept {
 	int width = 0;
 	int height = 0;
 	SDL_GL_GetDrawableSize(static_cast<SDL_Window*>(window.get()), &width, &height);
 	return {width, height};
 }
 
-[[nodiscard]] WindowId Window::getId() const {
+[[nodiscard]] std::uint32_t Window::getId() const {
 	const Uint32 id = SDL_GetWindowID(static_cast<SDL_Window*>(window.get()));
 	if (id == 0) {
 		throw Error{std::format("Failed to get window ID: {}", SDL_GetError())};
@@ -158,5 +165,4 @@ void Window::GLContextDeleter::operator()(void* handle) const noexcept {
 	SDL_GL_DeleteContext(static_cast<SDL_GLContext>(handle));
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

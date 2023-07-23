@@ -9,8 +9,7 @@
 #include <type_traits> // std::is_same_v
 #include <utility>     // std::pair
 
-namespace donut {
-namespace unicode {
+namespace donut::unicode {
 
 /**
  * Check if a 32-bit unsigned integer value falls within the valid ranges for a
@@ -362,7 +361,6 @@ private:
 	UTF8Iterator<const char8_t*> it{};
 };
 
-} // namespace unicode
-} // namespace donut
+} // namespace donut::unicode
 
 #endif

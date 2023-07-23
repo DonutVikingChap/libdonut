@@ -4,8 +4,7 @@
 #include <stdexcept> // std::runtime_error
 #include <string>    // std::string
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Exception type for domain-specific errors originating from the
@@ -19,7 +18,6 @@ struct Error : std::runtime_error {
 		: std::runtime_error(message) {}
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

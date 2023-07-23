@@ -5,15 +5,14 @@
 #include <donut/Variant.hpp>
 #include <donut/graphics/Handle.hpp>
 #include <donut/graphics/ShaderStage.hpp>
+#include <donut/math.hpp>
 
-#include <cstdint>     // std::int32_t
-#include <glm/glm.hpp> // glm::...
-#include <span>        // std::span
-#include <utility>     // std::pair
-#include <vector>      // std::vector
+#include <cstdint> // std::int32_t
+#include <span>    // std::span
+#include <utility> // std::pair
+#include <vector>  // std::vector
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 class ShaderParameter; // Forward declaration, to avoid a circular include of ShaderParameter.hpp.
 
@@ -50,20 +49,20 @@ public:
 	 */
 	using UniformValue = Variant< //
 		float,                    //
-		glm::vec2,                //
-		glm::vec3,                //
-		glm::vec4,                //
-		glm::i32,                 //
-		glm::i32vec2,             //
-		glm::i32vec3,             //
-		glm::i32vec4,             //
-		glm::u32,                 //
-		glm::u32vec2,             //
-		glm::u32vec3,             //
-		glm::u32vec4,             //
-		glm::mat2,                //
-		glm::mat3,                //
-		glm::mat4>;
+		vec2,                     //
+		vec3,                     //
+		vec4,                     //
+		i32,                      //
+		i32vec2,                  //
+		i32vec3,                  //
+		i32vec4,                  //
+		u32,                      //
+		u32vec2,                  //
+		u32vec3,                  //
+		u32vec4,                  //
+		mat2,                     //
+		mat3,                     //
+		mat4>;
 
 	/**
 	 * Compile and link a shader program.
@@ -111,7 +110,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformVec2(const ShaderParameter& parameter, glm::vec2 value);
+	void setUniformVec2(const ShaderParameter& parameter, vec2 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -129,7 +128,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformVec3(const ShaderParameter& parameter, glm::vec3 value);
+	void setUniformVec3(const ShaderParameter& parameter, vec3 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -147,7 +146,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformVec4(const ShaderParameter& parameter, glm::vec4 value);
+	void setUniformVec4(const ShaderParameter& parameter, vec4 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -165,7 +164,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformInt(const ShaderParameter& parameter, glm::i32 value);
+	void setUniformInt(const ShaderParameter& parameter, i32 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -183,7 +182,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformIVec2(const ShaderParameter& parameter, glm::i32vec2 value);
+	void setUniformIVec2(const ShaderParameter& parameter, i32vec2 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -201,7 +200,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformIVec3(const ShaderParameter& parameter, glm::i32vec3 value);
+	void setUniformIVec3(const ShaderParameter& parameter, i32vec3 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -219,7 +218,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformIVec4(const ShaderParameter& parameter, glm::i32vec4 value);
+	void setUniformIVec4(const ShaderParameter& parameter, i32vec4 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -237,7 +236,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformUint(const ShaderParameter& parameter, glm::u32 value);
+	void setUniformUint(const ShaderParameter& parameter, u32 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -255,7 +254,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformUVec2(const ShaderParameter& parameter, glm::u32vec2 value);
+	void setUniformUVec2(const ShaderParameter& parameter, u32vec2 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -273,7 +272,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformUVec3(const ShaderParameter& parameter, glm::u32vec3 value);
+	void setUniformUVec3(const ShaderParameter& parameter, u32vec3 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -291,7 +290,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformUVec4(const ShaderParameter& parameter, glm::u32vec4 value);
+	void setUniformUVec4(const ShaderParameter& parameter, u32vec4 value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -309,7 +308,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformMat2(const ShaderParameter& parameter, const glm::mat2& value);
+	void setUniformMat2(const ShaderParameter& parameter, const mat2& value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -327,7 +326,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformMat3(const ShaderParameter& parameter, const glm::mat3& value);
+	void setUniformMat3(const ShaderParameter& parameter, const mat3& value);
 
 	/**
 	 * Enqueue a new value to be set for a uniform shader variable of GLSL type
@@ -345,7 +344,7 @@ public:
 	 * \sa getUniformUploadQueue()
 	 * \sa clearUniformUploadQueue()
 	 */
-	void setUniformMat4(const ShaderParameter& parameter, const glm::mat4& value);
+	void setUniformMat4(const ShaderParameter& parameter, const mat4& value);
 
 	/**
 	 * Erase all entries from the queue of new uniform shader variable values.
@@ -391,7 +390,6 @@ private:
 	std::vector<std::pair<std::int32_t, UniformValue>> uniformUploadQueue{};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

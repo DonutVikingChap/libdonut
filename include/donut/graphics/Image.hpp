@@ -1,6 +1,7 @@
 #ifndef DONUT_GRAPHICS_IMAGE_HPP
 #define DONUT_GRAPHICS_IMAGE_HPP
 
+#include <donut/Filesystem.hpp>
 #include <donut/UniqueHandle.hpp>
 
 #include <cassert>  // assert
@@ -9,8 +10,7 @@
 #include <optional> // std::optional
 #include <utility>  // std::move
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Description of the number and meaning of the pixel component channels of an
@@ -314,6 +314,16 @@ struct ImageSaveHDROptions {
 };
 
 /**
+ * Options for saving an image in any format.
+ */
+struct ImageSaveOptions {
+	/**
+	 * Flip the saved image vertically.
+	 */
+	bool flipVertically = false;
+};
+
+/**
  * Options for loading an image.
  */
 struct ImageOptions {
@@ -352,7 +362,8 @@ public:
 	 * Save an 8-bit-per-channel image to a PNG file.
 	 *
 	 * \param image view over the image to save.
-	 * \param filepath virtual filepath to save the image to, see File.
+	 * \param filesystem virtual filesystem to save the file to.
+	 * \param filepath virtual filepath at which to save the image.
 	 * \param options saving options, see ImageSavePNGOptions.
 	 *
 	 * \note This function will fail if the image does not have pixel component
@@ -362,13 +373,14 @@ public:
 	 * \throws graphics::Error on failure to write the image to the file.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	static void savePNG(const ImageView& image, const char* filepath, const ImageSavePNGOptions& options = {});
+	static void savePNG(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSavePNGOptions& options = {});
 
 	/**
 	 * Save an 8-bit-per-channel image to a Windows Bitmap file.
 	 *
 	 * \param image view over the image to save.
-	 * \param filepath virtual filepath to save the image to, see File.
+	 * \param filesystem virtual filesystem to save the file to.
+	 * \param filepath virtual filepath at which to save the image.
 	 * \param options saving options, see ImageSaveBMPOptions.
 	 *
 	 * \note This function will fail if the image does not have pixel component
@@ -378,13 +390,14 @@ public:
 	 * \throws graphics::Error on failure to write the image to the file.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	static void saveBMP(const ImageView& image, const char* filepath, const ImageSaveBMPOptions& options = {});
+	static void saveBMP(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSaveBMPOptions& options = {});
 
 	/**
 	 * Save an 8-bit-per-channel image to a Truevision TARGA file.
 	 *
 	 * \param image view over the image to save.
-	 * \param filepath virtual filepath to save the image to, see File.
+	 * \param filesystem virtual filesystem to save the file to.
+	 * \param filepath virtual filepath at which to save the image.
 	 * \param options saving options, see ImageSaveTGAOptions.
 	 *
 	 * \note This function will fail if the image does not have pixel component
@@ -394,13 +407,14 @@ public:
 	 * \throws graphics::Error on failure to write the image to the file.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	static void saveTGA(const ImageView& image, const char* filepath, const ImageSaveTGAOptions& options = {});
+	static void saveTGA(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSaveTGAOptions& options = {});
 
 	/**
 	 * Save an 8-bit-per-channel image to a JPEG file.
 	 *
 	 * \param image view over the image to save.
-	 * \param filepath virtual filepath to save the image to, see File.
+	 * \param filesystem virtual filesystem to save the file to.
+	 * \param filepath virtual filepath at which to save the image.
 	 * \param options saving options, see ImageSaveJPGOptions.
 	 *
 	 * \note This function will fail if the image does not have pixel component
@@ -410,14 +424,15 @@ public:
 	 * \throws graphics::Error on failure to write the image to the file.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	static void saveJPG(const ImageView& image, const char* filepath, const ImageSaveJPGOptions& options = {});
+	static void saveJPG(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSaveJPGOptions& options = {});
 
 	/**
 	 * Save a floating-point 32-bit-per-channel image to a Radiance HDR RGBE
 	 * file.
 	 *
 	 * \param image view over the image to save.
-	 * \param filepath virtual filepath to save the image to, see File.
+	 * \param filesystem virtual filesystem to save the file to.
+	 * \param filepath virtual filepath at which to save the image.
 	 * \param options saving options, see ImageSaveHDROptions.
 	 *
 	 * \note This function will fail if the image does not have pixel component
@@ -427,7 +442,24 @@ public:
 	 * \throws graphics::Error on failure to write the image to the file.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	static void saveHDR(const ImageView& image, const char* filepath, const ImageSaveHDROptions& options = {});
+	static void saveHDR(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSaveHDROptions& options = {});
+
+	/**
+	 * Save an image to a file.
+	 *
+	 * \param image view over the image to save.
+	 * \param filesystem virtual filesystem to save the file to.
+	 * \param filepath virtual filepath at which to save the image.
+	 * \param options saving options, see ImageSaveOptions.
+	 *
+	 * \note This function will try to choose a suitable format to save the
+	 *       image to depending on its pixel component type.
+	 *
+	 * \throws File::Error on failure to create the file.
+	 * \throws graphics::Error on failure to write the image to the file.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	static void save(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSaveOptions& options = {});
 
 	/**
 	 * Construct an empty image without a value.
@@ -480,7 +512,8 @@ public:
 	 * - PPM (.ppm)
 	 * - PGM (.pgm)
 	 *
-	 * \param filepath virtual filepath of the image file to load, see File.
+	 * \param filesystem virtual filesystem to load the file from.
+	 * \param filepath virtual filepath of the image file to load.
 	 * \param options image options, see ImageOptions.
 	 *
 	 * \throws File::Error on failure to open the file.
@@ -503,7 +536,7 @@ public:
 	 *       of channels is always 4.
 	 * \note For PPM and PGM files, only binary format is supported.
 	 */
-	explicit Image(const char* filepath, const ImageOptions& options = {});
+	explicit Image(const Filesystem& filesystem, const char* filepath, const ImageOptions& options = {});
 
 	/**
 	 * Check if this image has a value.
@@ -678,14 +711,13 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	UniqueHandle<void*, PixelsDeleter, nullptr> pixels{};
+	UniqueHandle<void*, PixelsDeleter> pixels{};
 	std::size_t width = 0;
 	std::size_t height = 0;
 	PixelFormat pixelFormat = PixelFormat::R;
 	PixelComponentType pixelComponentType = PixelComponentType::U8;
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

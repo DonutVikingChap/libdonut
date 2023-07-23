@@ -3,8 +3,7 @@
 #include <donut/graphics/Handle.hpp>
 #include <donut/graphics/opengl.hpp>
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 Buffer::Buffer() {
 	Handle handle{};
@@ -19,5 +18,4 @@ void Buffer::BufferDeleter::operator()(Handle handle) const noexcept {
 	glDeleteBuffers(1, &handle);
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

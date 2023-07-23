@@ -6,8 +6,7 @@
 #include <string_view> // std::string_view
 #include <type_traits> // std::is_same_v
 
-namespace donut {
-namespace audio {
+namespace donut::audio {
 
 namespace {
 
@@ -32,5 +31,4 @@ constexpr std::string_view getErrorCodeMessage(unsigned errorCode) noexcept {
 Error::Error(std::string_view message, unsigned errorCode)
 	: std::runtime_error(std::format("{}: {}", message, getErrorCodeMessage(errorCode))) {}
 
-} // namespace audio
-} // namespace donut
+} // namespace donut::audio

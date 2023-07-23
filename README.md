@@ -2,60 +2,70 @@
 
 Libdonut is an application framework for cross-platform game development in C++20.
 
-Note: This library is currently a **work in progress** and makes no guarantees regarding future version compatibility.
-
 ## Features
 
 - Application framework:
     - [Application](include/donut/application/Application.hpp) base class:
-        - Controls the main game loop, including [Event](include/donut/application/Event.hpp) pumping, frame pacing and fixed-interval frame rate-independent tick updates.
-        - Supports both native Windows/Linux compilation as well as the [emscripten](https://emscripten.org/) WebAssembly runtime.
-    - [InputManager](include/donut/application/InputManager.hpp):
-        - Maps physical [Input](include/donut/application/Input.hpp) events to abstract action numbers.
-        - Supports simultaneous keyboard, mouse and controller input.
+        - Defines the main loop of the program in a platform-agnostic way that supports both native Windows/Linux compilation as well as the [emscripten](https://emscripten.org/) WebAssembly runtime.
+        - Includes an optional built-in frame rate limiter.
+        - Provides both per-frame update callbacks and frame rate-independent pacing of fixed-rate tick updates.
+- Events system:
+    - [EventPump](include/donut/events/EventPump.hpp):
+        - Polls [Event](include/donut/events/Event.hpp) data from the environment on demand.
+    - [InputManager](include/donut/events/InputManager.hpp):
+        - Maps physical [Input](include/donut/events/Input.hpp) events to abstract action numbers.
+        - Supports simultaneous keyboard, mouse, touch and controller input.
 - Audio engine using [SoLoud](http://solhsa.com/soloud/):
     - [Sound](include/donut/audio/Sound.hpp) loading:
-        - Support for OGG, WAV, FLAC and MP3 formats.
+        - Supports OGG, WAV, FLAC and MP3 formats.
     - [SoundStage](include/donut/audio/SoundStage.hpp):
         - Plays 3D positional audio, background sounds and music.
 - Graphics rendering through [OpenGL](https://www.khronos.org/opengl/):
     - [Window](include/donut/graphics/Window.hpp) abstraction:
         - Handles GL context setup and window management using [SDL](https://www.libsdl.org/).
-    - [RenderPass](include/donut/graphics/RenderPass.hpp) interface for simple batch rendering:
-        - 3D Model rendering with built-in Blinn-Phong lighting or custom shaders through [Shader3D](include/donut/graphics/Shader3D.hpp).
-        - 2D Textured quad rendering with built-in or custom shaders through [Shader2D](include/donut/graphics/Shader2D.hpp).
-        - Sprite rendering with automatic [SpriteAtlas](include/donut/graphics/SpriteAtlas.hpp) packing.
-        - Text rendering and [Font](include/donut/graphics/Font.hpp) loading using [libschrift](https://github.com/tomolt/libschrift).
-    - [Renderer](include/donut/graphics/Renderer.hpp) supporting arbitrary [Framebuffer](include/donut/graphics/Framebuffer.hpp) targets, [Camera](include/donut/graphics/Camera.hpp) positions and [Viewport](include/donut/graphics/Viewport.hpp) areas with optional integer scaling.
+    - [Renderer](include/donut/graphics/Renderer.hpp):
+        - [RenderPass](include/donut/graphics/RenderPass.hpp) interface for simple batch rendering:
+            - 3D Model rendering that supports custom shaders through [Shader3D](include/donut/graphics/Shader3D.hpp) or basic built-in Blinn-Phong lighting for prototyping.
+            - 2D Textured quad rendering with built-in shaders or custom shaders through [Shader2D](include/donut/graphics/Shader2D.hpp).
+            - Sprite rendering with automatic [SpriteAtlas](include/donut/graphics/SpriteAtlas.hpp) packing.
+            - Text rendering and [Font](include/donut/graphics/Font.hpp) loading using [libschrift](https://github.com/tomolt/libschrift).
+        - Supports arbitrary [Framebuffer](include/donut/graphics/Framebuffer.hpp) targets, [Camera](include/donut/graphics/Camera.hpp) positions and [Viewport](include/donut/graphics/Viewport.hpp) areas.
+        - Viewports can be restricted to integer scaling for pixel-perfect fixed-resolution 2D rendering regardless of window size.
     - [Model](include/donut/graphics/Model.hpp) loading from OBJ files.
     - [Image](include/donut/graphics/Image.hpp) loading/saving using [stbi](https://github.com/nothings/stb).
 - Utilities:
+    - Hand-written parsers and writers for some common data formats:
+        - [JSON](include/donut/json.hpp):
+            - Serialize/deserialize arbitrary types to/from JSON.
+            - Write/read JSON data to/from both strings and iostreams.
+            - Supports memory-efficient visitor-based parsing.
+            - Supports [JSON5](https://json5.org/) features (comments, trailing commas, identifier keys, etc.).
+        - [OBJ](include/donut/obj.hpp):
+            - Parse OBJ models and basic MTL materials.
+        - [XML](include/donut/xml.hpp):
+            - Parse XML documents into a simple tree structure in memory.
+        - [Base64](include/donut/base64.hpp)
+            - Encode/decode aribtrary data to/from standard Base64 strings.
+        - [Unicode](include/donut/unicode.hpp):
+            - Iterate the Unicode code points of UTF-8-encoded text in any sequence of bytes with simple error reporting in case of invalid encoding.
     - [AtlasPacker](include/donut/AtlasPacker.hpp) for packing rectangles into expandable square texture atlases.
     - Floating-point RGBA [Color](include/donut/Color.hpp) type that includes predefined constants for common web colors.
-    - Virtual [File](include/donut/File.hpp) system with streamed [reading](include/donut/InputFileStream.hpp) and [writing](include/donut/OutputFileStream.hpp) using [PhysicsFS](https://icculus.org/physfs/):
+    - Virtual [Filesystem](include/donut/Filesystem.hpp) based on [PhysicsFS](https://icculus.org/physfs/):
+        - Use virtual filepaths for uniform access to any resource [File](include/donut/File.hpp)  that resides in a mounted directory, regardless of its actual location.
         - Supports automatic mounting of pak/zip/etc. archives at startup for easy mod loading.
         - Used for all built-in resource loading in libdonut.
     - Custom [Variant](include/donut/Variant.hpp) implementation:
-        - Provides a cleaner API than std::variant by adding the methods `is<T>()`, `as<T>()`, `get<T>()` and `get_if<T>()` as well as a freestanding `match` function.
+        - Enhances the API of std::variant by adding the methods `is<T>()`, `as<T>()`, `get<T>()` and `get_if<T>()` as well as a freestanding `match` function.
         - Visitation is implemented through chaining of the conditional operator rather than virtual method dispatch, making it easier for compilers to generate a jump table than in most common std::variant implementations. This puts `match` on par with a raw switch statement in terms of performance.
         - Supports being used as a base class in user code.
-    - [Time](include/donut/Time.hpp) duration wrapper including common utility functions for correctly handling discrete-time update loops.
-    - [Base64](include/donut/base64.hpp) encoding and decoding.
-    - [JSON](include/donut/json.hpp) utilities:
-        - Writing/parsing to/from strings and iostreams.
-        - Extensible serialization/deserialization of arbitrary types.
-        - Supports [JSON5](https://json5.org/) features (comments, trailing commas, identifier keys, etc.).
     - [Loose Quadtree](include/donut/LooseQuadtree.hpp) container for accelerating AABB collision tests between a large number of objects in 2D.
-    - [OBJ](include/donut/obj.hpp) model/material parsing.
+    - [Time](include/donut/Time.hpp) duration wrapper including common utility functions for correctly handling discrete-time update loops.
     - Fast [pseudo-random number generation engine](include/donut/random.hpp) using [xoroshiro128++](https://prng.di.unimi.it/):
         - Designed to be used as a URBG in conjunction with the [standard C++ distributions](https://en.cppreference.com/w/cpp/numeric/random#Random_number_distributions).
     - [Compile-time reflection](include/donut/reflection.hpp) of aggregate types through some dark template magic.
         - Supports iterating references to the fields of an instance of any plain struct, with full type information available.
-        - Used in libdonut to automate JSON serialization, OpenGL vertex attribute setup, etc.
+        - Used in libdonut to automate JSON serialization, vertex attribute setup, etc.
     - Basic geometric [shapes](include/donut/shapes.hpp) with intersection tests.
-    - Utilities for working with [UTF-8](include/donut/unicode.hpp)-encoded text:
-        - Supports iterating unicode code points in any arbitrary byte sequence with basic error handling in the case of invalid encoding.
-    - [XML](include/donut/xml.hpp) document parsing.
 
 ## Authors
 
@@ -130,7 +140,7 @@ The generated HTML file at `build/_deps/donut-build/docs/html/index.html` can th
 
 ## Distribution
 
-After compiling in release mode, the resulting application executable can be packaged into a folder along with its main data directory and be distributed according to each of the relevant licenses mentioned below. A sample `copyright.txt` file is provided in the project template to illustrate the copyright notices that must be included when distributing an application containing the code of libdonut and its direct dependencies. Note however that this is only an example and not any form of legal advice.
+After compiling in release mode, the resulting application executable can be packaged into a folder along with its main data directory and be distributed according to the relevant licenses mentioned below. A sample `copyright.txt` file is provided in the project template to illustrate the copyright notices that must be included when distributing an application containing the code of libdonut and its direct dependencies. Note that this is only an example and not any form of legal advice.
 
 ## License
 
@@ -138,7 +148,7 @@ Libdonut is distributed under the **MIT License**. See the included [LICENSE](LI
 
 ### External libraries
 
-Libdonut depends on the C++ standard library, for which any C++20-compatible implementation may be used, as well as the following specific third-party libraries, each one having its own license, with some including further dependencies:
+Libdonut depends on the C++ standard library, for which any C++20-compatible implementation may be used, as well as the following third-party libraries, each one having its own license, with some including further dependencies:
 
 - [glad](https://github.com/Dav1dde/glad) (glad/gl.h is Public Domain, khrplatform.h is under MIT License)
 - [GLM](https://github.com/g-truc/glm) (MIT License)
@@ -148,4 +158,4 @@ Libdonut depends on the C++ standard library, for which any C++20-compatible imp
 - [SoLoud](https://github.com/jarikomppa/soloud) (zlib License)
 - [stb](https://github.com/nothings/stb) (Public Domain)
 
-For graphics, libdonut expects the end user to have an available graphics driver installed that implements the [OpenGL](https://www.khronos.org/opengl/) Graphics System (Version 3.3 (Core Profile)) as [specified](https://registry.khronos.org/OpenGL/specs/gl/glspec33.core.pdf) by The Khronos Group Inc. The GL library is loaded at runtime through glad, using the function loader provided by SDL.
+For graphics, libdonut expects the end user to have an available graphics driver installed that implements the [OpenGL](https://www.khronos.org/opengl/) Graphics System (Version 3.3 (Core Profile)) [specification](https://registry.khronos.org/OpenGL/specs/gl/glspec33.core.pdf). The graphics library is loaded at runtime through glad, using the function loader provided by SDL.

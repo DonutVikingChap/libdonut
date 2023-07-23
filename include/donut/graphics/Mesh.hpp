@@ -4,19 +4,18 @@
 #include <donut/graphics/Buffer.hpp>
 #include <donut/graphics/Handle.hpp>
 #include <donut/graphics/VertexArray.hpp>
+#include <donut/math.hpp>
 #include <donut/reflection.hpp>
 
 #include <cstddef>     // std::size_t, std::byte
-#include <cstdint>     // std::int32_t, std::uint8_t, std::uint16_t, std::uint32_t, std::uintptr_t
-#include <glm/glm.hpp> // glm::...
+#include <cstdint>     // std::int32_t, std::uint32_t, std::uintptr_t
 #include <memory>      // std::addressof
 #include <span>        // std::span
 #include <stdexcept>   // std::invalid_argument
 #include <type_traits> // std::is_same_v, std::remove_cvref_t, std::false_type, std::true_type, std::bool_constant, std::is_aggregate_v, std::is_standard_layout_v, std::conditional_t
 #include <utility>     // std::declval
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Concept that checks if a type is a valid vertex attribute.
@@ -24,15 +23,15 @@ namespace graphics {
  * \tparam T the type to check.
  */
 template <typename T>
-concept vertex_attribute =              //
-	std::is_same_v<T, std::uint32_t> || //
-	std::is_same_v<T, float> ||         //
-	std::is_same_v<T, glm::vec2> ||     //
-	std::is_same_v<T, glm::vec3> ||     //
-	std::is_same_v<T, glm::vec4> ||     //
-	std::is_same_v<T, glm::mat2> ||     //
-	std::is_same_v<T, glm::mat3> ||     //
-	std::is_same_v<T, glm::mat4>;
+concept vertex_attribute =      //
+	std::is_same_v<T, u32> ||   //
+	std::is_same_v<T, float> || //
+	std::is_same_v<T, vec2> ||  //
+	std::is_same_v<T, vec3> ||  //
+	std::is_same_v<T, vec4> ||  //
+	std::is_same_v<T, mat2> ||  //
+	std::is_same_v<T, mat3> ||  //
+	std::is_same_v<T, mat4>;
 
 /**
  * Hint to the graphics driver implementation regarding the intended access
@@ -120,28 +119,28 @@ template <bool IsInstance, typename T>
 	} else if constexpr (std::is_same_v<T, float>) {
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerFloat(index++, 1, stride, offset);
-	} else if constexpr (std::is_same_v<T, glm::vec2>) {
+	} else if constexpr (std::is_same_v<T, vec2>) {
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerFloat(index++, 2, stride, offset);
-	} else if constexpr (std::is_same_v<T, glm::vec3>) {
+	} else if constexpr (std::is_same_v<T, vec3>) {
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerFloat(index++, 3, stride, offset);
-	} else if constexpr (std::is_same_v<T, glm::vec4>) {
+	} else if constexpr (std::is_same_v<T, vec4>) {
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerFloat(index++, 4, stride, offset);
-	} else if constexpr (std::is_same_v<T, glm::mat2>) {
+	} else if constexpr (std::is_same_v<T, mat2>) {
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerFloat(index++, 2, stride, offset);
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerFloat(index++, 2, stride, offset + sizeof(float) * 2);
-	} else if constexpr (std::is_same_v<T, glm::mat3>) {
+	} else if constexpr (std::is_same_v<T, mat3>) {
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerFloat(index++, 3, stride, offset);
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerFloat(index++, 3, stride, offset + sizeof(float) * 3);
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerFloat(index++, 3, stride, offset + sizeof(float) * 6);
-	} else if constexpr (std::is_same_v<T, glm::mat4>) {
+	} else if constexpr (std::is_same_v<T, mat4>) {
 		enableVertexAttribute<IsInstance>(index);
 		vertexAttribPointerFloat(index++, 4, stride, offset);
 		enableVertexAttribute<IsInstance>(index);
@@ -189,11 +188,11 @@ struct NoIndex {};
  * \tparam T the type to check.
  */
 template <typename T>
-concept mesh_index =                    //
-	std::is_same_v<T, NoIndex> ||       //
-	std::is_same_v<T, std::uint8_t> ||  //
-	std::is_same_v<T, std::uint16_t> || //
-	std::is_same_v<T, std::uint32_t>;
+concept mesh_index =              //
+	std::is_same_v<T, NoIndex> || //
+	std::is_same_v<T, u8> ||      //
+	std::is_same_v<T, u16> ||     //
+	std::is_same_v<T, u32>;
 
 /**
  * Tag type for specifying that a Mesh does not have an instance buffer.
@@ -439,7 +438,6 @@ private:
 	[[no_unique_address]] std::conditional_t<IS_INSTANCED, Buffer, NoInstance> ibo{};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

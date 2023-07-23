@@ -1,15 +1,14 @@
-#ifndef DONUT_APPLICATION_ERROR_HPP
-#define DONUT_APPLICATION_ERROR_HPP
+#ifndef DONUT_EVENTS_ERROR_HPP
+#define DONUT_EVENTS_ERROR_HPP
 
 #include <stdexcept> // std::runtime_error
 #include <string>    // std::string
 
-namespace donut {
-namespace application {
+namespace donut::events {
 
 /**
- * Exception type for domain-specific errors originating from the
- * donut::application module.
+ * Exception type for domain-specific errors originating from the donut::events
+ * module.
  */
 struct Error : std::runtime_error {
 	explicit Error(const std::string& message)
@@ -19,7 +18,6 @@ struct Error : std::runtime_error {
 		: std::runtime_error(message) {}
 };
 
-} // namespace application
-} // namespace donut
+} // namespace donut::events
 
 #endif

@@ -1,16 +1,16 @@
 #ifndef DONUT_OBJ_HPP
 #define DONUT_OBJ_HPP
 
+#include <donut/math.hpp>
+
 #include <cstddef>     // std::size_t
-#include <cstdint>     // std::uint32_t
-#include <glm/glm.hpp> // glm::...
+#include <cstdint>     // std::uint8_t, std::uint32_t
 #include <stdexcept>   // std::runtime_error
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <vector>      // std::vector
 
-namespace donut {
-namespace obj {
+namespace donut::obj {
 
 /**
  * Exception type for errors originating from the OBJ API.
@@ -87,9 +87,9 @@ struct Scene {
 	[[nodiscard]] static Scene parse(std::string_view objString);
 
 	std::vector<std::string> materialLibraryFilenames{}; ///< List of relative filepaths of the material libraries associated with this scene.
-	std::vector<glm::vec3> vertices{};                   ///< List of vertex positions referenced by the face vertices defined in this scene.
-	std::vector<glm::vec2> textureCoordinates{};         ///< List of texture coordinates referenced by the face vertices defined in this scene.
-	std::vector<glm::vec3> normals{};                    ///< List of normal vectors referenced by the face vertices defined in this scene.
+	std::vector<vec3> vertices{};                        ///< List of vertex positions referenced by the face vertices defined in this scene.
+	std::vector<vec2> textureCoordinates{};              ///< List of texture coordinates referenced by the face vertices defined in this scene.
+	std::vector<vec3> normals{};                         ///< List of normal vectors referenced by the face vertices defined in this scene.
 	std::vector<Object> objects{};                       ///< List of objects belonging to this scene.
 };
 
@@ -124,10 +124,10 @@ struct Material {
 	std::string specularExponentMapName{};                         ///< Relative filepath of the specular exponent map image, or empty for no specular exponent map.
 	std::string dissolveFactorMapName{};                           ///< Relative filepath of the dissolve factor map image, or empty for no dissolve factor map.
 	std::string bumpMapName{};                                     ///< Relative filepath of the bump/normal map image, or empty for no bump/normal map.
-	glm::vec3 ambientColor{1.0f, 1.0f, 1.0f};                      ///< Ambient color factor to multiply the sampled ambient map value by.
-	glm::vec3 diffuseColor{1.0f, 1.0f, 1.0f};                      ///< Diffuse color factor to multiply the sampled diffuse map value by.
-	glm::vec3 specularColor{1.0f, 1.0f, 1.0f};                     ///< Specular color factor to multiply the sampled specular map value by.
-	glm::vec3 emissiveColor{0.0f, 0.0f, 0.0f};                     ///< Emissive color factor to multiply the sampled emissive map value by.
+	vec3 ambientColor{1.0f, 1.0f, 1.0f};                           ///< Ambient color factor to multiply the sampled ambient map value by.
+	vec3 diffuseColor{1.0f, 1.0f, 1.0f};                           ///< Diffuse color factor to multiply the sampled diffuse map value by.
+	vec3 specularColor{1.0f, 1.0f, 1.0f};                          ///< Specular color factor to multiply the sampled specular map value by.
+	vec3 emissiveColor{0.0f, 0.0f, 0.0f};                          ///< Emissive color factor to multiply the sampled emissive map value by.
 	float specularExponent = 0.0f;                                 ///< Specular exponent factor to multiply th sampled specular exponent map value by.
 	float dissolveFactor = 0.0f;                                   ///< Dissolve factor to multiply the sampled dissolve factor map value by.
 	IlluminationModel illuminationModel = IlluminationModel::FLAT; ///< Illumination model to use for rendering this material.
@@ -154,7 +154,6 @@ struct Library {
 };
 
 } // namespace mtl
-} // namespace obj
-} // namespace donut
+} // namespace donut::obj
 
 #endif

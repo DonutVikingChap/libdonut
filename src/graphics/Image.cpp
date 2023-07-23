@@ -1,5 +1,5 @@
-#include <donut/InputFileStream.hpp>
-#include <donut/OutputFileStream.hpp>
+#include <donut/File.hpp>
+#include <donut/Filesystem.hpp>
 #include <donut/graphics/Error.hpp>
 #include <donut/graphics/Image.hpp>
 
@@ -12,38 +12,37 @@
 #include <stb_image_write.h> // stbi_..., stbi_write_...
 #include <stdlib.h>          // malloc // NOLINT(modernize-deprecated-headers)
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 namespace {
 
 constexpr stbi_io_callbacks IMAGE_FILE_INPUT_CALLBACKS{
 	.read = [](void* user, char* data, int size) -> int {
-		InputFileStream& file = *static_cast<InputFileStream*>(user);
+		File& file = *static_cast<File*>(user);
 		return static_cast<int>(file.read(std::as_writable_bytes(std::span{data, static_cast<std::size_t>(size)})));
 	},
 	.skip = [](void* user, int n) -> void {
-		InputFileStream& file = *static_cast<InputFileStream*>(user);
-		file.skip(static_cast<std::ptrdiff_t>(n));
+		File& file = *static_cast<File*>(user);
+		file.skipg(static_cast<std::ptrdiff_t>(n));
 	},
 	.eof = [](void* user) -> int {
-		InputFileStream& file = *static_cast<InputFileStream*>(user);
+		File& file = *static_cast<File*>(user);
 		return (file.eof()) ? 1 : 0;
 	},
 };
 
 void imageFileOutputCallback(void* context, void* data, int size) noexcept {
-	OutputFileStream& file = *static_cast<OutputFileStream*>(context);
+	File& file = *static_cast<File*>(context);
 	file.write(std::span{reinterpret_cast<const std::byte*>(data), static_cast<std::size_t>(size)});
 }
 
 } // namespace
 
-void Image::savePNG(const ImageView& image, const char* filepath, const ImageSavePNGOptions& options) {
+void Image::savePNG(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSavePNGOptions& options) {
 	if (image.getPixelComponentType() != PixelComponentType::U8) {
 		throw Error{std::format("Cannot save image to \"{}\" as PNG since the image is not stored in 8-bit unsigned integer format.", filepath)};
 	}
-	OutputFileStream file = OutputFileStream::create(filepath);
+	File file = filesystem.createFile(filepath);
 	stbi_flip_vertically_on_write(options.flipVertically ? 0 : 1); // NOTE: Inverted on purpose.
 	stbi_write_png_compression_level = options.compressionLevel;
 	const int width = static_cast<int>(image.getWidth());
@@ -55,11 +54,11 @@ void Image::savePNG(const ImageView& image, const char* filepath, const ImageSav
 	}
 }
 
-void Image::saveBMP(const ImageView& image, const char* filepath, const ImageSaveBMPOptions& options) {
+void Image::saveBMP(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSaveBMPOptions& options) {
 	if (image.getPixelComponentType() != PixelComponentType::U8) {
 		throw Error{std::format("Cannot save image to \"{}\" as BMP since the image is not stored in 8-bit unsigned integer format.", filepath)};
 	}
-	OutputFileStream file = OutputFileStream::create(filepath);
+	File file = filesystem.createFile(filepath);
 	stbi_flip_vertically_on_write(options.flipVertically ? 0 : 1); // NOTE: Inverted on purpose.
 	const int width = static_cast<int>(image.getWidth());
 	const int height = static_cast<int>(image.getHeight());
@@ -70,11 +69,11 @@ void Image::saveBMP(const ImageView& image, const char* filepath, const ImageSav
 	}
 }
 
-void Image::saveTGA(const ImageView& image, const char* filepath, const ImageSaveTGAOptions& options) {
+void Image::saveTGA(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSaveTGAOptions& options) {
 	if (image.getPixelComponentType() != PixelComponentType::U8) {
 		throw Error{std::format("Cannot save image to \"{}\" as TGA since the image is not stored in 8-bit unsigned integer format.", filepath)};
 	}
-	OutputFileStream file = OutputFileStream::create(filepath);
+	File file = filesystem.createFile(filepath);
 	stbi_flip_vertically_on_write(options.flipVertically ? 0 : 1); // NOTE: Inverted on purpose.
 	stbi_write_tga_with_rle = (options.useRleCompression) ? 1 : 0;
 	const int width = static_cast<int>(image.getWidth());
@@ -86,11 +85,11 @@ void Image::saveTGA(const ImageView& image, const char* filepath, const ImageSav
 	}
 }
 
-void Image::saveJPG(const ImageView& image, const char* filepath, const ImageSaveJPGOptions& options) {
+void Image::saveJPG(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSaveJPGOptions& options) {
 	if (image.getPixelComponentType() != PixelComponentType::U8) {
 		throw Error{std::format("Cannot save image to \"{}\" as JPG since the image is not stored in 8-bit unsigned integer format.", filepath)};
 	}
-	OutputFileStream file = OutputFileStream::create(filepath);
+	File file = filesystem.createFile(filepath);
 	stbi_flip_vertically_on_write(options.flipVertically ? 0 : 1); // NOTE: Inverted on purpose.
 	const int width = static_cast<int>(image.getWidth());
 	const int height = static_cast<int>(image.getHeight());
@@ -101,11 +100,11 @@ void Image::saveJPG(const ImageView& image, const char* filepath, const ImageSav
 	}
 }
 
-void Image::saveHDR(const ImageView& image, const char* filepath, const ImageSaveHDROptions& options) {
+void Image::saveHDR(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSaveHDROptions& options) {
 	if (image.getPixelComponentType() != PixelComponentType::F32) {
 		throw Error{std::format("Cannot save image to \"{}\" as HDR since the image is not stored in 32-bit floating-point format.", filepath)};
 	}
-	OutputFileStream file = OutputFileStream::create(filepath);
+	File file = filesystem.createFile(filepath);
 	stbi_flip_vertically_on_write(options.flipVertically ? 0 : 1); // NOTE: Inverted on purpose.
 	const int width = static_cast<int>(image.getWidth());
 	const int height = static_cast<int>(image.getHeight());
@@ -113,6 +112,16 @@ void Image::saveHDR(const ImageView& image, const char* filepath, const ImageSav
 	const float* const pixels = static_cast<const float*>(image.getPixels());
 	if (stbi_write_hdr_to_func(imageFileOutputCallback, &file, width, height, channelCount, pixels) == 0) {
 		throw Error{std::format("Failed to save HDR image \"{}\"!", filepath)};
+	}
+}
+
+void Image::save(const ImageView& image, Filesystem& filesystem, const char* filepath, const ImageSaveOptions& options) {
+	if (image.getPixelComponentType() == PixelComponentType::U8) {
+		savePNG(image, filesystem, filepath, ImageSavePNGOptions{.flipVertically = options.flipVertically});
+	} else if (image.getPixelComponentType() == PixelComponentType::F32) {
+		saveHDR(image, filesystem, filepath, ImageSaveHDROptions{.flipVertically = options.flipVertically});
+	} else {
+		throw Error{std::format("Cannot save image to \"{}\" since the image is not stored in a suitable format.", filepath)};
 	}
 }
 
@@ -131,7 +140,7 @@ Image::Image(const ImageView& image)
 	std::memcpy(pixels.get(), image.getPixels(), image.getSizeInBytes());
 }
 
-Image::Image(const char* filepath, const ImageOptions& options) {
+Image::Image(const Filesystem& filesystem, const char* filepath, const ImageOptions& options) {
 	int desiredChannelCount = 0;
 	if (options.desiredFormat) {
 		switch (*options.desiredFormat) {
@@ -145,7 +154,7 @@ Image::Image(const char* filepath, const ImageOptions& options) {
 	int imageWidth = 0;
 	int imageHeight = 0;
 	int channelsInFile = 0;
-	InputFileStream file = InputFileStream::open(filepath);
+	File file = filesystem.openFile(filepath);
 	if (options.highDynamicRange) {
 		pixels.reset(stbi_loadf_from_callbacks(&IMAGE_FILE_INPUT_CALLBACKS, &file, &imageWidth, &imageHeight, &channelsInFile, desiredChannelCount));
 		if (!pixels) {
@@ -178,5 +187,4 @@ void Image::PixelsDeleter::operator()(void* handle) const noexcept {
 	stbi_image_free(handle);
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

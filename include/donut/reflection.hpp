@@ -6,8 +6,7 @@
 #include <type_traits> // std::is_aggregate_v, std::integral_constant, std::remove_cvref_t
 #include <utility>     // std::index_sequence, std::make_index_sequence
 
-namespace donut {
-namespace reflection {
+namespace donut::reflection {
 
 namespace detail {
 
@@ -188,10 +187,9 @@ inline constexpr std::size_t aggregate_size_v = aggregate_size<T>::value;
  */
 template <std::size_t N>
 constexpr void forEachIndex(auto fn) {
-	[&]<std::size_t... Indices>(std::index_sequence<Indices...>)->void {
+	[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
 		(fn(std::integral_constant<std::size_t, Indices>{}), ...);
-	}
-	(std::make_index_sequence<N>{});
+	}(std::make_index_sequence<N>{});
 }
 
 /**
@@ -209,8 +207,7 @@ constexpr void forEachIndex(auto fn) {
 constexpr void forEach(auto&& tuple, auto fn) {
 	[&]<std::size_t... Indices>(std::index_sequence<Indices...>) {
 		(fn(std::get<Indices>(tuple)), ...);
-	}
-	(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(tuple)>>>{});
+	}(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(tuple)>>>{});
 }
 
 /**
@@ -229,11 +226,9 @@ constexpr void forEach(auto&& tuple, auto fn) {
 [[nodiscard]] constexpr auto transform(auto&& tuple, auto fn) {
 	return [&]<std::size_t... Indices>(std::index_sequence<Indices...>) {
 		return std::make_tuple(fn(std::get<Indices>(tuple))...);
-	}
-	(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(tuple)>>>{});
+	}(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(tuple)>>>{});
 }
 
-} // namespace reflection
-} // namespace donut
+} // namespace donut::reflection
 
 #endif

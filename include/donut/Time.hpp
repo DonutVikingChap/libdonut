@@ -1,11 +1,12 @@
 #ifndef DONUT_TIME_HPP
 #define DONUT_TIME_HPP
 
-#include <chrono>      // std::chrono::...
-#include <cstddef>     // std::size_t
-#include <format>      // std::formatter, std::format_to
-#include <glm/glm.hpp> // glm::...
-#include <ratio>       // std::ratio
+#include <donut/math.hpp>
+
+#include <chrono>  // std::chrono::...
+#include <cstddef> // std::size_t
+#include <format>  // std::formatter, std::format_to
+#include <ratio>   // std::ratio
 
 namespace donut {
 
@@ -431,23 +432,38 @@ private:
 	Duration duration{};
 };
 
-template <glm::length_t L, typename T, typename Period>
-[[nodiscard]] constexpr glm::vec<L, T> operator*(glm::vec<L, T> a, Time<T, Period> b) noexcept {
+template <length_t L, typename T, typename Period>
+[[nodiscard]] constexpr Time<T, Period> operator*(Time<T, Period> a, T b) noexcept {
+	return static_cast<typename Time<T, Period>::Duration>(a) * b;
+}
+
+template <length_t L, typename T, typename Period>
+[[nodiscard]] constexpr Time<T, Period> operator*(T a, Time<T, Period> b) noexcept {
+	return a * static_cast<typename Time<T, Period>::Duration>(b);
+}
+
+template <length_t L, typename T, typename Period>
+[[nodiscard]] constexpr T operator/(Time<T, Period> a, T b) noexcept {
+	return static_cast<typename Time<T, Period>::Duration>(a) / b;
+}
+
+template <length_t L, typename T, typename Period>
+[[nodiscard]] constexpr vec<L, T> operator*(vec<L, T> a, Time<T, Period> b) noexcept {
 	return a * static_cast<T>(b);
 }
 
-template <glm::length_t L, typename T, typename Period>
-[[nodiscard]] constexpr glm::vec<L, T> operator*(Time<T, Period> a, glm::vec<L, T> b) noexcept {
+template <length_t L, typename T, typename Period>
+[[nodiscard]] constexpr vec<L, T> operator*(Time<T, Period> a, vec<L, T> b) noexcept {
 	return static_cast<T>(a) * b;
 }
 
-template <glm::length_t L, typename T, typename Period>
-[[nodiscard]] constexpr glm::vec<L, T> operator/(glm::vec<L, T> a, Time<T, Period> b) noexcept {
+template <length_t L, typename T, typename Period>
+[[nodiscard]] constexpr vec<L, T> operator/(vec<L, T> a, Time<T, Period> b) noexcept {
 	return a / static_cast<T>(b);
 }
 
-template <glm::length_t L, typename T, typename Period>
-[[nodiscard]] constexpr glm::vec<L, T> operator/(Time<T, Period> a, glm::vec<L, T> b) noexcept {
+template <length_t L, typename T, typename Period>
+[[nodiscard]] constexpr vec<L, T> operator/(Time<T, Period> a, vec<L, T> b) noexcept {
 	return static_cast<T>(a) / b;
 }
 

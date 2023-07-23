@@ -3,6 +3,7 @@
 
 #include <donut/modules/application.hpp>
 #include <donut/modules/audio.hpp>
+#include <donut/modules/events.hpp>
 #include <donut/modules/graphics.hpp>
 #include <donut/modules/utilities.hpp>
 

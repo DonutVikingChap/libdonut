@@ -1,6 +1,7 @@
 #ifndef DONUT_LOOSE_QUADTREE_HPP
 #define DONUT_LOOSE_QUADTREE_HPP
 
+#include <donut/math.hpp>
 #include <donut/shapes.hpp>
 
 #include <algorithm>   // std::all_of
@@ -8,7 +9,6 @@
 #include <cassert>     // assert
 #include <cstddef>     // std::size_t, std::ptrdiff_t
 #include <cstdint>     // std::uint..._t
-#include <glm/glm.hpp> // glm::...
 #include <iterator>    // std::iterator_traits
 #include <memory>      // std::unique_ptr, std::make_unique
 #include <optional>    // std::optional
@@ -105,7 +105,7 @@ public:
 	 *        This should correspond roughly to the typical size of the boxes
 	 *        that will be inserted into the tree.
 	 */
-	LooseQuadtree(const Box<2, float>& worldBoundingBox, glm::vec2 typicalBoxSize) noexcept {
+	LooseQuadtree(const Box<2, float>& worldBoundingBox, vec2 typicalBoxSize) noexcept {
 		reset(worldBoundingBox, typicalBoxSize);
 	}
 
@@ -121,12 +121,12 @@ public:
 	 *
 	 * \sa clear()
 	 */
-	void reset(const Box<2, float>& worldBoundingBox, glm::vec2 typicalBoxSize) noexcept {
+	void reset(const Box<2, float>& worldBoundingBox, vec2 typicalBoxSize) noexcept {
 		clear();
-		minimumQuadrantSize = glm::max(typicalBoxSize.x, typicalBoxSize.y);
+		minimumQuadrantSize = max(typicalBoxSize.x, typicalBoxSize.y);
 		rootCenter = (worldBoundingBox.min + worldBoundingBox.max) * 0.5f;
-		const glm::vec2 worldMaxExtents = glm::max(worldBoundingBox.max - rootCenter, rootCenter - worldBoundingBox.min);
-		const float worldMaxExtent = glm::max(worldMaxExtents.x, worldMaxExtents.y);
+		const vec2 worldMaxExtents = max(worldBoundingBox.max - rootCenter, rootCenter - worldBoundingBox.min);
+		const float worldMaxExtent = max(worldMaxExtents.x, worldMaxExtents.y);
 		// Double the root size until it fits the entire world.
 		halfRootSize = minimumQuadrantSize;
 		while (halfRootSize < worldMaxExtent) {
@@ -177,11 +177,11 @@ public:
 		}
 
 		// Find the center of the AABB.
-		const glm::vec2 aabbDiagonal = elementBoundingBox.max - elementBoundingBox.min;
-		const glm::vec2 aabbCenter = elementBoundingBox.min + aabbDiagonal * 0.5f;
+		const vec2 aabbDiagonal = elementBoundingBox.max - elementBoundingBox.min;
+		const vec2 aabbCenter = elementBoundingBox.min + aabbDiagonal * 0.5f;
 
 		// Find the largest extent of the AABB.
-		const float aabbSize = glm::max(aabbDiagonal.x, aabbDiagonal.y);
+		const float aabbSize = max(aabbDiagonal.x, aabbDiagonal.y);
 
 		// Start at the root of the tree and search for the smallest quadrant that contains the entire AABB within its loose bounds.
 		// The loose bounds is a box around the quadrant that is twice as big as the quadrant in every direction and shares the same center.
@@ -189,7 +189,7 @@ public:
 		// In that case, the closest quadrant, i.e. the one which contains the center of the AABB, is chosen.
 		// The loop stops going lower in the tree when the AABB can no longer fit in a smaller quadrant, or when we reach the minimum quadrant size.
 		float quadrantSize = halfRootSize;
-		glm::vec2 center = rootCenter;
+		vec2 center = rootCenter;
 		TreeIndex treeIndex = 0;
 		while (quadrantSize >= aabbSize && quadrantSize >= minimumQuadrantSize) {
 			quadrantSize *= 0.5f;
@@ -386,7 +386,7 @@ public:
 	 * \sa test()
 	 */
 	template <typename Callback, typename Predicate>
-	constexpr auto traverseActiveNodes(Callback&& callback, Predicate&& predicate) const {
+	constexpr auto traverseActiveNodes(Callback&& callback, Predicate&& predicate) const { // NOLINT(cppcoreguidelines-missing-std-forward)
 		return traverseNodesImpl(
 			[callback = std::forward<Callback>(callback)](const Box<2, float>& looseBounds, const Quadrant& node) mutable {
 				constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const Box<2, float>&, const T* const&>, bool>;
@@ -489,7 +489,7 @@ public:
 	 * \sa test()
 	 */
 	template <typename Callback, typename Predicate>
-	constexpr auto traverseElementNodes(Callback&& callback, Predicate&& predicate) const {
+	constexpr auto traverseElementNodes(Callback&& callback, Predicate&& predicate) const { // NOLINT(cppcoreguidelines-missing-std-forward)
 		return traverseNodesImpl(
 			[callback = std::forward<Callback>(callback)](const Box<2, float>& looseBounds, const Quadrant& node) mutable {
 				constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const Box<2, float>&, const T&>, bool>;
@@ -592,7 +592,7 @@ public:
 	 * \sa test()
 	 */
 	template <typename Callback, typename Predicate>
-	constexpr auto traverseElements(Callback&& callback, Predicate&& predicate) const {
+	constexpr auto traverseElements(Callback&& callback, Predicate&& predicate) const { // NOLINT(cppcoreguidelines-missing-std-forward)
 		return traverseNodesImpl(
 			[callback = std::forward<Callback>(callback)](const Box<2, float>&, const Quadrant& node) mutable {
 				constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const T&>, bool>;
@@ -682,7 +682,7 @@ public:
 	 * \sa traverseElements()
 	 */
 	template <typename Callback>
-	auto test(glm::vec2 point, Callback&& callback) const {
+	auto test(vec2 point, Callback&& callback) const {
 		return traverseElements(std::forward<Callback>(callback), [&point](const Box<2, float>& looseBounds) -> bool { return looseBounds.contains(point); });
 	}
 
@@ -704,7 +704,7 @@ public:
 	 * \sa traverseElementNodes()
 	 * \sa traverseElements()
 	 */
-	[[nodiscard]] bool test(glm::vec2 point) const noexcept {
+	[[nodiscard]] bool test(vec2 point) const noexcept {
 		return traverseElements([](const T&) -> bool { return true; }, [&point](const Box<2, float>& looseBounds) -> bool { return looseBounds.contains(point); });
 	}
 
@@ -771,12 +771,12 @@ public:
 
 private:
 	struct IterationState {
-		glm::vec2 center;
+		vec2 center;
 		float quadrantSize;
 		TreeIndex treeIndex;
 	};
 
-	[[nodiscard]] static constexpr std::size_t chooseQuadrant(glm::vec2 aabbCenter, glm::vec2& center, float halfQuadrantSize) {
+	[[nodiscard]] static constexpr std::size_t chooseQuadrant(vec2 aabbCenter, vec2& center, float halfQuadrantSize) {
 		std::size_t index{};
 		if (aabbCenter.x < center.x) {
 			center.x -= halfQuadrantSize;
@@ -801,23 +801,24 @@ private:
 	}
 
 	template <typename Callback>
-	static constexpr void forEachActiveQuadrant(const QuadrantIndexArray& subQuadrantIndices, glm::vec2 center, float halfQuadrantSize, Callback&& callback) {
+	static constexpr void forEachActiveQuadrant(const QuadrantIndexArray& subQuadrantIndices, vec2 center, float halfQuadrantSize,
+		Callback&& callback) { // NOLINT(cppcoreguidelines-missing-std-forward)
 		if (const TreeIndex quadrantIndex = subQuadrantIndices[0]) {
-			callback(quadrantIndex, glm::vec2{center.x - halfQuadrantSize, center.y - halfQuadrantSize});
+			callback(quadrantIndex, vec2{center.x - halfQuadrantSize, center.y - halfQuadrantSize});
 		}
 		if (const TreeIndex quadrantIndex = subQuadrantIndices[1]) {
-			callback(quadrantIndex, glm::vec2{center.x - halfQuadrantSize, center.y + halfQuadrantSize});
+			callback(quadrantIndex, vec2{center.x - halfQuadrantSize, center.y + halfQuadrantSize});
 		}
 		if (const TreeIndex quadrantIndex = subQuadrantIndices[2]) {
-			callback(quadrantIndex, glm::vec2{center.x + halfQuadrantSize, center.y - halfQuadrantSize});
+			callback(quadrantIndex, vec2{center.x + halfQuadrantSize, center.y - halfQuadrantSize});
 		}
 		if (const TreeIndex quadrantIndex = subQuadrantIndices[3]) {
-			callback(quadrantIndex, glm::vec2{center.x + halfQuadrantSize, center.y + halfQuadrantSize});
+			callback(quadrantIndex, vec2{center.x + halfQuadrantSize, center.y + halfQuadrantSize});
 		}
 	}
 
 	template <typename Callback, typename Predicate>
-	constexpr auto traverseNodesImpl(Callback&& callback, Predicate&& predicate) const {
+	constexpr auto traverseNodesImpl(Callback&& callback, Predicate&& predicate) const { // NOLINT(cppcoreguidelines-missing-std-forward)
 		constexpr bool CALLBACK_RETURNS_BOOL = std::is_convertible_v<std::invoke_result_t<Callback, const Box<2, float>&, const Quadrant&>, bool>;
 		if (!tree.empty()) {
 			iterationStack.clear();
@@ -831,7 +832,7 @@ private:
 				iterationStack.pop_back();
 
 				const float size = quadrantSize * 2.0f;
-				const Box<2, float> looseBounds{center - glm::vec2{size, size}, center + glm::vec2{size, size}};
+				const Box<2, float> looseBounds{center - vec2{size}, center + vec2{size}};
 				const Quadrant& node = tree[treeIndex];
 				if constexpr (CALLBACK_RETURNS_BOOL) {
 					if (callback(looseBounds, node)) {
@@ -843,8 +844,8 @@ private:
 
 				const float halfQuadrantSize = quadrantSize * 0.5f;
 				forEachActiveQuadrant(node.subQuadrantIndices, center, halfQuadrantSize,
-					[this, &predicate, quadrantSize = quadrantSize, halfQuadrantSize](TreeIndex quadrantIndex, glm::vec2 quadrantCenter) {
-						const Box<2, float> looseBounds{quadrantCenter - glm::vec2{quadrantSize, quadrantSize}, quadrantCenter + glm::vec2{quadrantSize, quadrantSize}};
+					[this, &predicate, quadrantSize = quadrantSize, halfQuadrantSize](TreeIndex quadrantIndex, vec2 quadrantCenter) {
+						const Box<2, float> looseBounds{quadrantCenter - vec2{quadrantSize}, quadrantCenter + vec2{quadrantSize}};
 						if (predicate(looseBounds)) {
 							iterationStack.push_back(IterationState{
 								.center = quadrantCenter,
@@ -884,7 +885,7 @@ private:
 	std::vector<Quadrant> tree{};
 	float minimumQuadrantSize = 0.0f;
 	float halfRootSize = 0.0f;
-	glm::vec2 rootCenter{0.0f, 0.0f};
+	vec2 rootCenter{0.0f, 0.0f};
 	TreeIndex firstFreeIndex = 0;
 	mutable std::vector<IterationState> iterationStack{};
 };

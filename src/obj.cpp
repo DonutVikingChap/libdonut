@@ -1,3 +1,4 @@
+#include <donut/math.hpp>
 #include <donut/obj.hpp>
 
 #include <cstddef>     // std::size_t
@@ -5,8 +6,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
-namespace donut {
-namespace obj {
+namespace donut::obj {
 
 namespace {
 
@@ -233,16 +233,16 @@ private:
 		return result;
 	}
 
-	[[nodiscard]] glm::vec2 parseVec2() {
-		glm::vec2 result{};
+	[[nodiscard]] vec2 parseVec2() {
+		vec2 result{};
 		result.x = parseFloat();
 		skipWhitespace();
 		result.y = parseFloat();
 		return result;
 	}
 
-	[[nodiscard]] glm::vec3 parseVec3() {
-		glm::vec3 result{};
+	[[nodiscard]] vec3 parseVec3() {
+		vec3 result{};
 		result.x = parseFloat();
 		skipWhitespace();
 		result.y = parseFloat();
@@ -310,5 +310,4 @@ Library Library::parse(std::string_view mtlString) {
 }
 
 } // namespace mtl
-} // namespace obj
-} // namespace donut
+} // namespace donut::obj

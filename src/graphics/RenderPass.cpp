@@ -1,13 +1,7 @@
 #include <donut/graphics/RenderPass.hpp>
+#include <donut/math.hpp>
 
-#include <glm/ext/matrix_transform.hpp> // glm::identity
-#include <glm/glm.hpp>                  // glm::...
-#include <glm/gtc/matrix_inverse.hpp>   // glm::inverseTranspose
-#include <glm/gtx/euler_angles.hpp>     // glm::orientate2
-#include <glm/gtx/transform.hpp>        // glm::translate, glm::scale
-
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 RenderPass& RenderPass::draw(const ModelInstance& model) {
 	assert(model.shader);
@@ -16,7 +10,7 @@ RenderPass& RenderPass::draw(const ModelInstance& model) {
 	models.try_emplace(ModelInstances::Key{.shader = model.shader, .model = model.model}, &memoryResource)
 		.first->second.instances.push_back(Model::Object::Instance{
 			.transformation = model.transformation,
-			.normalMatrix = glm::inverseTranspose(glm::mat3{model.transformation}),
+			.normalMatrix = inverseTranspose(mat3{model.transformation}),
 			.tintColor = model.tintColor,
 		});
 	return *this;
@@ -45,10 +39,10 @@ RenderPass& RenderPass::draw(const RectangleInstance& rectangle) {
 	return draw(QuadInstance{
 		.shader = rectangle.shader,
 		.texture = rectangle.texture,
-		.transformation = glm::translate(glm::vec3{rectangle.position, 0.0f}) * //
-	                      glm::mat4{glm::orientate2(rectangle.angle)} *         //
-	                      glm::scale(glm::vec3{rectangle.size, 1.0f}) *         //
-	                      glm::translate(glm::vec3{-rectangle.origin, 0.0f}),
+		.transformation = translate(vec3{rectangle.position, 0.0f}) * //
+	                      mat4{orientate2(rectangle.angle)} *         //
+	                      scale(vec3{rectangle.size, 1.0f}) *         //
+	                      translate(vec3{-rectangle.origin, 0.0f}),
 		.textureOffset = rectangle.textureOffset,
 		.textureScale = rectangle.textureScale,
 		.tintColor = rectangle.tintColor,
@@ -99,8 +93,8 @@ RenderPass& RenderPass::draw(const TextInstance& text) {
 	}
 	for (const Font::ShapedText::ShapedGlyph& shapedGlyph : text.text.shapedGlyphs) {
 		last_quad->instances.push_back(TexturedQuad::Instance{
-			.transformation = glm::translate(glm::vec3{text.position + shapedGlyph.offset, 0.0f}) * //
-		                      glm::scale(glm::vec3{shapedGlyph.size, 1.0f}),
+			.transformation = translate(vec3{text.position + shapedGlyph.offset, 0.0f}) * //
+		                      scale(vec3{shapedGlyph.size, 1.0f}),
 			.textureOffset = shapedGlyph.textureOffset,
 			.textureScale = shapedGlyph.textureScale,
 			.tintColor = text.color,
@@ -109,5 +103,4 @@ RenderPass& RenderPass::draw(const TextInstance& text) {
 	return *this;
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

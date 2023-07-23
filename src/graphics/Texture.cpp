@@ -15,8 +15,7 @@
 #include <optional> // std::optional
 #include <utility>  // std::move
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 namespace {
 
@@ -339,5 +338,4 @@ void Texture::TextureDeleter::operator()(Handle handle) const noexcept {
 	glDeleteTextures(1, &handle);
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

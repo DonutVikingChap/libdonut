@@ -1,13 +1,11 @@
-#ifndef DONUT_APPLICATION_INPUT_HPP
-#define DONUT_APPLICATION_INPUT_HPP
+#ifndef DONUT_EVENTS_INPUT_HPP
+#define DONUT_EVENTS_INPUT_HPP
 
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t
-#include <optional>    // std::optional
 #include <string_view> // std::string_view
 
-namespace donut {
-namespace application {
+namespace donut::events {
 
 // clang-format off
 //  X(name,                                 id,                                     str                     )
@@ -248,11 +246,11 @@ inline constexpr std::size_t INPUT_COUNT /** \cond */ = [] {
  * \param identifier the identifier string to search for.
  *
  * \return if found, returns the input value whose identifier matches the given
- *         string. Otherwise, returns an empty optional.
+ *         string. Otherwise, returns Input::UNKNOWN.
  *
  * \sa getInputIdentifier()
  */
-[[nodiscard]] constexpr std::optional<Input> findInput(std::string_view identifier) noexcept {
+[[nodiscard]] constexpr Input findInput(std::string_view identifier) noexcept {
 	/// \cond
 #define X(name, id, str) \
 	if (identifier == id) { \
@@ -261,12 +259,11 @@ inline constexpr std::size_t INPUT_COUNT /** \cond */ = [] {
 	DONUT_ENUM_INPUTS(X)
 #undef X
 	/// \endcond
-	return {};
+	return Input::UNKNOWN;
 }
 
 #undef DONUT_ENUM_INPUTS
 
-} // namespace application
-} // namespace donut
+} // namespace donut::events
 
 #endif

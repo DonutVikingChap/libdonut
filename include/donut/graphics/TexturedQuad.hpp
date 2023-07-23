@@ -2,13 +2,12 @@
 #define DONUT_GRAPHICS_TEXTURED_QUAD_HPP
 
 #include <donut/graphics/Mesh.hpp>
+#include <donut/math.hpp>
 
-#include <array>       // std::array
-#include <cstdint>     // std::int32_t
-#include <glm/glm.hpp> // glm::...
+#include <array>   // std::array
+#include <cstdint> // std::int32_t
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Square 2D mesh for textured rendering.
@@ -23,7 +22,7 @@ struct TexturedQuad {
 	 * \note Meets the requirements of the donut::graphics::mesh_vertex concept.
 	 */
 	struct Vertex {
-		glm::vec2 coordinates; ///< Shared vertex position and texture coordinates.
+		vec2 coordinates; ///< Shared vertex position and texture coordinates.
 	};
 
 	/**
@@ -33,10 +32,10 @@ struct TexturedQuad {
 	 *       concept.
 	 */
 	struct Instance {
-		glm::mat4 transformation; ///< Transformation matrix.
-		glm::vec2 textureOffset;  ///< Offset to apply to the texture coordinates before sampling the texture.
-		glm::vec2 textureScale;   ///< Coefficients to scale the texture coordinates by before sampling the texture.
-		glm::vec4 tintColor;      ///< Tint color to use when rendering.
+		mat4 transformation; ///< Transformation matrix.
+		vec2 textureOffset;  ///< Offset to apply to the texture coordinates before sampling the texture.
+		vec2 textureScale;   ///< Coefficients to scale the texture coordinates by before sampling the texture.
+		vec4 tintColor;      ///< Tint color to use when rendering.
 	};
 
 	/** Hint regarding the intended memory access pattern of the vertex buffer. */
@@ -64,7 +63,6 @@ struct TexturedQuad {
 	Mesh<Vertex, NoIndex, Instance> mesh{VERTICES_USAGE, INSTANCES_USAGE, VERTICES, {}};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

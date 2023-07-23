@@ -4,8 +4,7 @@
 #include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Handle.hpp>
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Unique resource handle with exclusive ownership of a GPU memory buffer.
@@ -41,7 +40,6 @@ private:
 	UniqueHandle<Handle, BufferDeleter> buffer{};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

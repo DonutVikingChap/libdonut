@@ -5,8 +5,7 @@
 #include <cstddef> // std::size_t
 #include <cstdint> // std::int32_t, std::uint32_t, std::uintptr_t
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 namespace detail {
 
@@ -64,5 +63,4 @@ void bufferElementArrayBufferData(std::size_t size, const void* data, MeshBuffer
 
 } // namespace detail
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

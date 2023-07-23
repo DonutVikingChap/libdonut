@@ -1,8 +1,7 @@
 #ifndef DONUT_MODULES_FWD_AUDIO_HPP
 #define DONUT_MODULES_FWD_AUDIO_HPP
 
-namespace donut {
-namespace audio {
+namespace donut::audio {
 
 struct Error;
 
@@ -15,7 +14,6 @@ class Sound;
 struct SoundStageOptions;
 class SoundStage;
 
-} // namespace audio
-} // namespace donut
+} // namespace donut::audio
 
 #endif

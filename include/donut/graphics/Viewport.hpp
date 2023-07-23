@@ -1,11 +1,11 @@
 #ifndef DONUT_GRAPHICS_VIEWPORT_HPP
 #define DONUT_GRAPHICS_VIEWPORT_HPP
 
-#include <glm/glm.hpp> // glm::...
-#include <utility>     // std::pair
+#include <donut/math.hpp>
 
-namespace donut {
-namespace graphics {
+#include <utility> // std::pair
+
+namespace donut::graphics {
 
 /**
  * Rectangular region of a framebuffer.
@@ -29,11 +29,11 @@ struct Viewport {
 	 *       framebuffer, then a viewport with the original render resolution
 	 *       will be returned along with a scale of 1.
 	 */
-	[[nodiscard]] static constexpr std::pair<Viewport, int> createIntegerScaled(glm::ivec2 framebufferSize, glm::ivec2 renderResolution) noexcept {
+	[[nodiscard]] static constexpr std::pair<Viewport, int> createIntegerScaled(ivec2 framebufferSize, ivec2 renderResolution) noexcept {
 		Viewport result{.position{}, .size = renderResolution};
 		int scale = 1;
 		while (true) {
-			const glm::ivec2 nextViewportSize = renderResolution * (scale + 1);
+			const ivec2 nextViewportSize = renderResolution * (scale + 1);
 			if (nextViewportSize.x > framebufferSize.x || nextViewportSize.y > framebufferSize.y) {
 				break;
 			}
@@ -48,15 +48,14 @@ struct Viewport {
 	 * The offset of the viewport, in pixels, from the bottom left of the
 	 * framebuffer.
 	 */
-	glm::ivec2 position;
+	ivec2 position;
 
 	/**
 	 * The width and height of the viewport, in pixels.
 	 */
-	glm::ivec2 size;
+	ivec2 size;
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

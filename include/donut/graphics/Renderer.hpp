@@ -10,8 +10,7 @@
 #include <donut/graphics/TexturedQuad.hpp>
 #include <donut/graphics/Viewport.hpp>
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Configuration options for a Renderer.
@@ -110,7 +109,6 @@ private:
 	TexturedQuad texturedQuad{};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

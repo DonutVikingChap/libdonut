@@ -1,61 +1,13 @@
 #include <donut/File.hpp>
 
+#include <cstddef>  // std::size_t, std::ptrdiff_t, std::byte
 #include <format>   // std::format
 #include <physfs.h> // PHYSFS_...
+#include <span>     // std::span, std::as_writable_bytes
+#include <string>   // std::string
+#include <vector>   // std::vector
 
 namespace donut {
-
-void File::createDirectory(const char* filepath) {
-	if (PHYSFS_mkdir(filepath) == 0) {
-		throw Error{std::format("Failed to create directory \"{}\": {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
-	}
-}
-
-void File::deleteFile(const char* filepath) {
-	if (PHYSFS_delete(filepath) == 0) {
-		throw Error{std::format("Failed to delete file \"{}\": {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
-	}
-}
-
-bool File::exists(const char* filepath) {
-	return PHYSFS_exists(filepath) != 0;
-}
-
-File::Metadata File::getFileMetadata(const char* filepath) {
-	PHYSFS_Stat metadata{};
-	if (PHYSFS_stat(filepath, &metadata) == 0) {
-		throw Error{std::format("Failed to get file metadata: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
-	}
-	Kind kind{};
-	switch (metadata.filetype) {
-		case PHYSFS_FILETYPE_REGULAR: kind = Kind::REGULAR; break;
-		case PHYSFS_FILETYPE_DIRECTORY: kind = Kind::DIRECTORY; break;
-		case PHYSFS_FILETYPE_SYMLINK: kind = Kind::SYMLINK; break;
-		case PHYSFS_FILETYPE_OTHER: kind = Kind::OTHER; break;
-	}
-	return {
-		.size = (metadata.filesize < 0) ? NPOS : static_cast<std::size_t>(metadata.filesize),
-		.creationTime = metadata.createtime,
-		.lastAccessTime = metadata.accesstime,
-		.lastModificationTime = metadata.modtime,
-		.kind = kind,
-		.readOnly = metadata.readonly != 0,
-	};
-}
-
-std::vector<std::string> File::getFilenamesInDirectory(const char* filepath) {
-	std::vector<std::string> result{};
-	if (PHYSFS_enumerate(
-			filepath,
-			[](void* data, const char*, const char* fname) -> PHYSFS_EnumerateCallbackResult {
-				static_cast<std::vector<std::string>*>(data)->emplace_back(fname);
-				return PHYSFS_ENUM_OK;
-			},
-			&result) == 0) {
-		throw Error{std::format("Failed to enumerate directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
-	}
-	return result;
-}
 
 void File::close() {
 	if (file) {
@@ -63,6 +15,99 @@ void File::close() {
 			throw Error{std::format("Failed to close file: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 		}
 		file.release();
+	}
+}
+
+bool File::eof() const noexcept {
+	return PHYSFS_eof(static_cast<PHYSFS_File*>(file.get())) != 0;
+}
+
+size_t File::size() const noexcept {
+	const PHYSFS_sint64 length = PHYSFS_fileLength(static_cast<PHYSFS_File*>(file.get()));
+	return (length < 0) ? NPOS : static_cast<size_t>(length);
+}
+
+size_t File::tellg() const noexcept {
+	const PHYSFS_sint64 position = PHYSFS_tell(static_cast<PHYSFS_File*>(file.get()));
+	return (position < 0) ? NPOS : static_cast<size_t>(position);
+}
+
+size_t File::tellp() const noexcept {
+	const PHYSFS_sint64 position = PHYSFS_tell(static_cast<PHYSFS_File*>(file.get()));
+	return (position < 0) ? NPOS : static_cast<size_t>(position);
+}
+
+void File::seekg(size_t position) {
+	if (PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position)) == 0) {
+		throw Error{std::format("Failed to seek in resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+	}
+}
+
+void File::seekp(size_t position) {
+	if (PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position)) == 0) {
+		throw Error{std::format("Failed to seek in resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+	}
+}
+
+void File::skipg(ptrdiff_t offset) {
+	if (const PHYSFS_sint64 position = PHYSFS_tell(static_cast<PHYSFS_File*>(file.get())); position > 0) {
+		if (PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position + offset)) == 0) {
+			throw Error{std::format("Failed to seek in resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		}
+	} else {
+		throw Error{std::format("Failed to get position in resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+	}
+}
+
+void File::skipp(ptrdiff_t offset) {
+	if (const PHYSFS_sint64 position = PHYSFS_tell(static_cast<PHYSFS_File*>(file.get())); position > 0) {
+		if (PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position + offset)) == 0) {
+			throw Error{std::format("Failed to seek in resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		}
+	} else {
+		throw Error{std::format("Failed to get position in resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+	}
+}
+
+std::vector<std::byte> File::readAll() && {
+	std::vector<std::byte> result{};
+	seekg(0);
+	result.resize(size());
+	if (read(result) != result.size()) {
+		throw Error{std::format("Failed to read file contents: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+	}
+	return result;
+}
+
+std::string File::readAllIntoString() && {
+	std::string result{};
+	seekg(0);
+	result.resize(size());
+	if (read(std::as_writable_bytes(std::span{result})) != result.size()) {
+		throw Error{std::format("Failed to read file contents: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+	}
+	return result;
+}
+
+std::size_t File::read(std::span<std::byte> data) {
+	const PHYSFS_sint64 bytesRead = PHYSFS_readBytes(static_cast<PHYSFS_File*>(file.get()), data.data(), static_cast<PHYSFS_uint64>(data.size()));
+	if (bytesRead < 0) {
+		throw Error{std::format("Failed to read from resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+	}
+	return static_cast<size_t>(bytesRead);
+}
+
+size_t File::write(std::span<const std::byte> data) {
+	const PHYSFS_sint64 bytesWritten = PHYSFS_writeBytes(static_cast<PHYSFS_File*>(file.get()), data.data(), static_cast<PHYSFS_uint64>(data.size()));
+	if (bytesWritten < 0) {
+		throw Error{std::format("Failed to write to resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+	}
+	return static_cast<size_t>(bytesWritten);
+}
+
+void File::flush() {
+	if (PHYSFS_flush(static_cast<PHYSFS_File*>(file.get())) == 0) {
+		throw Error{std::format("Failed to flush resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 }
 

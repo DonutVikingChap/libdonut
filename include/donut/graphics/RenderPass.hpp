@@ -10,18 +10,16 @@
 #include <donut/graphics/SpriteAtlas.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
+#include <donut/math.hpp>
 
-#include <array>                        // std::array
-#include <cstddef>                      // std::byte, std::max_align_t
-#include <forward_list>                 // std::forward_list
-#include <glm/ext/matrix_transform.hpp> // glm::identity
-#include <glm/glm.hpp>                  // glm::...
-#include <map>                          // std::map
-#include <utility>                      // std::pair
-#include <vector>                       // std::vector
+#include <array>        // std::array
+#include <cstddef>      // std::byte, std::max_align_t
+#include <forward_list> // std::forward_list
+#include <map>          // std::map
+#include <utility>      // std::pair
+#include <vector>       // std::vector
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Configuration of a 3D Model instance, for drawing as part of a RenderPass.
@@ -59,7 +57,7 @@ struct ModelInstance {
 	 * Transformation matrix to apply to every vertex position of the model, in
 	 * world space.
 	 */
-	glm::mat4 transformation = glm::identity<glm::mat4>();
+	mat4 transformation = identity<mat4>();
 
 	/**
 	 * Tint color to use in the shader.
@@ -108,7 +106,7 @@ struct TextureInstance {
 	 * Position, in world coordinates, to render the texture at, with respect to
 	 * its TextureInstance::origin.
 	 */
-	glm::vec2 position{0.0f, 0.0f};
+	vec2 position{0.0f, 0.0f};
 
 	/**
 	 * Coefficients to scale the size of the texture by.
@@ -116,7 +114,7 @@ struct TextureInstance {
 	 * The resulting textured quad will have the size of the original texture,
 	 * multiplied by this value.
 	 */
-	glm::vec2 scale{1.0f, 1.0f};
+	vec2 scale{1.0f, 1.0f};
 
 	/**
 	 * Angle, in radians, to rotate the texture by, around its
@@ -129,7 +127,7 @@ struct TextureInstance {
 	 * bottom left of the texture. For example, a value of (0.5, 0.5) would
 	 * represent the middle of the texture.
 	 */
-	glm::vec2 origin{0.0f, 0.0f};
+	vec2 origin{0.0f, 0.0f};
 
 	/**
 	 * Offset, in texture coordinates, to apply to the texture coordinates
@@ -138,7 +136,7 @@ struct TextureInstance {
 	 * \note This unscaled offset is applied after scaling the texture
 	 *       coordinates by the TextureInstance::textureScale.
 	 */
-	glm::vec2 textureOffset{0.0f, 0.0f};
+	vec2 textureOffset{0.0f, 0.0f};
 
 	/**
 	 * Coefficients to scale the texture coordinates by before sampling the
@@ -147,7 +145,7 @@ struct TextureInstance {
 	 * \note The texture coordinates are scaled before applying the unscaled
 	 *       TextureInstance::textureOffset.
 	 */
-	glm::vec2 textureScale{1.0f, 1.0f};
+	vec2 textureScale{1.0f, 1.0f};
 
 	/**
 	 * Tint color to use in the shader.
@@ -193,12 +191,12 @@ struct RectangleInstance {
 	 * Position, in world coordinates, to render the rectangle at, with respect
 	 * to its RectangleInstance::origin.
 	 */
-	glm::vec2 position{0.0f, 0.0f};
+	vec2 position{0.0f, 0.0f};
 
 	/**
 	 * Size of the rectangle, in world coordinates.
 	 */
-	glm::vec2 size{1.0f, 1.0f};
+	vec2 size{1.0f, 1.0f};
 
 	/**
 	 * Angle, in radians, to rotate the rectangle by, around its
@@ -211,7 +209,7 @@ struct RectangleInstance {
 	 * bottom left of the rectangle. For example, a value of (0.5, 0.5) would
 	 * represent the middle of the rectangle.
 	 */
-	glm::vec2 origin{0.0f, 0.0f};
+	vec2 origin{0.0f, 0.0f};
 
 	/**
 	 * Offset, in texture coordinates, to apply to the texture coordinates
@@ -220,7 +218,7 @@ struct RectangleInstance {
 	 * \note This unscaled offset is applied after scaling the texture
 	 *       coordinates by the RectangleInstance::textureScale.
 	 */
-	glm::vec2 textureOffset{0.0f, 0.0f};
+	vec2 textureOffset{0.0f, 0.0f};
 
 	/**
 	 * Coefficients to scale the texture coordinates by before sampling the
@@ -229,7 +227,7 @@ struct RectangleInstance {
 	 * \note The texture coordinates are scaled before applying the unscaled
 	 *       RectangleInstance::textureOffset.
 	 */
-	glm::vec2 textureScale{1.0f, 1.0f};
+	vec2 textureScale{1.0f, 1.0f};
 
 	/**
 	 * Tint color to use in the shader.
@@ -278,7 +276,7 @@ struct QuadInstance {
 	 * Transformation matrix to apply to every corner of the quad, in world
 	 * space.
 	 */
-	glm::mat4 transformation = glm::identity<glm::mat4>();
+	mat4 transformation = identity<mat4>();
 
 	/**
 	 * Offset, in texture coordinates, to apply to the texture coordinates
@@ -287,7 +285,7 @@ struct QuadInstance {
 	 * \note This unscaled offset is applied after scaling the texture
 	 *       coordinates by the QuadInstance::textureScale.
 	 */
-	glm::vec2 textureOffset{0.0f, 0.0f};
+	vec2 textureOffset{0.0f, 0.0f};
 
 	/**
 	 * Coefficients to scale the texture coordinates by before sampling the
@@ -296,7 +294,7 @@ struct QuadInstance {
 	 * \note The texture coordinates are scaled before applying the unscaled
 	 *       QuadInstance::textureOffset.
 	 */
-	glm::vec2 textureScale{1.0f, 1.0f};
+	vec2 textureScale{1.0f, 1.0f};
 
 	/**
 	 * Tint color to use in the shader.
@@ -357,7 +355,7 @@ struct SpriteInstance {
 	 * Position, in world coordinates, to render the sprite at, with respect to
 	 * its SpriteInstance::origin.
 	 */
-	glm::vec2 position{0.0f, 0.0f};
+	vec2 position{0.0f, 0.0f};
 
 	/**
 	 * Coefficients to scale the size of the sprite by.
@@ -365,7 +363,7 @@ struct SpriteInstance {
 	 * The resulting textured quad will have the size of the original sprite,
 	 * multiplied by this value.
 	 */
-	glm::vec2 scale{1.0f, 1.0f};
+	vec2 scale{1.0f, 1.0f};
 
 	/**
 	 * Angle, in radians, to rotate the sprite by, around its
@@ -378,7 +376,7 @@ struct SpriteInstance {
 	 * bottom left of the sprite. For example, a value of (0.5, 0.5) would
 	 * represent the middle of the sprite.
 	 */
-	glm::vec2 origin{0.0f, 0.0f};
+	vec2 origin{0.0f, 0.0f};
 
 	/**
 	 * Tint color to use in the shader.
@@ -431,7 +429,7 @@ struct TextInstance {
 	 * Starting position, in world coordinates, to render the text at. This will
 	 * be the first position on the baseline for the first line of text.
 	 */
-	glm::vec2 position{0.0f, 0.0f};
+	vec2 position{0.0f, 0.0f};
 
 	/**
 	 * Base text color.
@@ -553,7 +551,6 @@ private:
 	decltype(quads)::iterator last_quad = quads.before_begin();
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

@@ -3,8 +3,7 @@
 #include <donut/graphics/VertexArray.hpp>
 #include <donut/graphics/opengl.hpp>
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 VertexArray::VertexArray() {
 	Handle handle{};
@@ -23,5 +22,4 @@ void VertexArray::VertexArrayDeleter::operator()(Handle handle) const noexcept {
 	glDeleteVertexArrays(1, &handle);
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

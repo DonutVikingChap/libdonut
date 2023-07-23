@@ -7,8 +7,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
-namespace donut {
-namespace xml {
+namespace donut::xml {
 
 /**
  * Exception type for errors originating from the XML API.
@@ -75,7 +74,6 @@ struct Document {
 	std::unique_ptr<Element> root{};        ///< Root element of the document tree.
 };
 
-} // namespace xml
-} // namespace donut
+} // namespace donut::xml
 
 #endif

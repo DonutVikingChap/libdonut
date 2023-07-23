@@ -3,13 +3,12 @@
 #include <donut/audio/Listener.hpp>
 #include <donut/audio/Sound.hpp>
 #include <donut/audio/SoundStage.hpp>
+#include <donut/math.hpp>
 
-#include <glm/glm.hpp>  // glm::...
 #include <soloud.h>     // SoLoud::...
 #include <soloud_wav.h> // SoLoud::Wav
 
-namespace donut {
-namespace audio {
+namespace donut::audio {
 
 SoundStage::SoundStage(const SoundStageOptions& options)
 	: engine(new SoLoud::Soloud{}) {
@@ -33,7 +32,7 @@ void SoundStage::update(Time<float> deltaTime, const Listener& listener) {
 	soloud.update3dAudio();
 }
 
-SoundStage::SoundInstanceId SoundStage::playSound(const Sound& sound, float volume, glm::vec3 position, glm::vec3 velocity) {
+SoundStage::SoundInstanceId SoundStage::playSound(const Sound& sound, float volume, vec3 position, vec3 velocity) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	return soloud.play3dClocked(time, *static_cast<SoLoud::Wav*>(sound.get()), position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume);
 }
@@ -92,17 +91,17 @@ void SoundStage::seekToSoundTime(SoundInstanceId id, Time<float> timePointInSoun
 	soloud.seek(id, timePointInSound);
 }
 
-void SoundStage::setSoundPosition(SoundInstanceId id, glm::vec3 newPosition) {
+void SoundStage::setSoundPosition(SoundInstanceId id, vec3 newPosition) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	soloud.set3dSourcePosition(id, newPosition.x, newPosition.y, newPosition.z);
 }
 
-void SoundStage::setSoundVelocity(SoundInstanceId id, glm::vec3 newVelocity) {
+void SoundStage::setSoundVelocity(SoundInstanceId id, vec3 newVelocity) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	soloud.set3dSourceVelocity(id, newVelocity.x, newVelocity.y, newVelocity.z);
 }
 
-void SoundStage::setSoundPositionAndVelocity(SoundInstanceId id, glm::vec3 newPosition, glm::vec3 newVelocity) {
+void SoundStage::setSoundPositionAndVelocity(SoundInstanceId id, vec3 newPosition, vec3 newVelocity) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	soloud.set3dSourceParameters(id, newPosition.x, newPosition.y, newPosition.z, newVelocity.x, newVelocity.y, newVelocity.z);
 }
@@ -153,5 +152,4 @@ void SoundStage::EngineDeleter::operator()(void* handle) const noexcept {
 	delete static_cast<SoLoud::Soloud*>(handle); // NOLINT(cppcoreguidelines-owning-memory)
 }
 
-} // namespace audio
-} // namespace donut
+} // namespace donut::audio

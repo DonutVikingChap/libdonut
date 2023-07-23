@@ -1,12 +1,12 @@
 #ifndef DONUT_AUDIO_SOUND_HPP
 #define DONUT_AUDIO_SOUND_HPP
 
+#include <donut/Filesystem.hpp>
 #include <donut/UniqueHandle.hpp>
 
 #include <limits> // std::numeric_limits
 
-namespace donut {
-namespace audio {
+namespace donut::audio {
 
 /**
  * Distance attenuation/falloff model for 3D positional audio.
@@ -216,7 +216,8 @@ public:
 	 * - FLAC (.flac)
 	 * - MP3 (.mp3)
 	 *
-	 * \param filepath virtual filepath of the sound file to load, see File.
+	 * \param filesystem virtual filesystem to load the file from.
+	 * \param filepath virtual filepath of the sound file to load.
 	 * \param options sound options, see SoundOptions.
 	 *
 	 * \throws File::Error on failure to open the file.
@@ -226,7 +227,7 @@ public:
 	 * \note The file format is determined entirely from the file contents; the
 	 *       filename extension is not taken into account.
 	 */
-	explicit Sound(const char* filepath, const SoundOptions& options = {});
+	explicit Sound(const Filesystem& filesystem, const char* filepath, const SoundOptions& options = {});
 
 	/**
 	 * Get an opaque handle to the internal representation of the sound.
@@ -247,12 +248,11 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	using Source = UniqueHandle<void*, SourceDeleter, nullptr>;
+	using Source = UniqueHandle<void*, SourceDeleter>;
 
 	Source buffer{};
 };
 
-} // namespace audio
-} // namespace donut
+} // namespace donut::audio
 
 #endif

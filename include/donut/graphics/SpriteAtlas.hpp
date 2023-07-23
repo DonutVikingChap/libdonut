@@ -5,15 +5,14 @@
 #include <donut/Color.hpp>
 #include <donut/graphics/Image.hpp>
 #include <donut/graphics/Texture.hpp>
+#include <donut/math.hpp>
 
-#include <cassert>     // assert
-#include <cstddef>     // std::size_t
-#include <cstdint>     // std::uint8_t
-#include <glm/glm.hpp> // glm::...
-#include <vector>      // std::vector
+#include <cassert> // assert
+#include <cstddef> // std::size_t
+#include <cstdint> // std::uint8_t
+#include <vector>  // std::vector
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 class Renderer; // Forward declaration, to avoid including Renderer.hpp.
 
@@ -54,10 +53,10 @@ public:
 	 * Information about a specific image in the spritesheet.
 	 */
 	struct Sprite {
-		glm::vec2 textureOffset{}; ///< Texture coordinate offset of the image in the texture atlas.
-		glm::vec2 textureScale{};  ///< Texture coordinate scale of the image in the texture atlas.
-		glm::vec2 position{};      ///< Position of the image in the texture atlas, in texels.
-		glm::vec2 size{};          ///< Size of the image in the texture atlas, in texels.
+		vec2 textureOffset{}; ///< Texture coordinate offset of the image in the texture atlas.
+		vec2 textureScale{};  ///< Texture coordinate scale of the image in the texture atlas.
+		vec2 position{};      ///< Position of the image in the texture atlas, in texels.
+		vec2 size{};          ///< Size of the image in the texture atlas, in texels.
 	};
 
 	/**
@@ -84,11 +83,11 @@ public:
 
 		atlasTexture.pasteImage2D(image, x, y);
 
-		const glm::vec2 textureSize = atlasTexture.getSize2D();
-		const glm::vec2 position{static_cast<float>(x), static_cast<float>(y)};
-		const glm::vec2 size{static_cast<float>(image.getWidth()), static_cast<float>(image.getHeight())};
-		glm::vec2 textureOffset{};
-		glm::vec2 textureScale{};
+		const vec2 textureSize = atlasTexture.getSize2D();
+		const vec2 position{static_cast<float>(x), static_cast<float>(y)};
+		const vec2 size{static_cast<float>(image.getWidth()), static_cast<float>(image.getHeight())};
+		vec2 textureOffset{};
+		vec2 textureScale{};
 		if ((flip & FLIP_HORIZONTALLY) != 0) {
 			textureOffset.x = (position.x + size.x) / textureSize.x;
 			textureScale.x = -size.x / textureSize.x;
@@ -150,11 +149,11 @@ public:
 		assert(static_cast<float>(width) <= baseSprite.size.x - static_cast<float>(offsetX));
 		assert(static_cast<float>(height) <= baseSprite.size.y - static_cast<float>(offsetY));
 
-		const glm::vec2 textureSize = atlasTexture.getSize2D();
-		const glm::vec2 position = baseSprite.position + glm::vec2{static_cast<float>(offsetX), static_cast<float>(offsetY)};
-		const glm::vec2 size{static_cast<float>(width), static_cast<float>(height)};
-		glm::vec2 textureOffset{};
-		glm::vec2 textureScale{};
+		const vec2 textureSize = atlasTexture.getSize2D();
+		const vec2 position = baseSprite.position + vec2{static_cast<float>(offsetX), static_cast<float>(offsetY)};
+		const vec2 size{static_cast<float>(width), static_cast<float>(height)};
+		vec2 textureOffset{};
+		vec2 textureScale{};
 		if ((flip & FLIP_HORIZONTALLY) != 0) {
 			textureOffset.x = (position.x + size.x) / textureSize.x;
 			textureScale.x = -size.x / textureSize.x;
@@ -215,7 +214,7 @@ private:
 		if (atlasTexture) {
 			if (resized) {
 				atlasTexture.grow2D(renderer, atlasPacker.getResolution(), atlasPacker.getResolution(), Color::INVISIBLE);
-				const glm::vec2 textureSize = atlasTexture.getSize2D();
+				const vec2 textureSize = atlasTexture.getSize2D();
 				for (Sprite& sprite : sprites) {
 					if (sprite.textureScale.x < 0.0f) {
 						sprite.textureOffset.x = (sprite.position.x + sprite.size.x) / textureSize.x;
@@ -249,7 +248,6 @@ private:
 	std::vector<Sprite> sprites{};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

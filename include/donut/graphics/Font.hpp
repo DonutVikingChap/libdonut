@@ -2,18 +2,17 @@
 #define DONUT_GRAPHICS_FONT_HPP
 
 #include <donut/AtlasPacker.hpp>
+#include <donut/Filesystem.hpp>
 #include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Texture.hpp>
+#include <donut/math.hpp>
 
 #include <cstddef>       // std::size_t, std::byte
-#include <cstdint>       // std::uint32_t, std::uint64_t
-#include <glm/glm.hpp>   // glm::...
 #include <string_view>   // std::string_view, std::u8string_view
 #include <unordered_map> // std::unordered_map
 #include <vector>        // std::vector
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 class Renderer; // Forward declaration, to avoid a circular include of Renderer.hpp.
 
@@ -47,12 +46,12 @@ public:
 	 * Information about a single glyph stored in the texture atlas.
 	 */
 	struct Glyph {
-		glm::vec2 textureOffset; ///< Texture coordinate offset of this glyph's rectangle in the texture atlas.
-		glm::vec2 textureScale;  ///< Texture coordinate scale of this glyph's rectangle in the texture atlas.
-		glm::vec2 position;      ///< Position of this glyph's rectangle in the texture atlas, in texels.
-		glm::vec2 size;          ///< Size of this glyph's rectangle in the texture atlas, in texels.
-		glm::vec2 bearing;       ///< Baseline offset to apply to the glyph's rectangle position when rendering this glyph.
-		float advance;           ///< Horizontal offset to apply in order to advance to the next glyph position, excluding any kerning.
+		vec2 textureOffset; ///< Texture coordinate offset of this glyph's rectangle in the texture atlas.
+		vec2 textureScale;  ///< Texture coordinate scale of this glyph's rectangle in the texture atlas.
+		vec2 position;      ///< Position of this glyph's rectangle in the texture atlas, in texels.
+		vec2 size;          ///< Size of this glyph's rectangle in the texture atlas, in texels.
+		vec2 bearing;       ///< Baseline offset to apply to the glyph's rectangle position when rendering this glyph.
+		float advance;      ///< Horizontal offset to apply in order to advance to the next glyph position, excluding any kerning.
 	};
 
 	/**
@@ -65,15 +64,15 @@ public:
 		 * rendering at any given position.
 		 */
 		struct ShapedGlyph {
-			glm::vec2 offset;        ///< Scaled offset from the starting position to draw this glyph at, in pixels.
-			glm::vec2 size;          ///< Scaled size of this glyph's rectangle, in pixels.
-			glm::vec2 textureOffset; ///< Texture coordinate offset of this glyph's rectangle in the texture atlas.
-			glm::vec2 textureScale;  ///< Texture coordinate scale of this glyph's rectangle in the texture atlas.
+			vec2 offset;        ///< Scaled offset from the starting position to draw this glyph at, in pixels.
+			vec2 size;          ///< Scaled size of this glyph's rectangle, in pixels.
+			vec2 textureOffset; ///< Texture coordinate offset of this glyph's rectangle in the texture atlas.
+			vec2 textureScale;  ///< Texture coordinate scale of this glyph's rectangle in the texture atlas.
 		};
 
 		std::vector<ShapedGlyph> shapedGlyphs; ///< Sequence of shaped glyphs making up this shaped string.
-		glm::vec2 extentsMin;                  ///< Offset of the top left corner of the smallest rectangular area that spans all glyph rectangles of this string.
-		glm::vec2 extentsMax;                  ///< Offset of the bottom right corner of the smallest rectangular area that spans all glyph rectangles of this string.
+		vec2 extentsMin;                       ///< Offset of the top left corner of the smallest rectangular area that spans all glyph rectangles of this string.
+		vec2 extentsMax;                       ///< Offset of the bottom right corner of the smallest rectangular area that spans all glyph rectangles of this string.
 		std::size_t rowCount;                  ///< Total number of lines of text in the shaped string.
 	};
 
@@ -93,7 +92,8 @@ public:
 	 * - TrueType (.ttf)
 	 * - OpenType (.otf)
 	 *
-	 * \param filepath virtual filepath of the font file to load, see File.
+	 * \param filesystem virtual filesystem to load the file from.
+	 * \param filepath virtual filepath of the font file to load.
 	 * \param options font options, see FontOptions.
 	 *
 	 * \throws File::Error on failure to open the file.
@@ -104,7 +104,7 @@ public:
 	 * \note Only TrueType fonts are fully supported. OpenType extensions that
 	 *       are not a part of TrueType may not work.
 	 */
-	explicit Font(const char* filepath, const FontOptions& options = {});
+	explicit Font(const Filesystem& filesystem, const char* filepath, const FontOptions& options = {});
 
 	/** Destructor. */
 	~Font() = default;
@@ -149,7 +149,7 @@ public:
 	 * \sa shapeText()
 	 * \sa getAtlasTexture()
 	 */
-	[[nodiscard]] const Glyph* findGlyph(std::uint32_t characterSize, char32_t codePoint) const noexcept;
+	[[nodiscard]] const Glyph* findGlyph(u32 characterSize, char32_t codePoint) const noexcept;
 
 	/**
 	 * Load the glyph information for a specific character and store it in the
@@ -179,7 +179,7 @@ public:
 	 * \sa shapeText()
 	 * \sa getAtlasTexture()
 	 */
-	const Glyph& loadGlyph(Renderer& renderer, std::uint32_t characterSize, char32_t codePoint);
+	const Glyph& loadGlyph(Renderer& renderer, u32 characterSize, char32_t codePoint);
 
 	/**
 	 * Use the font to shape a UTF-8 encoded text string into a sequence of
@@ -214,15 +214,15 @@ public:
 	 * \sa loadGlyph()
 	 * \sa getAtlasTexture()
 	 */
-	[[nodiscard]] ShapedText shapeText(Renderer& renderer, std::uint32_t characterSize, std::u8string_view string, glm::vec2 scale = {1.0f, 1.0f});
+	[[nodiscard]] ShapedText shapeText(Renderer& renderer, u32 characterSize, std::u8string_view string, vec2 scale = {1.0f, 1.0f});
 
 	/**
 	 * Helper overload of shapeText() that takes an arbitrary byte string and
 	 * interprets it as UTF-8.
 	 *
-	 * \sa shapeText(Renderer&, std::uint32_t, std::u8string_view, glm::vec2)
+	 * \sa shapeText(Renderer&, u32, std::u8string_view, vec2)
 	 */
-	[[nodiscard]] ShapedText shapeText(Renderer& renderer, std::uint32_t characterSize, std::string_view string, glm::vec2 scale = {1.0f, 1.0f});
+	[[nodiscard]] ShapedText shapeText(Renderer& renderer, u32 characterSize, std::string_view string, vec2 scale = {1.0f, 1.0f});
 
 	/**
 	 * Get the vertical dimensions for shaping lines of text with this font.
@@ -231,7 +231,7 @@ public:
 	 *
 	 * \return the line metrics at the given character size, see LineMetrics.
 	 */
-	[[nodiscard]] LineMetrics getLineMetrics(std::uint32_t characterSize) const noexcept;
+	[[nodiscard]] LineMetrics getLineMetrics(u32 characterSize) const noexcept;
 
 	/**
 	 * Get the kerning offset to use between a pair of adjacent character glyphs
@@ -246,7 +246,7 @@ public:
 	 *         position by when going from the left glyph to the right glyph.
 	 *         Otherwise, returns (0, 0).
 	 */
-	[[nodiscard]] glm::vec2 getKerning(std::uint32_t characterSize, char32_t left, char32_t right) const noexcept;
+	[[nodiscard]] vec2 getKerning(u32 characterSize, char32_t left, char32_t right) const noexcept;
 
 	/**
 	 * Get the texture atlas to use when rendering glyphs from this font.
@@ -267,12 +267,12 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	using GlyphKey = std::uint64_t;
+	using GlyphKey = u64;
 
 	static constexpr std::size_t INITIAL_RESOLUTION = 128;
 	static constexpr std::size_t PADDING = 6;
 
-	[[nodiscard]] static constexpr GlyphKey makeGlyphKey(std::uint32_t characterSize, char32_t codePoint) noexcept {
+	[[nodiscard]] static constexpr GlyphKey makeGlyphKey(u32 characterSize, char32_t codePoint) noexcept {
 		static_assert(sizeof(GlyphKey) >= sizeof(characterSize) + sizeof(codePoint));
 		static_assert(sizeof(codePoint) == 4);
 		return static_cast<GlyphKey>(characterSize) << 32 | static_cast<GlyphKey>(codePoint);
@@ -280,17 +280,16 @@ private:
 
 	void prepareAtlasTexture(Renderer& renderer, bool resized);
 
-	[[nodiscard]] Glyph renderGlyph(Renderer& renderer, std::uint32_t characterSize, char32_t codePoint);
+	[[nodiscard]] Glyph renderGlyph(Renderer& renderer, u32 characterSize, char32_t codePoint);
 
 	std::vector<std::byte> fontFileContents;
-	UniqueHandle<void*, FontDeleter, nullptr> font;
+	UniqueHandle<void*, FontDeleter> font;
 	AtlasPacker<INITIAL_RESOLUTION, PADDING> atlasPacker{};
 	Texture atlasTexture{};
 	std::unordered_map<GlyphKey, Glyph> glyphs{};
 	FontOptions options;
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

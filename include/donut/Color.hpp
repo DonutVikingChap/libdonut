@@ -1,7 +1,7 @@
 #ifndef DONUT_COLOR_HPP
 #define DONUT_COLOR_HPP
 
-#include <glm/glm.hpp> // glm::...
+#include <donut/math.hpp>
 
 namespace donut {
 
@@ -199,7 +199,7 @@ public:
 	 * \param a value of the alpha component. Defaults to fully opaque, i.e. a
 	 *        value of 1.
 	 */
-	constexpr Color(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a = 255) noexcept
+	constexpr Color(u8 r, u8 g, u8 b, u8 a = 255) noexcept
 		: Color(static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, static_cast<float>(a) / 255.0f) {}
 
 	/**
@@ -224,7 +224,7 @@ public:
 	 * \param rgb input vector containing values for the red, green, and blue
 	 *        components.
 	 */
-	constexpr Color(glm::vec3 rgb) noexcept
+	constexpr Color(vec3 rgb) noexcept
 		: rgba(rgb.x, rgb.y, rgb.z, 1.0f) {}
 
 	/**
@@ -234,7 +234,7 @@ public:
 	 * \param rgba input vector containing values for the red, green, blue and
 	 *        alpha components.
 	 */
-	constexpr Color(glm::vec4 rgba) noexcept
+	constexpr Color(vec4 rgba) noexcept
 		: rgba(rgba.x, rgba.y, rgba.z, rgba.w) {}
 
 	/**
@@ -247,7 +247,7 @@ public:
 	 * \param rgb input vector containing values for the red, green, and blue
 	 *        components.
 	 */
-	constexpr Color(glm::u8vec3 rgb) noexcept
+	constexpr Color(u8vec3 rgb) noexcept
 		: rgba(rgb.x, rgb.y, rgb.z, 255) {}
 
 	/**
@@ -258,7 +258,7 @@ public:
 	 * \param rgba input vector containing values for the red, green, blue and
 	 *        alpha components.
 	 */
-	constexpr Color(glm::u8vec4 rgba) noexcept
+	constexpr Color(u8vec4 rgba) noexcept
 		: rgba(rgba.x, rgba.y, rgba.z, rgba.w) {}
 
 	/**
@@ -267,8 +267,8 @@ public:
 	 *
 	 * \return the RGB components of the color as a vector.
 	 */
-	constexpr operator glm::vec3() const noexcept {
-		return glm::vec3{rgba};
+	constexpr operator vec3() const noexcept {
+		return vec3{rgba};
 	}
 
 	/**
@@ -277,7 +277,7 @@ public:
 	 *
 	 * \return the RGBA components of the color as a vector.
 	 */
-	constexpr operator glm::vec4() const noexcept {
+	constexpr operator vec4() const noexcept {
 		return rgba;
 	}
 
@@ -287,8 +287,8 @@ public:
 	 *
 	 * \return the RGB components of the color as a vector.
 	 */
-	constexpr operator glm::dvec3() const noexcept {
-		return glm::dvec3{
+	constexpr operator dvec3() const noexcept {
+		return dvec3{
 			static_cast<double>(rgba.x),
 			static_cast<double>(rgba.y),
 			static_cast<double>(rgba.z),
@@ -301,8 +301,8 @@ public:
 	 *
 	 * \return the RGBA components of the color as a vector.
 	 */
-	constexpr operator glm::dvec4() const noexcept {
-		return glm::dvec4{
+	constexpr operator dvec4() const noexcept {
+		return dvec4{
 			static_cast<double>(rgba.x),
 			static_cast<double>(rgba.y),
 			static_cast<double>(rgba.z),
@@ -317,11 +317,11 @@ public:
 	 *
 	 * \return the RGB components of the color as a vector.
 	 */
-	constexpr operator glm::u8vec3() const noexcept {
-		return glm::u8vec3{
-			static_cast<std::uint8_t>(glm::clamp(rgba.x, 0.0f, 1.0f) * 255.0f),
-			static_cast<std::uint8_t>(glm::clamp(rgba.y, 0.0f, 1.0f) * 255.0f),
-			static_cast<std::uint8_t>(glm::clamp(rgba.z, 0.0f, 1.0f) * 255.0f),
+	constexpr operator u8vec3() const noexcept {
+		return u8vec3{
+			static_cast<u8>(clamp(rgba.x, 0.0f, 1.0f) * 255.0f),
+			static_cast<u8>(clamp(rgba.y, 0.0f, 1.0f) * 255.0f),
+			static_cast<u8>(clamp(rgba.z, 0.0f, 1.0f) * 255.0f),
 		};
 	}
 
@@ -332,12 +332,12 @@ public:
 	 *
 	 * \return the RGBA components of the color as a vector.
 	 */
-	constexpr operator glm::u8vec4() const noexcept {
-		return glm::u8vec4{
-			static_cast<std::uint8_t>(glm::clamp(rgba.x, 0.0f, 1.0f) * 255.0f),
-			static_cast<std::uint8_t>(glm::clamp(rgba.y, 0.0f, 1.0f) * 255.0f),
-			static_cast<std::uint8_t>(glm::clamp(rgba.z, 0.0f, 1.0f) * 255.0f),
-			static_cast<std::uint8_t>(glm::clamp(rgba.w, 0.0f, 1.0f) * 255.0f),
+	constexpr operator u8vec4() const noexcept {
+		return u8vec4{
+			static_cast<u8>(clamp(rgba.x, 0.0f, 1.0f) * 255.0f),
+			static_cast<u8>(clamp(rgba.y, 0.0f, 1.0f) * 255.0f),
+			static_cast<u8>(clamp(rgba.z, 0.0f, 1.0f) * 255.0f),
+			static_cast<u8>(clamp(rgba.w, 0.0f, 1.0f) * 255.0f),
 		};
 	}
 
@@ -612,7 +612,7 @@ public:
 	}
 
 private:
-	glm::vec4 rgba{0.0f, 0.0f, 0.0f, 0.0f};
+	vec4 rgba{0.0f, 0.0f, 0.0f, 0.0f};
 };
 
 // clang-format off

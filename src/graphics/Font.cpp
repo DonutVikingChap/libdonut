@@ -1,9 +1,11 @@
 #include <donut/Color.hpp>
-#include <donut/InputFileStream.hpp>
+#include <donut/File.hpp>
+#include <donut/Filesystem.hpp>
 #include <donut/graphics/Error.hpp>
 #include <donut/graphics/Font.hpp>
 #include <donut/graphics/Renderer.hpp>
 #include <donut/graphics/Texture.hpp>
+#include <donut/math.hpp>
 #include <donut/unicode.hpp>
 
 #include <algorithm>   // std::min, std::max
@@ -11,16 +13,14 @@
 #include <cstddef>     // std::size_t, std::byte
 #include <cstdint>     // std::uint32_t
 #include <format>      // std::format
-#include <glm/glm.hpp> // glm::...
 #include <schrift.h>   // SFT..., sft_...
 #include <string_view> // std::string_view, std::u8string_view
 #include <vector>      // std::vector
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
-Font::Font(const char* filepath, const FontOptions& options)
-	: fontFileContents(InputFileStream::open(filepath).readAll())
+Font::Font(const Filesystem& filesystem, const char* filepath, const FontOptions& options)
+	: fontFileContents(filesystem.openFile(filepath).readAll())
 	, font(sft_loadmem(fontFileContents.data(), fontFileContents.size()))
 	, options(options) {
 	if (!font) {
@@ -28,14 +28,14 @@ Font::Font(const char* filepath, const FontOptions& options)
 	}
 }
 
-const Font::Glyph* Font::findGlyph(std::uint32_t characterSize, char32_t codePoint) const noexcept {
+const Font::Glyph* Font::findGlyph(u32 characterSize, char32_t codePoint) const noexcept {
 	if (const auto it = glyphs.find(makeGlyphKey(characterSize, codePoint)); it != glyphs.end()) {
 		return &it->second;
 	}
 	return nullptr;
 }
 
-const Font::Glyph& Font::loadGlyph(Renderer& renderer, std::uint32_t characterSize, char32_t codePoint) {
+const Font::Glyph& Font::loadGlyph(Renderer& renderer, u32 characterSize, char32_t codePoint) {
 	const auto [it, inserted] = glyphs.try_emplace(makeGlyphKey(characterSize, codePoint));
 	if (inserted) {
 		it->second = renderGlyph(renderer, characterSize, codePoint);
@@ -43,14 +43,14 @@ const Font::Glyph& Font::loadGlyph(Renderer& renderer, std::uint32_t characterSi
 	return it->second;
 }
 
-Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize, std::u8string_view string, glm::vec2 scale) {
+Font::ShapedText Font::shapeText(Renderer& renderer, u32 characterSize, std::u8string_view string, vec2 scale) {
 	ShapedText result{
 		.shapedGlyphs{},
 		.extentsMin{0.0f, 0.0f},
 		.extentsMax{0.0f, 0.0f},
 		.rowCount = 1,
 	};
-	glm::vec2 offset{0.0f, 0.0f};
+	vec2 offset{0.0f, 0.0f};
 	const float xBegin = offset.x;
 	const unicode::UTF8View codePoints{string};
 	for (auto it = codePoints.begin(); it != codePoints.end();) {
@@ -60,11 +60,11 @@ Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize
 			++result.rowCount;
 		} else {
 			const Glyph& glyph = loadGlyph(renderer, characterSize, codePoint);
-			const glm::vec2 glyphOffset{
+			const vec2 glyphOffset{
 				std::floor(offset.x + std::round(glyph.bearing.x * scale.x)),
 				std::floor(offset.y + std::round(glyph.bearing.y * scale.y)),
 			};
-			const glm::vec2 glyphSize{
+			const vec2 glyphSize{
 				std::round(glyph.size.x * scale.x),
 				std::round(glyph.size.y * scale.y),
 			};
@@ -78,20 +78,20 @@ Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize
 			result.extentsMin.y = std::min(result.extentsMin.y, glyphOffset.y);
 			result.extentsMax.x = std::max(result.extentsMax.x, glyphOffset.x + glyphSize.x);
 			result.extentsMax.y = std::max(result.extentsMax.y, glyphOffset.y + glyphSize.y);
-			const glm::vec2 kerning = getKerning(characterSize, codePoint, (it == codePoints.end()) ? char32_t{0} : *it);
-			offset += glm::vec2{glyph.advance + kerning.x, kerning.y} * scale;
+			const vec2 kerning = getKerning(characterSize, codePoint, (it == codePoints.end()) ? char32_t{0} : *it);
+			offset += vec2{glyph.advance + kerning.x, kerning.y} * scale;
 		}
 	}
 	return result;
 }
 
-Font::ShapedText Font::shapeText(Renderer& renderer, std::uint32_t characterSize, std::string_view string, glm::vec2 scale) {
+Font::ShapedText Font::shapeText(Renderer& renderer, u32 characterSize, std::string_view string, vec2 scale) {
 	static_assert(sizeof(char) == sizeof(char8_t));
 	static_assert(alignof(char) == alignof(char8_t));
 	return shapeText(renderer, characterSize, std::u8string_view{reinterpret_cast<const char8_t*>(string.data()), string.size()}, scale);
 }
 
-Font::LineMetrics Font::getLineMetrics(std::uint32_t characterSize) const noexcept {
+Font::LineMetrics Font::getLineMetrics(u32 characterSize) const noexcept {
 	const SFT sft{
 		.font = static_cast<SFT_Font*>(font.get()),
 		.xScale = static_cast<double>(characterSize),
@@ -113,7 +113,7 @@ Font::LineMetrics Font::getLineMetrics(std::uint32_t characterSize) const noexce
 	};
 }
 
-glm::vec2 Font::getKerning(std::uint32_t characterSize, char32_t left, char32_t right) const noexcept {
+vec2 Font::getKerning(u32 characterSize, char32_t left, char32_t right) const noexcept {
 	const SFT sft{
 		.font = static_cast<SFT_Font*>(font.get()),
 		.xScale = static_cast<double>(characterSize),
@@ -145,7 +145,7 @@ void Font::prepareAtlasTexture(Renderer& renderer, bool resized) {
 	if (atlasTexture) {
 		if (resized) {
 			atlasTexture.grow2D(renderer, atlasPacker.getResolution(), atlasPacker.getResolution(), Color::INVISIBLE);
-			const glm::vec2 textureSize = atlasTexture.getSize2D();
+			const vec2 textureSize = atlasTexture.getSize2D();
 			for (auto& [codePoint, glyph] : glyphs) {
 				glyph.textureOffset = glyph.position / textureSize;
 				glyph.textureScale = glyph.size / textureSize;
@@ -162,7 +162,7 @@ void Font::prepareAtlasTexture(Renderer& renderer, bool resized) {
 	}
 }
 
-Font::Glyph Font::renderGlyph(Renderer& renderer, std::uint32_t characterSize, char32_t codePoint) {
+Font::Glyph Font::renderGlyph(Renderer& renderer, u32 characterSize, char32_t codePoint) {
 	const SFT sft{
 		.font = static_cast<SFT_Font*>(font.get()),
 		.xScale = static_cast<double>(characterSize),
@@ -193,10 +193,10 @@ Font::Glyph Font::renderGlyph(Renderer& renderer, std::uint32_t characterSize, c
 		atlasTexture.pasteImage2D(width, height, PixelFormat::R, PixelComponentType::U8, pixels.data(), x, y);
 	}
 
-	const glm::vec2 textureSize = atlasTexture.getSize2D();
-	const glm::vec2 position{static_cast<float>(x), static_cast<float>(y)};
-	const glm::vec2 size{static_cast<float>(width), static_cast<float>(height)};
-	const glm::vec2 bearing{static_cast<float>(gmetrics.leftSideBearing), static_cast<float>(gmetrics.yOffset)};
+	const vec2 textureSize = atlasTexture.getSize2D();
+	const vec2 position{static_cast<float>(x), static_cast<float>(y)};
+	const vec2 size{static_cast<float>(width), static_cast<float>(height)};
+	const vec2 bearing{static_cast<float>(gmetrics.leftSideBearing), static_cast<float>(gmetrics.yOffset)};
 	const float advance = static_cast<float>(gmetrics.advanceWidth);
 	return {
 		.textureOffset = position / textureSize,
@@ -212,5 +212,4 @@ void Font::FontDeleter::operator()(void* handle) const noexcept {
 	sft_freefont(static_cast<SFT_Font*>(handle));
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

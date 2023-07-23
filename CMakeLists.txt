@@ -15,15 +15,20 @@ if(DONUT_ENABLE_LIBRARY)
 
 	add_library(donut
 		"include/donut/application/Application.hpp"
-		"include/donut/application/Error.hpp"
-		"include/donut/application/Event.hpp"
-		"include/donut/application/Input.hpp"
-		"include/donut/application/InputManager.hpp"
+		"include/donut/application/FrameInfo.hpp"
+		"include/donut/application/TickInfo.hpp"
 
 		"include/donut/audio/Error.hpp"
 		"include/donut/audio/Listener.hpp"
 		"include/donut/audio/Sound.hpp"
 		"include/donut/audio/SoundStage.hpp"
+
+		"include/donut/events/Error.hpp"
+		"include/donut/events/Event.hpp"
+		"include/donut/events/EventPump.hpp"
+		"include/donut/events/Input.hpp"
+		"include/donut/events/InputManager.hpp"
+		"include/donut/events/MessageBox.hpp"
 
 		"include/donut/graphics/Buffer.hpp"
 		"include/donut/graphics/Camera.hpp"
@@ -52,11 +57,13 @@ if(DONUT_ENABLE_LIBRARY)
 
 		"include/donut/modules/fwd/application.hpp"
 		"include/donut/modules/fwd/audio.hpp"
+		"include/donut/modules/fwd/events.hpp"
 		"include/donut/modules/fwd/graphics.hpp"
 		"include/donut/modules/fwd/utilities.hpp"
 
 		"include/donut/modules/application.hpp"
 		"include/donut/modules/audio.hpp"
+		"include/donut/modules/events.hpp"
 		"include/donut/modules/graphics.hpp"
 		"include/donut/modules/utilities.hpp"
 
@@ -66,12 +73,12 @@ if(DONUT_ENABLE_LIBRARY)
 		"include/donut/Color.hpp"
 		"include/donut/donut.hpp"
 		"include/donut/File.hpp"
-		"include/donut/InputFileStream.hpp"
+		"include/donut/Filesystem.hpp"
 		"include/donut/json.hpp"
 		"include/donut/LinearAllocator.hpp"
 		"include/donut/LooseQuadtree.hpp"
+		"include/donut/math.hpp"
 		"include/donut/obj.hpp"
-		"include/donut/OutputFileStream.hpp"
 		"include/donut/random.hpp"
 		"include/donut/reflection.hpp"
 		"include/donut/shapes.hpp"
@@ -82,11 +89,14 @@ if(DONUT_ENABLE_LIBRARY)
 		"include/donut/xml.hpp"
 		
 		"src/application/Application.cpp"
-		"src/application/InputManager.cpp"
 
 		"src/audio/Error.cpp"
 		"src/audio/Sound.cpp"
 		"src/audio/SoundStage.cpp"
+
+		"src/events/EventPump.cpp"
+		"src/events/InputManager.cpp"
+		"src/events/MessageBox.cpp"
 
 		"src/graphics/Buffer.cpp"
 		"src/graphics/Font.cpp"
@@ -107,9 +117,8 @@ if(DONUT_ENABLE_LIBRARY)
 
 		"src/base64.cpp"
 		"src/File.cpp"
-		"src/InputFileStream.cpp"
+		"src/Filesystem.cpp"
 		"src/obj.cpp"
-		"src/OutputFileStream.cpp"
 		"src/xml.cpp")
 
 	add_library(donut::donut ALIAS donut)

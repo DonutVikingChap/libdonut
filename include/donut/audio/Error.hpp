@@ -5,8 +5,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
-namespace donut {
-namespace audio {
+namespace donut::audio {
 
 /**
  * Exception type for domain-specific errors originating from the
@@ -22,7 +21,6 @@ struct Error : std::runtime_error {
 	Error(std::string_view message, unsigned errorCode);
 };
 
-} // namespace audio
-} // namespace donut
+} // namespace donut::audio
 
 #endif

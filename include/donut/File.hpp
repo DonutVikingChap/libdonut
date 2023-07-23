@@ -3,38 +3,24 @@
 
 #include <donut/UniqueHandle.hpp>
 
-#include <cstddef>   // std::size_t
+#include <cstddef>   // std::size_t, std::ptrdiff_t, std::byte
 #include <cstdint>   // std::int64_t, std::uint8_t
+#include <span>      // std::span
 #include <stdexcept> // std::runtime_error
 #include <string>    // std::string
 #include <vector>    // std::vector
 
 namespace donut {
 
+class Filesystem; // Forward declaration, to avoid a circular include of Filesystem.hpp.
+
 /**
- * Abstract virtual file handle.
+ * Unique handle to a file in the virtual Filesystem.
  *
- * The structure of the virtual file system is determined by the configuration
- * of the application::ApplicationOptions that were passed to the running
- * application::Application. This system allows for mounting multiple physical
- * directories to the same virtual mount point, mapping each contained file
- * path to the corresponding physical file with the highest mount priority for
- * the purposes of reading. For writing, the application defines a specific
- * centralized directory known as the application folder, where any output files
- * will be written. See the documentation of application::ApplicationOptions for
- * more information.
- *
- * \warning This virtual File handle type and all of its derived types may only
- *          be used during the lifetime of an application::Application, which
- *          initializes the relevant global context upon construction.
- *          Attempting to use the File API without an active application results
- *          in undefined behavior. Assuming the application is created correctly
- *          in the main function of the program, the main case that could cause
- *          this to happen is when initializing global or static variables,
- *          whose initializers may execute before main is called.
- *
- * \sa InputFileStream
- * \sa OutputFileStream
+ * \warning This file handle type may only be used during the lifetime of a
+ *          Filesystem object, which initializes the relevant global context
+ *          upon construction. Attempting to use the File API without an active
+ *          Filesystem results in undefined behavior.
  */
 class File {
 public:
@@ -78,127 +64,9 @@ public:
 	static constexpr std::size_t NPOS = static_cast<std::size_t>(-1);
 
 	/**
-	 * Create a new physical directory in the write directory.
-	 *
-	 * \param filepath virtual filepath, relative to the application folder,
-	 *        of the new directory to be created.
-	 *
-	 * \throws Error on failure to create the given directory.
-	 * \throws std::bad_alloc on allocation failure.
-	 */
-	static void createDirectory(const char* filepath);
-
-	/**
-	 * Delete a physical file or directory in the write directory.
-	 *
-	 * \param filepath virtual filepath, relative to the application folder,
-	 *        of the file or directory to delete.
-	 *
-	 * \throws Error on failure to delete the given file or directory.
-	 * \throws std::bad_alloc on allocation failure.
-	 *
-	 * \warning If successful, this will delete the physical file that
-	 *          corresponds to the given virtual filepath on the host
-	 *          filesystem; not just the virtual file entry.
-	 * \warning Althrough deleting a file will prevent it from being read again
-	 *          through conventional means, the physical data that was contained
-	 *          in the file may or may not remain untouched on disk, meaning
-	 *          that this function cannot be relied upon to securly erase
-	 *          sensitive data.
-	 *
-	 * \note Directories must be empty before they can be deleted with this
-	 *       function.
-	 */
-	static void deleteFile(const char* filepath);
-
-	/**
-	 * Check if a given virtual filepath has a corresponding physical
-	 * file mounted.
-	 *
-	 * \param filepath virtual filepath to check for a mounted file.
-	 *
-	 * \return true if a file is mounted at the given filepath, false otherwise.
-	 *
-	 * \sa getFileMetadata()
-	 * \sa getFilenamesInDirectory()
-	 */
-	[[nodiscard]] static bool exists(const char* filepath);
-
-	/**
-	 * Get the metadata of a file that is mounted at a given virtual filepath.
-	 *
-	 * \param filepath virtual filepath of the file to get the metadata of.
-	 *
-	 * \return the file metadata, see Metadata.
-	 *
-	 * \throws Error on failure to get the metadata, such as if no file is
-	 *         mounted at the given filepath.
-	 * \throws std::bad_alloc on allocation failure.
-	 */
-	[[nodiscard]] static Metadata getFileMetadata(const char* filepath);
-
-	/**
-	 * Get a list of the filenames of all readable virtual filepaths that are
-	 * direct children of a given directory.
-	 *
-	 * \param filepath virtual filepath of the directory to enumerate.
-	 *
-	 * \return an input-iterable sequence containing the filenames, in no
-	 *         specific order.
-	 *
-	 * \throws Error on failure to enumerate the directory.
-	 * \throws std::bad_alloc on allocation failure.
-	 *
-	 * \note This function is not recursive, and only returns the filename
-	 *       component of the direct descendants of the given directory, without
-	 *       the leading directory path. The full virtual filepath of each
-	 *       result can be formatted as `"{filepath}/{filename}"`, where
-	 *       `{filepath}` is the directory filepath that was passed to the
-	 *       function, and `{filename}` is one of the results in the returned
-	 *       sequence. Note that this path may refer to any kind of file,
-	 *       including a subdirectory. Use getFileMetadata() to find out which
-	 *       kind of file it refers to.
-	 *
-	 * \sa exists()
-	 * \sa getFileMetadata()
-	 */
-	[[nodiscard]] static std::vector<std::string> getFilenamesInDirectory(const char* filepath);
-
-	/**
 	 * Construct a closed virtual file handle without an associated file.
 	 */
 	constexpr File() noexcept = default;
-
-	/**
-	 * Virtual destructor.
-	 *
-	 * Closes the associated file if open.
-	 *
-	 * \warning The destructor does not report any potential failures to close
-	 *          the file. The close() function can be used before destroying the
-	 *          file handle in order to make sure the file closed successfully.
-	 *
-	 * \sa close()
-	 */
-	virtual ~File() = default;
-
-	/**
-	 * Copying a file handle is not allowed, since each handle has the exclusive
-	 * responsibility of closing its associated file.
-	 */
-	File(const File&) = delete;
-
-	/** Move constructor. */
-	constexpr File(File&& other) noexcept = default;
-
-	/**
-	 * Copying a file handle is not allowed, since each handle has the exclusive
-	 * responsibility of closing its associated file.
-	 */
-	File& operator=(const File&) = delete;
-
-	/** Move assignment. */
-	File& operator=(File&& other) noexcept = default;
 
 	/**
 	 * Check if the file handle has an open file associated with it.
@@ -206,7 +74,7 @@ public:
 	 * \return true if there is an associated open file, false otherwise.
 	 */
 	constexpr explicit operator bool() const noexcept {
-		return static_cast<bool>(file);
+		return isOpen();
 	}
 
 	/**
@@ -224,24 +92,177 @@ public:
 	 */
 	void close();
 
+	/**
+	 * Check if the file handle has an open file associated with it.
+	 *
+	 * \return true if there is an associated open file, false otherwise.
+	 */
+	[[nodiscard]] constexpr bool isOpen() const noexcept {
+		return static_cast<bool>(file);
+	}
+
+	/**
+	 * Check if the end of the file has been reached.
+	 *
+	 * \return true if the end of the file has been reached, false otherwise.
+	 */
+	[[nodiscard]] bool eof() const noexcept;
+
+	/**
+	 * Get the readable length of the full file contents, in bytes.
+	 *
+	 * \return the length of the file, or File::NPOS if the length cannot be
+	 *         determined.
+	 */
+	[[nodiscard]] std::size_t size() const noexcept;
+
+	/**
+	 * Get the current reading position of the file.
+	 *
+	 * \return the current file reading position, or File::NPOS if it cannot be
+	 *         determined.
+	 */
+	[[nodiscard]] std::size_t tellg() const noexcept;
+
+	/**
+	 * Get the current writing position of the file.
+	 *
+	 * \return the current file writing position, or File::NPOS if it cannot be
+	 *         determined.
+	 */
+	[[nodiscard]] std::size_t tellp() const noexcept;
+
+	/**
+	 * Set the file reading position to an absolute offset from the beginning of
+	 * the file.
+	 *
+	 * \param position the new reading position to set.
+	 *
+	 * \throws File::Error on failure to seek to the given position.
+	 *
+	 * \note Attempting to seek to a position outside the readable length of the
+	 *       file will cause the function to fail.
+	 */
+	void seekg(std::size_t position);
+
+	/**
+	 * Set the file writing position to an absolute offset from the beginning of
+	 * the file.
+	 *
+	 * \param position the new writing position to set.
+	 *
+	 * \throws File::Error on failure to seek to the given position.
+	 *
+	 * \note Attempting to seek to a position outside the readable length of the
+	 *       file will cause the function to fail.
+	 */
+	void seekp(std::size_t position);
+
+	/**
+	 * Advance the file reading position by a relative offset, which may be
+	 * negative in order to go backwards.
+	 *
+	 * \param offset the relative offset to advance the reading position by.
+	 *
+	 * \throws File::Error on failure to skip by the given offset.
+	 *
+	 * \note Attempting to seek to a position outside the readable length of the
+	 *       file will cause the function to fail.
+	 */
+	void skipg(std::ptrdiff_t offset);
+
+	/**
+	 * Advance the file writing position by a relative offset, which may be
+	 * negative in order to go backwards.
+	 *
+	 * \param offset the relative offset to advance the writing position by.
+	 *
+	 * \throws File::Error on failure to skip by the given offset.
+	 *
+	 * \note Attempting to seek to a position outside the readable length of the
+	 *       file will cause the function to fail.
+	 */
+	void skipp(std::ptrdiff_t offset);
+
+	/**
+	 * Read the full contents of an open file into an array of bytes.
+	 *
+	 * \return a contiguous container containing a copy of the full contents of
+	 *         the file.
+	 *
+	 * \throws File::Error on failure to read the file contents.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	[[nodiscard]] std::vector<std::byte> readAll() &&;
+
+	/**
+	 * Read the full contents of an open file into a string of bytes.
+	 *
+	 * \return a string containing a copy of the full contents of the file.
+	 *
+	 * \throws File::Error on failure to read the file contents.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	[[nodiscard]] std::string readAllIntoString() &&;
+
+	/**
+	 * Read data from an open file into a buffer, starting at the current
+	 * reading position.
+	 *
+	 * The reading position is advanced to the end of the bytes that were read.
+	 *
+	 * \param data writable span over the buffer to read file data into. The
+	 *        size of the span determines the number of bytes that are attempted
+	 *        to be read.
+	 *
+	 * \return the number of bytes that were successfully read, which may be any
+	 *         non-negative integer less than or equal to the size of the given
+	 *         span, including 0.
+	 *
+	 * \note If the end of the file is reached before the entire span's worth of
+	 *       data could be read, this will be reflected in the returned number
+	 *       of read bytes.
+	 *
+	 * \throws File::Error on failure to read from the file.
+	 */
+	[[nodiscard]] std::size_t read(std::span<std::byte> data);
+
+	/**
+	 * Write data to the end of an open file from a buffer.
+	 *
+	 * The writing position is advanced to the new end of the file.
+	 *
+	 * \param data read-only view over the buffer to copy the data from. The
+	 *        size of the buffer determines the number of bytes that are
+	 *        attempted to be written.
+	 *
+	 * \return the number of bytes that were successfully written, which may be
+	 *         any non-negative integer less than or equal to the size of the
+	 *         given view, including 0.
+	 *
+	 * \throws File::Error on failure to write to the file.
+	 */
+	std::size_t write(std::span<const std::byte> data);
+
+	/**
+	 * Synchronize with the underlying file to make sure that all buffered data
+	 * that has been written so far is flushed into the actual file.
+	 *
+	 * \throws File::Error on failure to synchronize with the file.
+	 */
+	void flush();
+
 private:
+	friend Filesystem;
+
+	constexpr explicit File(void* handle) noexcept
+		: file(handle) {}
+
 	struct FileDeleter {
 		void operator()(void* handle) const noexcept;
 	};
 
-protected:
-	/**
-	 * Construct a virtual file handle from an underlying handle pointer.
-	 *
-	 * \param handle the underlying handle pointer to take ownership of.
-	 */
-	constexpr explicit File(void* handle) noexcept
-		: file(handle) {}
-
-	/**
-	 * Resource handle wrapping the underlying handle to the virtual file.
-	 */
-	UniqueHandle<void*, FileDeleter, nullptr> file{};
+	UniqueHandle<void*, FileDeleter> file{};
 };
 
 } // namespace donut

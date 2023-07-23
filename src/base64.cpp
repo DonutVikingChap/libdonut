@@ -7,8 +7,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
-namespace donut {
-namespace base64 {
+namespace donut::base64 {
 
 namespace {
 
@@ -112,5 +111,4 @@ std::string decode(std::string_view string) {
 	return result;
 }
 
-} // namespace base64
-} // namespace donut
+} // namespace donut::base64

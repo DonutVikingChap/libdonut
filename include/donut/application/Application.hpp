@@ -1,151 +1,17 @@
 #ifndef DONUT_APPLICATION_APPLICATION_HPP
 #define DONUT_APPLICATION_APPLICATION_HPP
 
-#include <donut/Time.hpp>
+#include <donut/application/FrameInfo.hpp>
+#include <donut/application/TickInfo.hpp>
 
-#include <cstddef>     // std::size_t
-#include <cstdint>     // std::uint64_t
-#include <glm/glm.hpp> // glm::...
-#include <string>      // std::string
+#include <chrono> // std::chrono::...
 
-namespace donut {
-namespace application {
-
-struct Event; // Forward declaration, to avoid including Event.hpp.
-
-/**
- * Transient information about the current tick of an Application.
- */
-struct TickInfo {
-	/**
-	 * Number of ticks that have been fully processed since the start of the
-	 * application.
-	 */
-	std::size_t processedTickCount;
-
-	/**
-	 * The accumulated time, in seconds, of all ticks that had been processed
-	 * since the start of the application at the beginning of the current tick.
-	 */
-	Time<float> processedTickTime;
-
-	/**
-	 * The average time, in seconds, that should elapse between each tick.
-	 *
-	 * This is calculated as the reciprocal of the desired application tick
-	 * rate, i.e. tickInterval = 1 / ApplicationOptions::tickRate.
-	 *
-	 * The tick interval should be used as the time delta when updating
-	 * physics, timers, etc. within a tick. This will ensure a fixed update
-	 * interval, which generally results in more stable, predictable and
-	 * consistent behavior compared to using a variable update interval,
-	 * especially with regard to floating-point errors and numerical integration
-	 * methods which may produce different results depending on the step size.
-	 *
-	 * To achieve a higher perceived update rate for the user, some form of
-	 * interpolation and/or extrapolation should be used in the variable-rate
-	 * Application::display() callback in order to smooth out the result of the
-	 * fixed-rate ticks when applicable.
-	 */
-	Time<float> tickInterval;
-};
-
-/**
- * Transient information about the current frame of an Application.
- */
-struct FrameInfo {
-	/**
-	 * Information about the latest processed tick.
-	 */
-	TickInfo tickInfo;
-
-	/**
-	 * The ratio of the latest processed tick's importance compared to the tick
-	 * processed before it, for use when interpolating data between the two.
-	 */
-	float tickInterpolationAlpha;
-
-	/**
-	 * The time, in seconds, that had elapsed since the start of the application
-	 * at the beginning of the current frame.
-	 */
-	Time<float> elapsedTime;
-
-	/**
-	 * The time, in seconds, elapsed between the beginning of the previous frame
-	 * and the beginning of the current frame.
-	 */
-	Time<float> deltaTime;
-};
+namespace donut::application {
 
 /**
  * Configuration options for an Application.
  */
 struct ApplicationOptions {
-	/**
-	 * Non-owning pointer to a null-terminated UTF-8 string that commonly
-	 * identifies the publisher of the application, such as an organization
-	 * name, alias or internet domain.
-	 *
-	 * This will be used as the name of the organization folder in the
-	 * user/platform-specific preferences directory where the application folder
-	 * will be created if it doesn't already exist, into which files such as
-	 * user settings or saved images can then be read and written by the
-	 * application.
-	 *
-	 * If set to nullptr, no application folder will be created nor mounted, and
-	 * the application will be unable to write such files.
-	 */
-	const char* organizationName = nullptr;
-
-	/**
-	 * Non-owning pointer to a null-terminated UTF-8 string that uniquely
-	 * identifies the application among all other applications released by the
-	 * same organization.
-	 *
-	 * This will be used as name of the application folder, that will be created
-	 * if it doesn't exist, under the organization folder in the
-	 * user/platform-specific preferences directory, into which files such as
-	 * user settings or saved images can then be read and written by the 
-	 * application.
-	 *
-	 * If set to nullptr, no application folder will be created nor mounted, and
-	 * the application will be unable to write such files.
-	 */
-	const char* applicationName = nullptr;
-
-	/**
-	 * Non-owning pointer to a null-terminated UTF-8 string of the native
-	 * filepath to the main data directory which will be mounted for reading
-	 * application resources.
-	 *
-	 * This may be either an absolute path or a path relative to the program's
-	 * working directory.
-	 *
-	 * If set to nullptr, no main data directory will be mounted, and the
-	 * application will be unable to read any resource files, except for those
-	 * in the application folder under the organization folder in the
-	 * user/platform-specific preferences directory, if one was specified.
-	 */
-	const char* dataDirectoryFilepath = ".";
-
-	/**
-	 * Non-owning pointer to a null-terminated UTF-8 string of the filename
-	 * extension for mod archives.
-	 *
-	 * All mounted directories will be automatically searched for archives with
-	 * this extension at application startup. Any found archives will be mounted
-	 * for resource file reading, with a higher priority than the main data
-	 * directory. This means that any file in an archive that has the same
-	 * relative filepath as a file in the main data directory will be preferred
-	 * over the original file. This is useful for allowing users to easily
-	 * create and share modifications or plugins that add or override
-	 * application resources, without having to hack the application.
-	 *
-	 * If set to nullptr, no archives will be automatically mounted.
-	 */
-	const char* archiveFilenameExtension = nullptr;
-
 	/**
 	 * The tick rate of the application, in hertz (ticks per second).
 	 *
@@ -155,7 +21,7 @@ struct ApplicationOptions {
 	 * the main frame rate of the application.
 	 *
 	 * Tick polling is performed on each frame of the application, which may
-	 * result in anywhere from 0 to tickRate/minFps ticks being processed,
+	 * result in anywhere from 0 to tickRate/minFrameRate ticks being processed,
 	 * depending on the time since the previous frame. When not enough time has
 	 * passed to process any ticks within a frame, the time is accumulated for
 	 * the next frame, and so on, until enough time has passed to process more
@@ -163,6 +29,9 @@ struct ApplicationOptions {
 	 * multiple ticks will be processed, and any remaining time will carry over
 	 * to the next frame. This results in a fixed average interval between
 	 * ticks even in the event of high framerates or small frame rate drops.
+	 *
+	 * \sa minFrameRate
+	 * \sa maxFrameRate
 	 */
 	float tickRate = 60.0f;
 
@@ -180,8 +49,11 @@ struct ApplicationOptions {
 	 * maximum number of ticks per frame will be set to 1, causing slowdown to
 	 * always occur whenever the frame rate goes below the tick rate. This is
 	 * generally not recommended.
+	 *
+	 * \sa tickRate
+	 * \sa maxFrameRate
 	 */
-	float minFps = 10.0f;
+	float minFrameRate = 1.0f;
 
 	/**
 	 * Maximum frame rate of the application, in hertz (frames per second),
@@ -189,14 +61,60 @@ struct ApplicationOptions {
 	 *
 	 * If the frame rate goes above this limit, the application will wait until
 	 * enough time has passed for the next frame to begin.
+	 *
+	 * Set to 0 or a negative value for no frame rate limit.
+	 *
+	 * \sa tickRate
+	 * \sa minFrameRate
+	 * \sa frameRateLimiterSleepEnabled
 	 */
-	float maxFps = 60.0f;
+	float maxFrameRate = 480.0f;
+
+	/**
+	 * Put the thread that is running the application to sleep until the next
+	 * frame is supposed to begin if the maximum frame rate is exceeded.
+	 *
+	 * This helps reduce the CPU usage of the application in low-load scenarios.
+	 *
+	 * \note This option is only applicable when there is a frame rate limit,
+	 *       i.e. when #maxFrameRate is positive.
+	 *
+	 * \sa maxFrameRate
+	 * \sa frameRateLimiterSleepBias
+	 */
+	bool frameRateLimiterSleepEnabled = true;
+
+	/**
+	 * The duration offset to subtract from the requested wake-up time when
+	 * frame rate limiter sleep is enabled.
+	 *
+	 * Since there is some overhead associated with waking a thread from sleep,
+	 * the thread must be requested to wake up slightly before the next frame is
+	 * supposed to begin to avoid missing the deadline, otherwise the actual
+	 * frame rate may fluctuate and deviate from the intended target frame rate.
+	 *
+	 * However, the larger this duration is, the more time will be spent
+	 * busy-waiting before each frame begins, which will increase the CPU usage
+	 * and limit the effectiveness of frame rate limiter sleep.
+	 *
+	 * The default value is tuned to produce decent results on most harware,
+	 * though it may need to be adjusted depending on application-specific
+	 * requirements.
+	 *
+	 * \note This option is only applicable when #frameRateLimiterSleepEnabled
+	 *       is set to true.
+	 *
+	 * \warning This value must be non-negative.
+	 *
+	 * \sa frameRateLimiterSleepEnabled
+	 */
+	std::chrono::steady_clock::duration frameRateLimiterSleepBias = std::chrono::microseconds{100};
 };
 
 /**
  * Main application base class.
  *
- * The application controls the main loop, including Event pumping, frame pacing
+ * The application controls the main loop, including frame pacing
  * and fixed-interval frame rate-independent tick updates.
  *
  * Concrete applications should derive from this class and implement the
@@ -210,48 +128,12 @@ struct ApplicationOptions {
 class Application {
 public:
 	/**
-	 * Type of message contained in a message box.
-	 */
-	enum class MessageBoxType {
-		ERROR_MESSAGE,   ///< Indicates that an error occured.
-		WARNING_MESSAGE, ///< Warns the user about a potential error.
-		INFO_MESSAGE,    ///< Provides general information.
-	};
-
-	/**
-	 * Display a simple message box that blocks execution on the current thread
-	 * until the user presses OK.
-	 *
-	 * This does not require the application to be running.
-	 *
-	 * \param type type of message shown in the box. This may be reflected in
-	 *        the styling of the box.
-	 * \param title non-owning read-only pointer to a UTF-8 string containing
-	 *        the window title of the message box. Must not be nullptr.
-	 * \param message non-owning read-only pointer to a UTF-8 string containing
-	 *        the main message to show in the box. Must not be nullptr.
-	 *
-	 * \throws application::Error on failure to show the message box.
-	 * \throws std::bad_alloc on allocation failure.
-	 */
-	static void showSimpleMessageBox(MessageBoxType type, const char* title, const char* message);
-
-	/**
-	 * Construct the base of the main application and initialize global systems.
-	 *
-	 * \param programFilepath the first string in the argument vector passed to
-	 *        the main function of the program, i.e. argv[0].
+	 * Construct the base of the main application.
 	 *
 	 * \param options initial configuration of the application, see
 	 *        ApplicationOptions.
-	 *
-	 * \throws application::Error if system initialization failed.
-	 * \throws std::bad_alloc on allocation failure.
-	 *
-	 * \warning The behavior of passing programFilepath a value other than the
-	 *          argv[0] string received from main is undefined.
 	 */
-	explicit Application(const char* programFilepath, const ApplicationOptions& options);
+	explicit Application(const ApplicationOptions& options = {});
 
 	/**
 	 * Virtual destructor which must be overridden by the concrete application
@@ -292,8 +174,15 @@ public:
 	/**
 	 * Initiate the shutdown process, meaning that the current frame will be the
 	 * last to be processed and displayed before the main loop ends.
+	 *
+	 * This method may be overridden by the concrete application to intercept
+	 * requests to quit and perform application-specific processing before
+	 * deciding whether to actually quit or not by either calling the base
+	 * implementation or choosing to ignore the request.
+	 *
+	 * \throws any exception thrown by the concrete implementation.
 	 */
-	void quit() noexcept;
+	virtual void quit();
 
 	/**
 	 * Check if the application is currently running, meaning that it is fully
@@ -302,151 +191,119 @@ public:
 	 *
 	 * \return true if the application is currently running, false otherwise.
 	 */
-	[[nodiscard]] bool isRunning() const noexcept;
+	[[nodiscard]] bool isRunning() const noexcept {
+		return running;
+	}
 
 	/**
-	 * Get the latest measurement of the average frame rate.
+	 * Get the number of frames displayed during the last measured second of the
+	 * application's run time, which approximates the average frame rate.
 	 *
-	 * The average frame rate is automatically measured for every second that
-	 * passes while the application is running by keeping a frame counter that
-	 * is incremented by 1 on each frame and reset to 0 when a full second has
-	 * passed.
+	 * This is measured automatically by counting the number of frames displayed
+	 * between each second that passes while the application is running.
 	 *
-	 * \return the average frame rate over the last second that was measured, or
-	 *         0 if less than one full second has passed since the start of the
-	 *         application.
+	 * \return the number of frames displayed during the last second that was
+	 *         measured, or 0 if less than one full second has passed since the
+	 *         start of the application.
 	 *
 	 * \note This approximation of the frame rate does not update frequently
 	 *       enough to be used as an accurate time delta between frames. Use the
 	 *       values that are supplied in the FrameInfo struct to each
 	 *       relevant callback for this purpose instead.
 	 */
-	[[nodiscard]] unsigned getLatestMeasuredFps() const noexcept;
-
-	/**
-	 * Get the current text contained in the clipboard.
-	 *
-	 * \return The text in the clipboard.
-	 *
-	 * \throws std::bad_alloc on allocation failure.
-	 */
-	[[nodiscard]] std::string getClipboardText() const;
-
-	/**
-	 * Check if the application supports a screen keyboard.
-	 *
-	 * \return true if a screen keyboard is supported, false otherwise.
-	 *
-	 * \sa graphics::Window::isScreenKeyboardShown()
-	 */
-	[[nodiscard]] bool hasScreenKeyboardSupport() const noexcept;
+	[[nodiscard]] unsigned getLastSecondFrameCount() const noexcept {
+		return lastSecondFrameCount;
+	}
 
 	/**
 	 * Set the frame rate parameters of the application.
 	 *
 	 * \param tickRate desired tick rate of the application, in hertz (ticks per
 	 *        second).
-	 * \param minFps minimum frame rate of the application, in hertz (frames per
-	 *        second), before tick slowdown occurs.
-	 * \param maxFps maximum frame rate of the application, in hertz (frames per
-	 *        second), before frames are delayed.
+	 * \param minFrameRate minimum frame rate of the application, in hertz
+	 *        (frames per second), before tick slowdown occurs.
+	 * \param maxFrameRate maximum frame rate of the application, in hertz
+	 *        (frames per second), before frames are delayed. Set to 0 or a
+	 *        negative value for no frame rate limit.
 	 *
 	 * \sa ApplicationOptions::tickRate
-	 * \sa ApplicationOptions::minFps
-	 * \sa ApplicationOptions::maxFps
+	 * \sa ApplicationOptions::minFrameRate
+	 * \sa ApplicationOptions::maxFrameRate
+	 * \sa setFrameRateLimiterSleepEnabled()
+	 * \sa setFrameRateLimiterSleepBias()
 	 */
-	void setFrameRateParameters(float tickRate, float minFps, float maxFps);
+	void setFrameRateParameters(float tickRate, float minFrameRate, float maxFrameRate);
 
 	/**
-	 * Set the input rectangle for text input.
+	 * Enable or disable frame rate limiter sleep.
 	 *
-	 * \param offset offset of the input rectangle, in screen coordinates.
-	 * \param size size of the input rectangle, in screen coordinates.
+	 * \param frameRateLimiterSleepEnabled true to enable frame rate limiter sleep,
+	 *        false to disable.
 	 *
-	 * \sa startTextInput()
-	 * \sa stopTextInput()
+	 * \sa ApplicationOptions::frameRateLimiterSleepEnabled
+	 * \sa setFrameRateParameters()
+	 * \sa setFrameRateLimiterSleepBias()
 	 */
-	void setTextInputRectangle(glm::ivec2 offset, glm::ivec2 size);
+	void setFrameRateLimiterSleepEnabled(bool frameRateLimiterSleepEnabled);
 
 	/**
-	 * Start accepting text input events in the current text input rectangle.
+	 * Set the frame rate limiter sleep bias.
 	 *
-	 * \sa setTextInputRectangle()
-	 * \sa stopTextInput()
+	 * \param frameRateLimiterSleepBias new bias to set. Must be non-negative.
+	 *
+	 * \sa ApplicationOptions::frameRateLimiterSleepBias
+	 * \sa setFrameRateParameters()
+	 * \sa setFrameRateLimiterSleepEnabled()
 	 */
-	void startTextInput();
+	void setFrameRateLimiterSleepBias(std::chrono::steady_clock::duration frameRateLimiterSleepBias);
 
 	/**
-	 * Stop accepting text input events.
+	 * Get information about the latest tick.
 	 *
-	 * \sa setTextInputRectangle()
-	 * \sa startTextInput()
+	 * \return the latest tick information.
 	 */
-	void stopTextInput();
+	[[nodiscard]] TickInfo getLatestTickInfo() const noexcept {
+		return tickInfo;
+	}
+
+	/**
+	 * Get information about the latest frame.
+	 *
+	 * \return the latest frame information.
+	 */
+	[[nodiscard]] FrameInfo getLatestFrameInfo() const noexcept {
+		return frameInfo;
+	}
 
 protected:
 	/**
-	 * Initial frame callback, called in the main loop once at the beginning of
-	 * each frame, before event processing.
+	 * Per-frame update callback, called in the main loop once at the beginning
+	 * of each frame, before processing ticks.
+	 *
+	 * This is the best time to poll events using an EventPump and apply any
+	 * changes to interactive application state that depends on user input and
+	 * is used by tick(), since it minimizes the average latency between
+	 * processing an input event and it affecting the result of a subsequent
+	 * tick.
 	 *
 	 * \param frameInfo information about the current frame, see FrameInfo.
 	 *
 	 * \note Any exception that is thrown out of this function will percolate up
 	 *       to run() and cause the main loop to stop.
+	 * \note The default implementation of this function does nothing.
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *
-	 * \sa handleEvent()
-	 * \sa update()
 	 * \sa tick()
 	 * \sa display()
+	 * \sa getLatestTickInfo()
 	 */
-	virtual void prepareForEvents(FrameInfo frameInfo) = 0;
+	virtual void update(FrameInfo frameInfo) {
+		(void)frameInfo;
+	}
 
 	/**
-	 * Event pumping callback, called in the main loop 0 or more times during
-	 * event processing, which happens on each frame after calling
-	 * prepareForEvents() and before calling update(), in order to forward any
-	 * events that occured since the last frame to the application for it to
-	 * handle.
-	 *
-	 * \param frameInfo information about the current frame, see FrameInfo.
-	 * \param event the event that occured, see Event.
-	 *
-	 * \note Any exception that is thrown out of this function will percolate up
-	 *       to run() and cause the main loop to stop.
-	 *
-	 * \warning The behavior of calling this function manually is undefined.
-	 *
-	 * \sa prepareForEvents()
-	 * \sa update()
-	 * \sa tick()
-	 */
-	virtual void handleEvent(FrameInfo frameInfo, const Event& event) = 0;
-
-	/**
-	 * Post-event frame callback, called in the main loop once on each frame
-	 * after processing events and before processing ticks.
-	 *
-	 * This is the best time to apply changes to any interactive application
-	 * state that depends on user input and is used by tick(), since it
-	 * minimizes the average latency between processing an input event and it
-	 * affecting the result of a subsequent tick.
-	 *
-	 * \param frameInfo information about the current frame, see FrameInfo.
-	 *
-	 * \note Any exception that is thrown out of this function will percolate up
-	 *       to run() and cause the main loop to stop.
-	 *
-	 * \warning The behavior of calling this function manually is undefined.
-	 *
-	 * \sa prepareForEvents()
-	 * \sa tick()
-	 */
-	virtual void update(FrameInfo frameInfo) = 0;
-
-	/**
-	 * Fixed-interval tick callback, called in the main loop 0 or more times
+	 * Fixed-rate tick callback, called in the main loop 0 or more times
 	 * during tick processing, which happens on each frame after calling
 	 * update() and before calling display().
 	 *
@@ -457,14 +314,17 @@ protected:
 	 *
 	 * \note Any exception that is thrown out of this function will percolate up
 	 *       to run() and cause the main loop to stop.
+	 * \note The default implementation of this function does nothing.
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *
-	 * \sa prepareForEvents()
 	 * \sa update()
 	 * \sa display()
+	 * \sa getLatestFrameInfo()
 	 */
-	virtual void tick(TickInfo tickInfo) = 0;
+	virtual void tick(TickInfo tickInfo) {
+		(void)tickInfo;
+	}
 
 	/**
 	 * Frame rendering callback, called in the main loop once at the end of each
@@ -475,49 +335,45 @@ protected:
 	 * changes to the state of the application that is about to be presented,
 	 * such as interpolation of data that is updated in tick().
 	 *
-	 * \param frameInfo information about the current frame, see FrameInfo.
+	 * \param tickInfo information about the latest tick, see TickInfo.
+	 * \param frameInfo information about the latest frame, see FrameInfo.
 	 *
 	 * \note Any exception that is thrown out of this function will percolate up
 	 *       to run() and cause the main loop to stop.
+	 * \note The default implementation of this function does nothing.
 	 *
 	 * \warning The behavior of calling this function manually is undefined.
 	 *
-	 * \sa prepareForEvents()
 	 * \sa update()
 	 * \sa tick()
+	 * \sa getLatestTickInfo()
 	 */
-	virtual void display(FrameInfo frameInfo) = 0;
+	virtual void display(TickInfo tickInfo, FrameInfo frameInfo) {
+		(void)tickInfo;
+		(void)frameInfo;
+	}
 
 private:
 	void runFrame();
 
-	struct PhysFSManager {
-		PhysFSManager(const char* programFilepath, const char* organizationName, const char* applicationName, const char* dataDirectoryFilepath,
-			const char* archiveFilenameExtension);
-	};
+	using Clock = std::chrono::steady_clock;
 
-	struct SDLManager {
-		SDLManager();
-	};
-
-	[[no_unique_address]] PhysFSManager physFSManager;
-	[[no_unique_address]] SDLManager sdlManager{};
-	std::uint64_t clockFrequency = 0;
-	std::uint64_t tickClockInterval = 0;
-	std::uint64_t minFrameClockInterval = 0;
-	std::uint64_t maxTicksPerFrame = 0;
-	std::uint64_t startClockTime = 0;
-	std::uint64_t latestFrameClockTime = 0;
-	std::uint64_t latestFpsMeasurementClockTime = 0;
-	std::uint64_t processedTickClockTime = 0;
-	float clockInterval = 0.0f;
-	unsigned latestMeasuredFps = 0u;
-	unsigned fpsCounter = 0u;
+	Clock::duration tickInterval{};
+	Clock::duration minFrameInterval{};
+	Clock::rep maxTicksPerFrame{};
+	Clock::time_point startTime{};
+	Clock::time_point latestFrameTime{};
+	Clock::time_point latestTickProcessingEndTime{};
+	Clock::time_point latestFrameCountTime{};
+	unsigned lastSecondFrameCount = 0u;
+	unsigned frameCounter = 0u;
+	TickInfo tickInfo{};
 	FrameInfo frameInfo{};
+	Clock::duration frameRateLimiterSleepBias{};
+	bool frameRateLimiterSleepEnabled = false;
 	bool running = false;
 };
 
-} // namespace application
-} // namespace donut
+} // namespace donut::application
 
 #endif

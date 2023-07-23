@@ -4,8 +4,7 @@
 #include <cstddef> // std::size_t, std::byte
 #include <memory>  // std::construct_at, std::destroy_at
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 namespace {
 
@@ -150,5 +149,4 @@ void Shader3D::destroySharedShaders() noexcept {
 	}
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

@@ -4,8 +4,7 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/opengl.hpp>
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 Framebuffer::TextureAttachment::~TextureAttachment() {
 	GLint oldFramebufferBinding = 0;
@@ -41,5 +40,4 @@ void Framebuffer::FramebufferDeleter::operator()(Handle handle) const noexcept {
 	glDeleteFramebuffers(1, &handle);
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

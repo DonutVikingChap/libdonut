@@ -4,17 +4,11 @@
 #include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Framebuffer.hpp>
 #include <donut/graphics/Handle.hpp>
+#include <donut/math.hpp>
 
-#include <cstdint>     // std::uint32_t
-#include <glm/glm.hpp> // glm::...
+#include <cstdint> // std::uint32_t
 
-namespace donut {
-namespace graphics {
-
-/**
- * Unique identifier corresponding to a particular window.
- */
-using WindowId = std::uint32_t;
+namespace donut::graphics {
 
 /**
  * Configuration options for a Window.
@@ -36,7 +30,7 @@ struct WindowOptions {
 	 *
 	 * \warning Both the width and height must be positive.
 	 */
-	glm::ivec2 size{800, 600};
+	ivec2 size{800, 600};
 
 	/**
 	 * Whether the user should be allowed to resize the window or not.
@@ -58,7 +52,7 @@ struct WindowOptions {
 	 * buffers in the middle of a screen refresh, at the cost of effectively
 	 * limiting the application's frame rate to the screen's refresh rate.
 	 *
-	 * \note Enabling VSync is not recommended for applications which are
+	 * \note Enabling VSync is not recommended for applications that are
 	 *       sensitive to input delay, such as games, since it can significantly
 	 *       increase the time before a rendered frame gets displayed to the
 	 *       user compared to a regular frame rate limiter.
@@ -96,6 +90,21 @@ public:
 	 */
 	explicit Window(const WindowOptions& options);
 
+	/** Destructor. */
+	~Window();
+
+	/** Copying a window is not allowed, since it manages global state. */
+	Window(const Window&) = delete;
+
+	/** Moving a window is not allowed, since it manages global state. */
+	Window(Window&&) = delete;
+
+	/** Copying a window is not allowed, since it manages global state. */
+	Window& operator=(const Window&) = delete;
+
+	/** Moving a window is not allowed, since it manages global state. */
+	Window& operator=(Window&&) = delete;
+
 	/**
 	 * Swap the window's front and back buffers, showing what has been rendered
 	 * to the framebuffer since the last presentation.
@@ -123,7 +132,7 @@ public:
 	 *
 	 * \sa WindowOptions::size
 	 */
-	void setSize(glm::ivec2 size);
+	void setSize(ivec2 size);
 
 	/**
 	 * Set whether to allow the window to be resized by the user or not.
@@ -157,7 +166,7 @@ public:
 	 *
 	 * \return true if the screen keyboard is open, false otherwise.
 	 *
-	 * \sa application::Application::hasScreenKeyboardSupport()
+	 * \sa events::EventPump::hasScreenKeyboardSupport()
 	 */
 	[[nodiscard]] bool isScreenKeyboardShown() const noexcept;
 
@@ -176,7 +185,7 @@ public:
 	 *         - the x component represents the width, and
 	 *         - the y component represents the height.
 	 */
-	[[nodiscard]] glm::ivec2 getSize() const noexcept;
+	[[nodiscard]] ivec2 getSize() const noexcept;
 
 	/**
 	 * Get the drawable size of the window.
@@ -186,14 +195,14 @@ public:
 	 *         - the x component represents the width, and
 	 *         - the y component represents the height.
 	 */
-	[[nodiscard]] glm::ivec2 getDrawableSize() const noexcept;
+	[[nodiscard]] ivec2 getDrawableSize() const noexcept;
 
 	/**
 	 * Get a unique identifier for this window.
 	 *
 	 * \return the identifier corresponding to this window.
 	 */
-	[[nodiscard]] WindowId getId() const;
+	[[nodiscard]] std::uint32_t getId() const;
 
 	/**
 	 * Get the Framebuffer for rendering to this window.
@@ -212,12 +221,11 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	UniqueHandle<void*, WindowDeleter, nullptr> window{};
-	UniqueHandle<void*, GLContextDeleter, nullptr> glContext{};
+	UniqueHandle<void*, WindowDeleter> window{};
+	UniqueHandle<void*, GLContextDeleter> glContext{};
 	Framebuffer framebuffer{Handle{}};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

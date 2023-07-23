@@ -1,29 +1,49 @@
 #ifndef DONUT_GRAPHICS_CAMERA_HPP
 #define DONUT_GRAPHICS_CAMERA_HPP
 
-#include <glm/ext/matrix_clip_space.hpp> // glm::ortho, glm::perspective
-#include <glm/ext/matrix_transform.hpp>  // glm::identity, glm::lookAt
-#include <glm/glm.hpp>                   // glm::...
+#include <donut/math.hpp>
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Configuration options for a Camera with an orthographic projection.
  */
 struct CameraOrthographicOptions {
-	glm::vec2 offset{0.0f, 0.0f}; ///< Bottom left corner of the orthographic projection, in framebuffer coordinates.
-	glm::vec2 size{1.0f, 1.0f};   ///< Size of the orthographic projection, in framebuffer coordinates.
+	/**
+	 * Bottom left corner of the orthographic projection, in framebuffer
+	 * coordinates.
+	 */
+	vec2 offset{0.0f, 0.0f};
+
+	/**
+	 * Size of the orthographic projection, in framebuffer coordinates.
+	 */
+	vec2 size{1.0f, 1.0f};
 };
 
 /**
  * Configuration options for a Camera with a perspective projection.
  */
 struct CameraPerspectiveOptions {
-	float verticalFieldOfView = 1.57079633f; ///< Vertical field of view of the projection, in radians.
-	float aspectRatio = 1.0f;                ///< Aspect ratio of the projection, X/Y.
-	float nearZ = 0.01f;                     ///< Distance to the near plane of the projection, in view coordinates.
-	float farZ = 1000.0f;                    ///< Distance to the far plane of the projection, in view coordinates.
+	/**
+	 * Vertical field of view of the projection, in radians.
+	 */
+	float verticalFieldOfView = 1.28700221758656877361f;
+
+	/**
+	 * Aspect ratio of the projection, X/Y.
+	 */
+	float aspectRatio = 1.0f;
+
+	/**
+	 * Distance to the near plane of the projection, in view coordinates.
+	 */
+	float nearZ = 0.01f;
+
+	/**
+	 * Distance to the far plane of the projection, in view coordinates.
+	 */
+	float farZ = 1000.0f;
 };
 
 /**
@@ -40,8 +60,8 @@ public:
 	 *
 	 * \return an orthographic camera with the specified configuration.
 	 */
-	[[nodiscard]] static Camera createOrthographic(const CameraOrthographicOptions& options, const glm::mat4& viewMatrix) noexcept {
-		return Camera{glm::ortho(options.offset.x, options.offset.x + options.size.x, options.offset.y, options.offset.y + options.size.y), viewMatrix};
+	[[nodiscard]] static Camera createOrthographic(const CameraOrthographicOptions& options, const mat4& viewMatrix) noexcept {
+		return Camera{ortho(options.offset.x, options.offset.x + options.size.x, options.offset.y, options.offset.y + options.size.y), viewMatrix};
 	}
 
 	/**
@@ -53,7 +73,7 @@ public:
 	 * \return an orthographic camera with the specified configuration.
 	 */
 	[[nodiscard]] static Camera createOrthographic(const CameraOrthographicOptions& options) noexcept {
-		return createOrthographic(options, glm::identity<glm::mat4>());
+		return createOrthographic(options, identity<mat4>());
 	}
 
 	/**
@@ -66,8 +86,8 @@ public:
 	 *
 	 * \return an orthographic camera with the specified configuration.
 	 */
-	[[nodiscard]] static Camera createOrthographic(const CameraOrthographicOptions& options, glm::vec3 position, glm::vec3 target, glm::vec3 up) noexcept {
-		return createOrthographic(options, glm::lookAt(position, target, up));
+	[[nodiscard]] static Camera createOrthographic(const CameraOrthographicOptions& options, vec3 position, vec3 target, vec3 up) noexcept {
+		return createOrthographic(options, lookAt(position, target, up));
 	}
 	/**
 	 * Create a camera with a perspective projection.
@@ -77,8 +97,8 @@ public:
 	 *
 	 * \return an orthographic camera with the specified configuration.
 	 */
-	[[nodiscard]] static Camera createPerspective(const CameraPerspectiveOptions& options, const glm::mat4& viewMatrix) noexcept {
-		return Camera{glm::perspective(options.verticalFieldOfView, options.aspectRatio, options.nearZ, options.farZ), viewMatrix};
+	[[nodiscard]] static Camera createPerspective(const CameraPerspectiveOptions& options, const mat4& viewMatrix) noexcept {
+		return Camera{perspective(options.verticalFieldOfView, options.aspectRatio, options.nearZ, options.farZ), viewMatrix};
 	}
 
 	/**
@@ -90,7 +110,7 @@ public:
 	 * \return an orthographic camera with the specified configuration.
 	 */
 	[[nodiscard]] static Camera createPerspective(const CameraPerspectiveOptions& options) noexcept {
-		return createPerspective(options, glm::identity<glm::mat4>());
+		return createPerspective(options, identity<mat4>());
 	}
 
 	/**
@@ -103,16 +123,16 @@ public:
 	 *
 	 * \return an orthographic camera with the specified configuration.
 	 */
-	[[nodiscard]] static Camera createPerspective(const CameraPerspectiveOptions& options, glm::vec3 position, glm::vec3 target, glm::vec3 up) noexcept {
-		return createPerspective(options, glm::lookAt(position, target, up));
+	[[nodiscard]] static Camera createPerspective(const CameraPerspectiveOptions& options, vec3 position, vec3 target, vec3 up) noexcept {
+		return createPerspective(options, lookAt(position, target, up));
 	}
 
 	/**
 	 * Construct a camera with an identity projection matrix and view matrix.
 	 */
 	constexpr Camera() noexcept
-		: projectionMatrix(glm::identity<glm::mat4>())
-		, viewMatrix(glm::identity<glm::mat4>()) {}
+		: projectionMatrix(identity<mat4>())
+		, viewMatrix(identity<mat4>()) {}
 
 	/**
 	 * Construct a camera with a specific projection matrix and view matrix.
@@ -120,7 +140,7 @@ public:
 	 * \param projectionMatrix projection matrix of the camera.
 	 * \param viewMatrix view matrix of the camera.
 	 */
-	constexpr Camera(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix) noexcept
+	constexpr Camera(const mat4& projectionMatrix, const mat4& viewMatrix) noexcept
 		: projectionMatrix(projectionMatrix)
 		, viewMatrix(viewMatrix) {}
 
@@ -130,7 +150,7 @@ public:
 	 * \param options projection options, see CameraOrthographicOptions.
 	 */
 	void setProjectionOrthographic(const CameraOrthographicOptions& options) noexcept {
-		setProjectionMatrix(glm::ortho(options.offset.x, options.offset.x + options.size.x, options.offset.y, options.offset.y + options.size.y));
+		setProjectionMatrix(ortho(options.offset.x, options.offset.x + options.size.x, options.offset.y, options.offset.y + options.size.y));
 	}
 
 	/**
@@ -139,7 +159,7 @@ public:
 	 * \param options projection options, see CameraPerspectiveOptions.
 	 */
 	void setProjectionPerspective(const CameraPerspectiveOptions& options) noexcept {
-		setProjectionMatrix(glm::perspective(options.verticalFieldOfView, options.aspectRatio, options.nearZ, options.farZ));
+		setProjectionMatrix(perspective(options.verticalFieldOfView, options.aspectRatio, options.nearZ, options.farZ));
 	}
 
 	/**
@@ -150,8 +170,8 @@ public:
 	 *        coordinates.
 	 * \param newUp new up direction of the camera in the world.
 	 */
-	void setView(glm::vec3 newPosition, glm::vec3 newTarget, glm::vec3 newUp) noexcept {
-		setViewMatrix(glm::lookAt(newPosition, newTarget, newUp));
+	void setView(vec3 newPosition, vec3 newTarget, vec3 newUp) noexcept {
+		setViewMatrix(lookAt(newPosition, newTarget, newUp));
 	}
 
 	/**
@@ -159,7 +179,7 @@ public:
 	 *
 	 * \param newProjectionMatrix new projection matrix to set.
 	 */
-	void setProjectionMatrix(const glm::mat4& newProjectionMatrix) noexcept {
+	void setProjectionMatrix(const mat4& newProjectionMatrix) noexcept {
 		projectionMatrix = newProjectionMatrix;
 	}
 
@@ -168,7 +188,7 @@ public:
 	 *
 	 * \param newViewMatrix new view matrix to set.
 	 */
-	void setViewMatrix(const glm::mat4& newViewMatrix) noexcept {
+	void setViewMatrix(const mat4& newViewMatrix) noexcept {
 		viewMatrix = newViewMatrix;
 	}
 
@@ -177,7 +197,7 @@ public:
 	 *
 	 * \return the camera's current projection matrix.
 	 */
-	[[nodiscard]] const glm::mat4& getProjectionMatrix() const noexcept {
+	[[nodiscard]] const mat4& getProjectionMatrix() const noexcept {
 		return projectionMatrix;
 	}
 
@@ -186,16 +206,15 @@ public:
 	 *
 	 * \return the camera's current view matrix.
 	 */
-	[[nodiscard]] const glm::mat4& getViewMatrix() const noexcept {
+	[[nodiscard]] const mat4& getViewMatrix() const noexcept {
 		return viewMatrix;
 	}
 
 private:
-	glm::mat4 projectionMatrix;
-	glm::mat4 viewMatrix;
+	mat4 projectionMatrix;
+	mat4 viewMatrix;
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

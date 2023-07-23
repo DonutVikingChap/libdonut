@@ -11,16 +11,14 @@
 #include <donut/graphics/TexturedQuad.hpp>
 #include <donut/graphics/Viewport.hpp>
 #include <donut/graphics/opengl.hpp>
+#include <donut/math.hpp>
 
-#include <cassert>              // assert
-#include <cstddef>              // std::size_t
-#include <glm/glm.hpp>          // glm::...
-#include <glm/gtc/type_ptr.hpp> // glm::value_ptr
-#include <span>                 // std::span
-#include <vector>               // std::vector
+#include <cassert> // assert
+#include <cstddef> // std::size_t
+#include <span>    // std::span
+#include <vector>  // std::vector
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 namespace {
 
@@ -75,22 +73,22 @@ void applyShaderConfiguration(const ShaderConfiguration& configuration) {
 void uploadEnqueuedShaderUniformValues(ShaderProgram& program) {
 	for (const auto& [location, value] : program.getUniformUploadQueue()) {
 		const GLint loc = location;
-		match(value)(                                                                                       //
-			[loc](float v) -> void { glUniform1f(loc, v); },                                                //
-			[loc](glm::vec2 v) -> void { glUniform2f(loc, v.x, v.y); },                                     //
-			[loc](glm::vec3 v) -> void { glUniform3f(loc, v.x, v.y, v.z); },                                //
-			[loc](glm::vec4 v) -> void { glUniform4f(loc, v.x, v.y, v.z, v.w); },                           //
-			[loc](glm::i32 v) -> void { glUniform1i(loc, v); },                                             //
-			[loc](glm::i32vec2 v) -> void { glUniform2i(loc, v.x, v.y); },                                  //
-			[loc](glm::i32vec3 v) -> void { glUniform3i(loc, v.x, v.y, v.z); },                             //
-			[loc](glm::i32vec4 v) -> void { glUniform4i(loc, v.x, v.y, v.z, v.w); },                        //
-			[loc](glm::u32 v) -> void { glUniform1ui(loc, v); },                                            //
-			[loc](glm::u32vec2 v) -> void { glUniform2ui(loc, v.x, v.y); },                                 //
-			[loc](glm::u32vec3 v) -> void { glUniform3ui(loc, v.x, v.y, v.z); },                            //
-			[loc](glm::u32vec4 v) -> void { glUniform4ui(loc, v.x, v.y, v.z, v.w); },                       //
-			[loc](const glm::mat2& v) -> void { glUniformMatrix2fv(loc, 1, GL_FALSE, glm::value_ptr(v)); }, //
-			[loc](const glm::mat3& v) -> void { glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(v)); }, //
-			[loc](const glm::mat4& v) -> void { glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(v)); });
+		match(value)(                                                                             //
+			[loc](float v) -> void { glUniform1f(loc, v); },                                      //
+			[loc](vec2 v) -> void { glUniform2f(loc, v.x, v.y); },                                //
+			[loc](vec3 v) -> void { glUniform3f(loc, v.x, v.y, v.z); },                           //
+			[loc](vec4 v) -> void { glUniform4f(loc, v.x, v.y, v.z, v.w); },                      //
+			[loc](i32 v) -> void { glUniform1i(loc, v); },                                        //
+			[loc](i32vec2 v) -> void { glUniform2i(loc, v.x, v.y); },                             //
+			[loc](i32vec3 v) -> void { glUniform3i(loc, v.x, v.y, v.z); },                        //
+			[loc](i32vec4 v) -> void { glUniform4i(loc, v.x, v.y, v.z, v.w); },                   //
+			[loc](u32 v) -> void { glUniform1ui(loc, v); },                                       //
+			[loc](u32vec2 v) -> void { glUniform2ui(loc, v.x, v.y); },                            //
+			[loc](u32vec3 v) -> void { glUniform3ui(loc, v.x, v.y, v.z); },                       //
+			[loc](u32vec4 v) -> void { glUniform4ui(loc, v.x, v.y, v.z, v.w); },                  //
+			[loc](const mat2& v) -> void { glUniformMatrix2fv(loc, 1, GL_FALSE, value_ptr(v)); }, //
+			[loc](const mat3& v) -> void { glUniformMatrix3fv(loc, 1, GL_FALSE, value_ptr(v)); }, //
+			[loc](const mat4& v) -> void { glUniformMatrix4fv(loc, 1, GL_FALSE, value_ptr(v)); });
 	}
 	program.clearUniformUploadQueue();
 }
@@ -112,9 +110,9 @@ void useShader(Shader2D& shader) {
 }
 
 void uploadCameraToShader(auto& shader, const Camera& camera) {
-	glUniformMatrix4fv(shader.projectionMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(camera.getProjectionMatrix()));
-	glUniformMatrix4fv(shader.viewMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(camera.getViewMatrix()));
-	glUniformMatrix4fv(shader.viewProjectionMatrix.getLocation(), 1, GL_FALSE, glm::value_ptr(camera.getProjectionMatrix() * camera.getViewMatrix()));
+	glUniformMatrix4fv(shader.projectionMatrix.getLocation(), 1, GL_FALSE, value_ptr(camera.getProjectionMatrix()));
+	glUniformMatrix4fv(shader.viewMatrix.getLocation(), 1, GL_FALSE, value_ptr(camera.getViewMatrix()));
+	glUniformMatrix4fv(shader.viewProjectionMatrix.getLocation(), 1, GL_FALSE, value_ptr(camera.getProjectionMatrix() * camera.getViewMatrix()));
 }
 
 void renderModelInstances(Shader3D& shader, std::span<const Model::Object> objects, std::span<const Model::Object::Instance> instances) {
@@ -237,5 +235,4 @@ void Renderer::render( // NOLINT(readability-make-member-function-const)
 	}
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics

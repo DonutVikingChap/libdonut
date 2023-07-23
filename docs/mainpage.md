@@ -19,10 +19,12 @@ The main API of libdonut is organized into the following modules, listed along w
 
 - [donut::application](@ref donut::application) - Application framework module
     - [Application](@ref donut::application::Application) - Main application base class
-    - [InputManager](@ref donut::application::InputManager) - Mapping between physical inputs and abstract output numbers
 - [donut::audio](@ref donut::audio) - Audio engine module
     - [Sound](@ref donut::audio::Sound) - Sound wave loading
     - [SoundStage](@ref donut::audio::SoundStage) - Sound playback in 3D to the default audio device
+- [donut::events](@ref donut::events) - Events module
+    - [EventPump](@ref donut::events::EventPump) - On-demand polling of events and user input from the host environment
+    - [InputManager](@ref donut::events::InputManager) - Mapping between physical inputs and abstract output numbers
 - [donut::graphics](@ref donut::graphics) - Graphics rendering module
     - [Camera](@ref donut::graphics::Camera) - Perspective to render from
     - [Font](@ref donut::graphics::Font) - Text shaping facility
@@ -43,9 +45,8 @@ The main API of libdonut is organized into the following modules, listed along w
 Libdonut also includes the following utility APIs which encompass all of the main modules:
 
 - Virtual filesystem:
-    - [donut::File](@ref donut::File) - Abstract interface to virtual files
-    - [donut::InputFileStream](@ref donut::InputFileStream) - Virtual file reading
-    - [donut::OutputFileStream](@ref donut::OutputFileStream) - Virtual file writing
+    - [donut::File](@ref donut::File) - Virtual file handle
+    - [donut::Filesystem](@ref donut::Filesystem) - Virtual filesystem
 - Data interchange formats:
     - [donut::base64](@ref donut::base64) - Base64 string encoding/decoding
     - [donut::json](@ref donut::json) - JSON parsing/writing/(de)serialization
@@ -63,14 +64,14 @@ Libdonut also includes the following utility APIs which encompass all of the mai
     - [donut::Rectangle](@ref donut::Rectangle) - Flat 2D rectangle shape with a position and size
 - Data types:
     - [donut::Color](@ref donut::Color) - Floating-point RGBA color type
-    - [donut::Resource](@ref donut::Resource) - Generic resource handle with exclusive ownership
+    - [donut::UniqueHandle](@ref donut::UniqueHandle) - Generic resource handle with exclusive ownership
     - [donut::Variant](@ref donut::Variant) - Generic tagged union type
 - Other:
     - [donut::AtlasPacker](@ref donut::AtlasPacker) - Rectangle packer for expandable square texture atlases
     - [donut::LooseQuadtree](@ref donut::LooseQuadtree) - Container for fast AABB collision tests between a large number of 2D objects
     - [donut::random](@ref donut::random) - Fast pseudo-random number generation
     - [donut::reflection](@ref donut::reflection) - Compile-time reflection of aggregate types
-    - [donut::Timer](@ref donut::Timer) - Time counting utility
+    - [donut::Time](@ref donut::Time) - Time duration wrapper
 
 ## Includes
 
@@ -79,6 +80,7 @@ For ease of use, libdonut provides the following header files which include coll
 ```cpp
 #include <donut/modules/application.hpp>
 #include <donut/modules/audio.hpp>
+#include <donut/modules/events.hpp>
 #include <donut/modules/graphics.hpp>
 #include <donut/modules/utilities.hpp>
 ```
@@ -102,10 +104,12 @@ These aliases include global declarations for all types that are defined directl
 ```cpp
 namespace app = donut::application;
 namespace audio = donut::audio;
+namespace events = donut::events;
 namespace gfx = donut::graphics;
 
 namespace base64 = donut::base64;
 namespace json = donut::json;
+namespace numbers = donut::numbers;
 namespace obj = donut::obj;
 namespace rng = donut::random;
 namespace reflection = donut::reflection;

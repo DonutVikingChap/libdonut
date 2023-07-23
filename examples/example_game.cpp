@@ -2,8 +2,8 @@
  * \example example_game.cpp
  *
  * \details This example shows a basic game project consisting of a single
- *          source file. The main application class, Game, is defined at the top
- *          while the main function is defined at the bottom.
+ *          source file. The main application class, ExampleGame, is defined at
+ *          the top while the main function is defined at the bottom.
  *
  *          This can be used to study how various libdonut features are combined
  *          to form a working application. Note however that for a real project,
@@ -18,42 +18,30 @@
 #include <donut/aliases.hpp>
 #include <donut/donut.hpp>
 
-#include <array>                        // std::array
-#include <charconv>                     // std::from_chars_result, std::from_chars
-#include <chrono>                       // std::chrono_literals
-#include <cmath>                        // std::atan2
-#include <concepts>                     // std::integral
-#include <cstddef>                      // std::size_t
-#include <cstdio>                       // stderr, std::sscanf, std::fprintf
-#include <cstdlib>                      // EXIT_SUCCESS, EXIT_FAILURE
-#include <exception>                    // std::exception
-#include <format>                       // std::format
-#include <forward_list>                 // std::forward_list
-#include <glm/ext/matrix_transform.hpp> // glm::identity
-#include <glm/glm.hpp>                  // glm::...
-#include <glm/gtx/euler_angles.hpp>     // glm::orientate4
-#include <glm/gtx/norm.hpp>             // glm::length2
-#include <glm/gtx/transform.hpp>        // glm::translate, glm::scale
-#include <optional>                     // std::optional
-#include <span>                         // std::span
-#include <stdexcept>                    // std::runtime_error
-#include <string>                       // std::string
-#include <string_view>                  // std::string_view
-#include <system_error>                 // std::errc
-#include <unordered_map>                // std::unordered_map
+#include <array>         // std::array
+#include <charconv>      // std::from_chars_result, std::from_chars
+#include <chrono>        // std::chrono_literals
+#include <concepts>      // std::integral
+#include <cstddef>       // std::size_t
+#include <cstdio>        // stderr, std::sscanf, std::fprintf
+#include <cstdlib>       // EXIT_SUCCESS, EXIT_FAILURE
+#include <exception>     // std::exception
+#include <format>        // std::format
+#include <forward_list>  // std::forward_list
+#include <optional>      // std::optional
+#include <span>          // std::span
+#include <stdexcept>     // std::runtime_error
+#include <string>        // std::string
+#include <string_view>   // std::string_view
+#include <system_error>  // std::errc
+#include <unordered_map> // std::unordered_map
 
 namespace {
 
-using namespace std::chrono_literals;
-
 struct GameOptions {
 	app::ApplicationOptions applicationOptions{
-		.organizationName = "Donut",
-		.applicationName = "ExampleGame",
-		.dataDirectoryFilepath = "data",
-		.archiveFilenameExtension = "pak",
-		.tickRate = 60.0f,
-		.maxFps = 240.0f,
+		.tickRate = 30.0f,
+		.maxFrameRate = 240.0f,
 	};
 	gfx::WindowOptions windowOptions{
 		.title = "Example Game",
@@ -62,62 +50,58 @@ struct GameOptions {
 	};
 	const char* mainMenuMusicFilepath = "sounds/music/donauwalzer.ogg";
 	float fieldOfView = 90.0f;
-	std::string messageToShowAndExit{};
 };
 
-class Game final : public app::Application {
+class ExampleGame final : public app::Application {
 public:
-	Game(const char* programFilepath, const GameOptions& options)
-		: app::Application(programFilepath, options.applicationOptions)
+	ExampleGame(Filesystem& filesystem, const GameOptions& options)
+		: app::Application(options.applicationOptions)
 		, window(options.windowOptions)
-		, verticalFieldOfView(2.0f * glm::atan((3.0f / 4.0f) * glm::tan(glm::radians(options.fieldOfView) * 0.5f))) {
-		constexpr Circle<float> CIRCLE_A{.center{60.0f, 80.0f}, .radius = 20.0f};
-		constexpr Circle<float> CIRCLE_B{.center{50.0f, 90.0f}, .radius = 20.0f};
-		constexpr Circle<float> CIRCLE_C{.center{60.0f, 120.0f}, .radius = 20.0f};
-		constexpr Circle<float> CIRCLE_D{.center{300.0f, 100.0f}, .radius = 10.0f};
-		constexpr Circle<float> CIRCLE_E{.center{200.0f, 180.0f}, .radius = 30.0f};
-		constexpr Circle<float> CIRCLE_F{.center{140.0f, 440.0f}, .radius = 20.0f};
-		quadtree[getAabbOf(CIRCLE_A)].push_front(CIRCLE_A);
-		quadtree[getAabbOf(CIRCLE_B)].push_front(CIRCLE_B);
-		quadtree[getAabbOf(CIRCLE_C)].push_front(CIRCLE_C);
-		quadtree[getAabbOf(CIRCLE_D)].push_front(CIRCLE_D);
-		quadtree[getAabbOf(CIRCLE_E)].push_front(CIRCLE_E);
-		quadtree[getAabbOf(CIRCLE_F)].push_front(CIRCLE_F);
+		, testTexture(gfx::Image{filesystem, "textures/test.png"})
+		, circleTexture(gfx::Image{filesystem, "textures/circle.png"}, {.useLinearFiltering = false, .useMipmap = false})
+		, carrotCakeModel(filesystem, "models/carrot_cake.obj")
+		, testSprite(spriteAtlas.insert(renderer, gfx::Image{filesystem, "textures/test.png"}))
+		, testSubSprite(spriteAtlas.createSubSprite(testSprite, 200, 200, 100, 100, gfx::SpriteAtlas::FLIP_HORIZONTALLY))
+		, mainFont(filesystem, "fonts/unscii/unscii-8.ttf")
+		, verticalFieldOfView(2.0f * atan((3.0f / 4.0f) * tan(radians(options.fieldOfView) * 0.5f))) {
+		loadBindingsConfiguration(filesystem, "configuration/bindings.json");
 
-		loadBindingsConfiguration("configuration/bindings.json");
 		initializeSoundStage();
-		playMainMenuMusic(options.mainMenuMusicFilepath);
+		playMainMenuMusic(filesystem, options.mainMenuMusicFilepath);
 
-		resize(window.getDrawableSize());
+		loadCircles();
+
+		resize();
 	}
 
 protected:
-	void prepareForEvents(app::FrameInfo /*frameInfo*/) override {
-		inputManager.prepareForEvents();
-	}
-
-	void handleEvent(app::FrameInfo /*frameInfo*/, const app::Event& event) override {
-		if (event.is<app::WindowSizeChangedEvent>()) {
-			resize(window.getDrawableSize());
-		}
-		inputManager.handleEvent(event);
-	}
-
 	void update(app::FrameInfo frameInfo) override {
+		using namespace std::chrono_literals;
+
+		inputManager.prepareForEvents();
+		for (const events::Event& event : eventPump.pollEvents()) {
+			if (event.is<events::ApplicationQuitRequestedEvent>()) {
+				quit();
+			} else if (event.is<events::WindowSizeChangedEvent>()) {
+				resize();
+			}
+			inputManager.handleEvent(event);
+		}
+
 		if (soundStage) {
 			soundStage->update(frameInfo.deltaTime, listener);
 		}
 
-		if (inputManager.justPressed(app::Input::KEY_F10)) {
+		if (inputManager.justPressed(events::Input::KEY_F10)) {
 			quit();
 		}
 
-		if (inputManager.justPressed(app::Input::KEY_F11) ||
-			(inputManager.justPressed(app::Input::KEY_RETURN) && (inputManager.isPressed(app::Input::KEY_LALT) || inputManager.isPressed(app::Input::KEY_RALT)))) {
+		if (inputManager.justPressed(events::Input::KEY_F11) ||
+			(inputManager.justPressed(events::Input::KEY_RETURN) && (inputManager.isPressed(events::Input::KEY_LALT) || inputManager.isPressed(events::Input::KEY_RALT)))) {
 			window.setFullscreen(!window.isFullscreen());
 		}
 
-		if (inputManager.justPressed(app::Input::KEY_F2)) {
+		if (inputManager.justPressed(events::Input::KEY_F2)) {
 			if (soundStage) {
 				soundStage->stopSound(musicId);
 			}
@@ -125,19 +109,16 @@ protected:
 
 		const float sprintInput = (inputManager.isPressed(Action::SPRINT)) ? 4.0f : 1.0f;
 
-		glm::vec2 movementInput = inputManager.getAbsoluteVector(Action::MOVE_LEFT, Action::MOVE_RIGHT, Action::MOVE_DOWN, Action::MOVE_UP);
-		if (const float movementInputLengthSquared = glm::length2(movementInput); movementInputLengthSquared > 1.0f) {
-			movementInput /= glm::sqrt(movementInputLengthSquared);
+		vec2 movementInput = inputManager.getAbsoluteVector(Action::MOVE_LEFT, Action::MOVE_RIGHT, Action::MOVE_DOWN, Action::MOVE_UP);
+		if (const float movementInputLengthSquared = length2(movementInput); movementInputLengthSquared > 1.0f) {
+			movementInput /= sqrt(movementInputLengthSquared);
 		}
 		const float carrotCakeSpeed = 2.0f * sprintInput;
-		carrotCakeVelocity.x = movementInput.x * carrotCakeSpeed;
-		carrotCakeVelocity.y = movementInput.y * carrotCakeSpeed;
-		carrotCakeVelocity.z = 0.0f;
+		carrotCakeVelocity = {movementInput * carrotCakeSpeed, 0.0f};
 
 		if (inputManager.isPressed(Action::CONFIRM)) {
-			const glm::vec2 aimInput = inputManager.getRelativeVector(Action::AIM_LEFT, Action::AIM_RIGHT, Action::AIM_DOWN, Action::AIM_UP);
-			carrotCakeScale.x = glm::clamp(carrotCakeScale.x + aimInput.x, 0.25f, 4.0f);
-			carrotCakeScale.y = glm::clamp(carrotCakeScale.y + aimInput.y, 0.25f, 4.0f);
+			const vec2 aimInput = inputManager.getRelativeVector(Action::AIM_LEFT, Action::AIM_RIGHT, Action::AIM_DOWN, Action::AIM_UP);
+			carrotCakeScale = clamp(carrotCakeScale + aimInput * 10.0f, 0.25f, 4.0f);
 		}
 
 		const float scrollInput = inputManager.getRelativeVector(Action::SCROLL_DOWN, Action::SCROLL_UP);
@@ -153,36 +134,36 @@ protected:
 		carrotCakeCurrentPosition += carrotCakeVelocity * tickInfo.tickInterval;
 	}
 
-	void display(app::FrameInfo frameInfo) override {
-		carrotCakeDisplayPosition = glm::mix(carrotCakePreviousPosition, carrotCakeCurrentPosition, frameInfo.tickInterpolationAlpha);
+	void display(app::TickInfo /*tickInfo*/, app::FrameInfo frameInfo) override {
+		carrotCakeDisplayPosition = mix(carrotCakePreviousPosition, carrotCakeCurrentPosition, frameInfo.tickInterpolationAlpha);
 
-		const TestShader3D::PointLight baseLight = {
+		const ExampleShader::PointLight baseLight = {
 			.position = carrotCakeDisplayPosition,
 			.ambient{0.2f, 0.2f, 0.2f},
-			.diffuse{0.5f + 0.5f * glm::sin(frameInfo.elapsedTime), 0.8f, 0.8f},
+			.diffuse{0.5f + 0.5f * sin(frameInfo.elapsedTime), 0.8f, 0.8f},
 			.specular{0.8f, 0.8f, 0.8f},
 			.constantFalloff = 1.0f,
 			.linearFalloff = 0.04f,
 			.quadraticFalloff = 0.03f,
 		};
 
-		const auto baseLightWithOffset = [&](glm::vec3 offset) -> TestShader3D::PointLight {
-			TestShader3D::PointLight result = baseLight;
+		const auto baseLightWithOffset = [&](vec3 offset) -> ExampleShader::PointLight {
+			ExampleShader::PointLight result = baseLight;
 			result.position += offset;
 			return result;
 		};
 
-		const std::array<TestShader3D::PointLight, TestShader3D::POINT_LIGHT_COUNT> pointLights{{
+		const std::array<ExampleShader::PointLight, ExampleShader::POINT_LIGHT_COUNT> pointLights{{
 			baseLightWithOffset({-2.0f, 0.0f, 0.0f}),
 			baseLightWithOffset({0.0f, -2.0f, 0.0f}),
 			baseLightWithOffset({0.0f, 2.0f, 0.0f}),
 			baseLightWithOffset({0.0f, 0.0f, 2.0f}),
 		}};
 
-		const glm::vec3 viewPosition{0.0f, 0.0f, 0.0f};
+		const vec3 viewPosition{0.0f, 0.0f, 0.0f};
 
-		testShader3D.setPointLights(pointLights);
-		testShader3D.setViewPosition(viewPosition);
+		exampleShader.setPointLights(pointLights);
+		exampleShader.setViewPosition(viewPosition);
 
 		gfx::Framebuffer& framebuffer = window.getFramebuffer();
 
@@ -203,7 +184,7 @@ protected:
 		{
 			gfx::RenderPass renderPass{};
 			drawUserInterface(renderPass, frameInfo);
-			drawFpsCounter(renderPass);
+			drawFrameRateCounter(renderPass);
 			renderer.render(framebuffer, renderPass, screenViewport, screenCamera);
 		}
 
@@ -228,12 +209,12 @@ private:
 		SCROLL_DOWN,
 	};
 
-	struct TestShader3D : gfx::Shader3D {
+	struct ExampleShader : gfx::Shader3D {
 		struct PointLight {
-			glm::vec3 position;
-			glm::vec3 ambient;
-			glm::vec3 diffuse;
-			glm::vec3 specular;
+			vec3 position;
+			vec3 ambient;
+			vec3 diffuse;
+			vec3 specular;
 			float constantFalloff;
 			float linearFalloff;
 			float quadraticFalloff;
@@ -331,7 +312,7 @@ private:
 			}
 		)GLSL";
 
-		TestShader3D()
+		ExampleShader()
 			: gfx::Shader3D({
 				  .definitions = std::format("#define POINT_LIGHT_COUNT {}", POINT_LIGHT_COUNT).c_str(),
 				  .vertexShaderSourceCode = gfx::Shader3D::vertexShaderSourceCodeInstancedModel,
@@ -350,7 +331,7 @@ private:
 			}
 		}
 
-		void setViewPosition(glm::vec3 position) {
+		void setViewPosition(vec3 position) {
 			program.setUniformVec3(viewPosition, position);
 		}
 
@@ -359,16 +340,18 @@ private:
 		gfx::ShaderParameter viewPosition{program, "viewPosition"};
 	};
 
-	void resize(glm::ivec2 newWindowSize) {
-		constexpr glm::ivec2 RENDER_RESOLUTION{640, 480};
-		constexpr glm::ivec2 WORLD_VIEWPORT_POSITION{15, 15};
-		constexpr glm::ivec2 WORLD_VIEWPORT_SIZE{380, 450};
+	void resize() {
+		constexpr ivec2 RENDER_RESOLUTION{640, 480};
+		constexpr ivec2 WORLD_VIEWPORT_POSITION{15, 15};
+		constexpr ivec2 WORLD_VIEWPORT_SIZE{380, 450};
 
-		const auto [viewport, scale] = gfx::Viewport::createIntegerScaled(newWindowSize, RENDER_RESOLUTION);
+		const ivec2 size = window.getDrawableSize();
+
+		const auto [viewport, scale] = gfx::Viewport::createIntegerScaled(size, RENDER_RESOLUTION);
 		screenViewport = viewport;
 		screenCamera = gfx::Camera::createOrthographic({
 			.offset{0.0f, 0.0f},
-			.size{static_cast<float>(RENDER_RESOLUTION.x), static_cast<float>(RENDER_RESOLUTION.y)},
+			.size = RENDER_RESOLUTION,
 		});
 
 		worldViewport = {
@@ -383,7 +366,7 @@ private:
 		});
 	}
 
-	void loadBindingsConfiguration(const char* filepath) {
+	void loadBindingsConfiguration(const Filesystem& filesystem, const char* filepath) {
 		const std::unordered_map<std::string_view, Action> actionsByIdentifier{
 			{"confirm", Action::CONFIRM},
 			{"cancel", Action::CANCEL},
@@ -402,18 +385,20 @@ private:
 		};
 
 		try {
-			json::StringParser{InputFileStream::open(filepath).readAllIntoString()}.parseObject(
+			json::StringParser{filesystem.openFile(filepath).readAllIntoString()}.parseObject(
 				json::onElement([&](const json::SourceLocation&, const json::String& key, json::StringParser& parser) -> void {
-					if (const std::optional<app::Input> input = app::findInput(key)) {
+					if (const events::Input input = events::findInput(key); input != events::Input::UNKNOWN) {
 						const auto bindAction = [&](const json::SourceLocation&, const json::String& value) -> void {
 							if (const auto it = actionsByIdentifier.find(value); it != actionsByIdentifier.end()) {
-								inputManager.addBinding(*input, it->second);
+								inputManager.addBinding(input, it->second);
 							} else {
 								throw std::runtime_error{std::format("Invalid action identifier \"{}\".", value)};
 							}
 						};
 						parser.parseValue(json::onArray([&](const json::SourceLocation&, json::StringParser& parser) -> void { parser.parseArray(json::onString(bindAction)); }) |
 										  json::onString(bindAction));
+					} else {
+						throw std::runtime_error{std::format("Invalid input identifier \"{}\".", key)};
 					}
 				}));
 		} catch (const json::Error& e) {
@@ -433,10 +418,12 @@ private:
 		}
 	}
 
-	void playMainMenuMusic(const char* filepath) {
+	void playMainMenuMusic(const Filesystem& filesystem, const char* filepath) {
+		using namespace std::chrono_literals;
+
 		if (soundStage) {
-			if (File::exists(filepath)) {
-				music.emplace(filepath,
+			if (filesystem.fileExists(filepath)) {
+				music.emplace(filesystem, filepath,
 					audio::SoundOptions{
 						.attenuationModel = audio::SoundAttenuationModel::NO_ATTENUATION,
 						.volume = 0.1f,
@@ -450,18 +437,33 @@ private:
 		}
 	}
 
+	void loadCircles() {
+		constexpr Circle<float> CIRCLE_A{.center{60.0f, 80.0f}, .radius = 20.0f};
+		constexpr Circle<float> CIRCLE_B{.center{50.0f, 90.0f}, .radius = 20.0f};
+		constexpr Circle<float> CIRCLE_C{.center{60.0f, 120.0f}, .radius = 20.0f};
+		constexpr Circle<float> CIRCLE_D{.center{300.0f, 100.0f}, .radius = 10.0f};
+		constexpr Circle<float> CIRCLE_E{.center{200.0f, 180.0f}, .radius = 30.0f};
+		constexpr Circle<float> CIRCLE_F{.center{140.0f, 440.0f}, .radius = 20.0f};
+		quadtree[getAabbOf(CIRCLE_A)].push_front(CIRCLE_A);
+		quadtree[getAabbOf(CIRCLE_B)].push_front(CIRCLE_B);
+		quadtree[getAabbOf(CIRCLE_C)].push_front(CIRCLE_C);
+		quadtree[getAabbOf(CIRCLE_D)].push_front(CIRCLE_D);
+		quadtree[getAabbOf(CIRCLE_E)].push_front(CIRCLE_E);
+		quadtree[getAabbOf(CIRCLE_F)].push_front(CIRCLE_F);
+	}
+
 	void drawBackground(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
-		constexpr glm::vec3 BACKGROUND_OFFSET{0.0f, 3.5f, -10.0f};
-		constexpr glm::vec2 BACKGROUND_SCALE{18.0f, 18.0f};
+		constexpr vec3 BACKGROUND_OFFSET{0.0f, 3.5f, -10.0f};
+		constexpr vec2 BACKGROUND_SCALE{18.0f, 18.0f};
 		constexpr float BACKGROUND_ANGLE = -30.0f;
 		constexpr float BACKGROUND_SPEED = 2.0f;
 
 		renderPass.draw(gfx::QuadInstance{
 			.texture = &testTexture,
-			.transformation = glm::translate(BACKGROUND_OFFSET) *                                      //
-		                      glm::orientate4(glm::vec3{glm::radians(BACKGROUND_ANGLE), 0.0f, 0.0f}) * //
-		                      glm::scale(glm::vec3{BACKGROUND_SCALE, 1.0f}) *                          //
-		                      glm::translate(glm::vec3{-0.5f, -0.5f, 0.0f}),
+			.transformation = translate(BACKGROUND_OFFSET) *                            //
+		                      orientate4(vec3{radians(BACKGROUND_ANGLE), 0.0f, 0.0f}) * //
+		                      scale(vec3{BACKGROUND_SCALE, 1.0f}) *                     //
+		                      translate(vec3{-0.5f, -0.5f, 0.0f}),
 			.textureOffset{0.0f, frameInfo.elapsedTime * BACKGROUND_SPEED},
 			.textureScale = 1000.0f * BACKGROUND_SCALE / testTexture.getSize2D(),
 		});
@@ -470,19 +472,19 @@ private:
 	void drawWorld(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
 		renderPass.draw(gfx::ModelInstance{
 			.model = &carrotCakeModel,
-			.transformation = glm::translate(glm::vec3{0.6f, 0.7f, -3.0f} + carrotCakeDisplayPosition) *                     //
-		                      glm::scale(glm::vec3{5.0f * carrotCakeScale.x, 5.0f * carrotCakeScale.y, 5.0f}) *              //
-		                      glm::orientate4(glm::vec3{0.0f, frameInfo.elapsedTime * 1.5f, frameInfo.elapsedTime * 2.0f}) * //
-		                      glm::translate(glm::vec3{0.0f, -0.05f, 0.0f}),
+			.transformation = translate(vec3{0.6f, 0.7f, -3.0f} + carrotCakeDisplayPosition) *                     //
+		                      scale(vec3{5.0f * carrotCakeScale.x, 5.0f * carrotCakeScale.y, 5.0f}) *              //
+		                      orientate4(vec3{0.0f, frameInfo.elapsedTime * 1.5f, frameInfo.elapsedTime * 2.0f}) * //
+		                      translate(vec3{0.0f, -0.05f, 0.0f}),
 		});
 
 		renderPass.draw(gfx::ModelInstance{
-			.shader = &testShader3D,
+			.shader = &exampleShader,
 			.model = &carrotCakeModel,
-			.transformation = glm::translate(glm::vec3{-0.6f, 0.2f, -3.0f}) *                                                //
-		                      glm::scale(glm::vec3{5.0f, 5.0f, 5.0f}) *                                                      //
-		                      glm::orientate4(glm::vec3{0.0f, frameInfo.elapsedTime * 1.5f, frameInfo.elapsedTime * 2.0f}) * //
-		                      glm::translate(glm::vec3{0.0f, -0.05f, 0.0f}),
+			.transformation = translate(vec3{-0.6f, 0.2f, -3.0f}) *                                                //
+		                      scale(vec3{5.0f, 5.0f, 5.0f}) *                                                      //
+		                      orientate4(vec3{0.0f, frameInfo.elapsedTime * 1.5f, frameInfo.elapsedTime * 2.0f}) * //
+		                      translate(vec3{0.0f, -0.05f, 0.0f}),
 		});
 	}
 
@@ -497,24 +499,24 @@ private:
 
 		renderPass.draw(gfx::TextureInstance{
 			.texture = &testTexture,
-			.position{200.0f + glm::cos(frameInfo.elapsedTime) * 50.0f, 120.0f + glm::sin(frameInfo.elapsedTime) * 50.0f},
-			.scale{0.2f + glm::sin(frameInfo.elapsedTime) * 0.1f, 0.2f + glm::cos(frameInfo.elapsedTime) * 0.1f},
+			.position{200.0f + cos(frameInfo.elapsedTime) * 50.0f, 120.0f + sin(frameInfo.elapsedTime) * 50.0f},
+			.scale{0.2f + sin(frameInfo.elapsedTime) * 0.1f, 0.2f + cos(frameInfo.elapsedTime) * 0.1f},
 			.origin{0.5f, 0.5f},
 		});
 
 		renderPass.draw(gfx::SpriteInstance{
 			.atlas = &spriteAtlas,
 			.id = testSprite,
-			.position{450.0f + glm::cos(frameInfo.elapsedTime) * 50.0f, 120.0f + glm::sin(frameInfo.elapsedTime) * 50.0f},
-			.scale{0.2f + glm::sin(frameInfo.elapsedTime) * 0.1f, 0.2f + glm::cos(frameInfo.elapsedTime) * 0.1f},
+			.position{450.0f + cos(frameInfo.elapsedTime) * 50.0f, 120.0f + sin(frameInfo.elapsedTime) * 50.0f},
+			.scale{0.2f + sin(frameInfo.elapsedTime) * 0.1f, 0.2f + cos(frameInfo.elapsedTime) * 0.1f},
 			.origin{0.5f, 0.5f},
 		});
 
 		renderPass.draw(gfx::SpriteInstance{
 			.atlas = &spriteAtlas,
 			.id = testSubSprite,
-			.position{450.0f + glm::cos(frameInfo.elapsedTime) * 50.0f, 320.0f + glm::sin(frameInfo.elapsedTime) * 50.0f},
-			.scale{0.2f + glm::sin(frameInfo.elapsedTime) * 0.1f, 0.2f + glm::cos(frameInfo.elapsedTime) * 0.1f},
+			.position{450.0f + cos(frameInfo.elapsedTime) * 50.0f, 320.0f + sin(frameInfo.elapsedTime) * 50.0f},
+			.scale{0.2f + sin(frameInfo.elapsedTime) * 0.1f, 0.2f + cos(frameInfo.elapsedTime) * 0.1f},
 			.origin{0.5f, 0.5f},
 		});
 
@@ -575,10 +577,10 @@ private:
 			.position{410.0f, 240.0f},
 		});
 
-		if (inputManager.isPressed(app::Input::KEY_SPACE)) {
+		if (inputManager.isPressed(events::Input::KEY_SPACE)) {
 			constexpr Capsule<2, float> STATIC_CAPSULE{.centerLine{.pointA{80.0f, 80.0f}, .pointB{300.0f, 200.0f}}, .radius = 50.0f};
-			constexpr glm::vec2 STATIC_CAPSULE_VECTOR = STATIC_CAPSULE.centerLine.pointB - STATIC_CAPSULE.centerLine.pointA;
-			const Circle<float> movingCircle{.center = glm::vec2{200.0f, 50.0f} + glm::vec2{carrotCakeDisplayPosition} * 50.0f, .radius = 32.0f};
+			constexpr vec2 STATIC_CAPSULE_VECTOR = STATIC_CAPSULE.centerLine.pointB - STATIC_CAPSULE.centerLine.pointA;
+			const Circle<float> movingCircle{.center = vec2{200.0f, 50.0f} + vec2{carrotCakeDisplayPosition} * 50.0f, .radius = 32.0f};
 			const Color movingCircleColor = (intersects(movingCircle, STATIC_CAPSULE)) ? Color::RED : Color::YELLOW;
 
 			renderPass.draw(gfx::RectangleInstance{
@@ -597,8 +599,8 @@ private:
 			});
 			renderPass.draw(gfx::RectangleInstance{
 				.position = STATIC_CAPSULE.centerLine.pointA,
-				.size{glm::length(STATIC_CAPSULE_VECTOR), STATIC_CAPSULE.radius * 2.0f},
-				.angle = std::atan2(STATIC_CAPSULE_VECTOR.y, STATIC_CAPSULE_VECTOR.x),
+				.size{length(STATIC_CAPSULE_VECTOR), STATIC_CAPSULE.radius * 2.0f},
+				.angle = static_cast<float>(atan2(STATIC_CAPSULE_VECTOR.y, STATIC_CAPSULE_VECTOR.x)),
 				.origin{0.0f, 0.5f},
 				.tintColor = Color::GREEN,
 			});
@@ -612,7 +614,7 @@ private:
 			});
 
 			const auto drawBorder = [&](const Box<2, float>& box, float lineThickness, Color color) -> void {
-				const glm::vec2 extent = box.max - box.min;
+				const vec2 extent = box.max - box.min;
 				renderPass.draw(gfx::RectangleInstance{.position = box.min, .size{extent.x, lineThickness}, .origin{0.0f, 0.0f}, .tintColor = color});
 				renderPass.draw(gfx::RectangleInstance{.position{box.min.x, box.max.y}, .size{extent.x, lineThickness}, .origin{0.0f, 1.0f}, .tintColor = color});
 				renderPass.draw(gfx::RectangleInstance{.position = box.min, .size{lineThickness, extent.y}, .origin{0.0f, 0.0f}, .tintColor = color});
@@ -667,20 +669,21 @@ private:
 			});
 		}
 
-		if (inputManager.justReleased(app::Input::KEY_SPACE)) {
+		if (inputManager.justReleased(events::Input::KEY_SPACE)) {
 			inputManager.resetAllInputs();
 		}
 	}
 
-	void drawFpsCounter(gfx::RenderPass& renderPass) {
-		const unsigned fps = getLatestMeasuredFps();
+	void drawFrameRateCounter(gfx::RenderPass& renderPass) {
+		const unsigned fps = getLastSecondFrameCount();
 		const gfx::Font::ShapedText fpsText = mainFont.shapeText(renderer, 16, std::format("FPS: {}", fps));
-		const glm::vec2 fpsPosition{15.0f + 2.0f, 480.0f - 15.0f - 20.0f};
+		const vec2 fpsPosition{15.0f + 2.0f, 480.0f - 15.0f - 20.0f};
 		const Color fpsColor = (fps < 60) ? Color::RED : (fps < 120) ? Color::YELLOW : (fps < 240) ? Color::GRAY : Color::LIME;
-		renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = fpsText, .position = fpsPosition + glm::vec2{1.0f, -1.0f}, .color = Color::BLACK});
+		renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = fpsText, .position = fpsPosition + vec2{1.0f, -1.0f}, .color = Color::BLACK});
 		renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = fpsText, .position = fpsPosition, .color = fpsColor});
 	}
 
+	events::EventPump eventPump{};
 	gfx::Window window;
 	gfx::Renderer renderer{};
 	gfx::Viewport screenViewport{};
@@ -688,31 +691,31 @@ private:
 	gfx::Camera screenCamera{};
 	gfx::Camera worldCamera{};
 	audio::Listener listener{};
-	gfx::Texture testTexture{gfx::Image{"textures/test.png"}};
-	gfx::Texture circleTexture{gfx::Image{"textures/circle.png"}, {.useLinearFiltering = false, .useMipmap = false}};
-	gfx::Model carrotCakeModel{"models/carrot_cake.obj"};
 	gfx::SpriteAtlas spriteAtlas{};
-	gfx::SpriteAtlas::SpriteId testSprite = spriteAtlas.insert(renderer, gfx::Image{"textures/test.png"});
-	gfx::SpriteAtlas::SpriteId testSubSprite = spriteAtlas.createSubSprite(testSprite, 200, 200, 100, 100, gfx::SpriteAtlas::FLIP_HORIZONTALLY);
-	gfx::Font mainFont{"fonts/unscii/unscii-8.ttf"};
-	TestShader3D testShader3D{};
-	app::InputManager inputManager{};
+	gfx::Texture testTexture;
+	gfx::Texture circleTexture;
+	gfx::Model carrotCakeModel;
+	gfx::SpriteAtlas::SpriteId testSprite;
+	gfx::SpriteAtlas::SpriteId testSubSprite;
+	gfx::Font mainFont;
+	ExampleShader exampleShader{};
+	events::InputManager inputManager{};
 	std::optional<audio::SoundStage> soundStage{};
 	std::optional<audio::Sound> music{};
 	audio::SoundStage::SoundInstanceId musicId{};
 	float verticalFieldOfView;
-	glm::vec3 carrotCakeCurrentPosition{0.0f, 0.0f, 0.0f};
-	glm::vec3 carrotCakePreviousPosition{0.0f, 0.0f, 0.0f};
-	glm::vec3 carrotCakeDisplayPosition{0.0f, 0.0f, 0.0f};
-	glm::vec2 carrotCakeScale{1.0f, 1.0f};
-	glm::vec3 carrotCakeVelocity{0.0f, 0.0f, 0.0f};
+	vec3 carrotCakeCurrentPosition{0.0f, 0.0f, 0.0f};
+	vec3 carrotCakePreviousPosition{0.0f, 0.0f, 0.0f};
+	vec3 carrotCakeDisplayPosition{0.0f, 0.0f, 0.0f};
+	vec2 carrotCakeScale{1.0f, 1.0f};
+	vec3 carrotCakeVelocity{0.0f, 0.0f, 0.0f};
 	Time<float> timerA{};
 	Time<float> timerB{};
 	std::size_t counterA = 0;
 	std::size_t counterB = 0;
 	LooseQuadtree<std::forward_list<Circle<float>>> quadtree{
 		Box<2, float>{.min{15.0f, 15.0f}, .max{15.0f + 380.0f, 15.0f + 450.0f}},
-		glm::vec2{32.0f, 32.0f},
+		vec2{32.0f, 32.0f},
 	};
 };
 
@@ -757,9 +760,9 @@ public:
 			} else if (argument == "-vsync") {
 				parseOptionValue("vsync", options.windowOptions.vSync);
 			} else if (argument == "-min-fps") {
-				parseOptionValue("min fps", options.applicationOptions.minFps);
+				parseOptionValue("min fps", options.applicationOptions.minFrameRate);
 			} else if (argument == "-max-fps") {
-				parseOptionValue("max fps", options.applicationOptions.maxFps);
+				parseOptionValue("max fps", options.applicationOptions.maxFrameRate);
 			} else if (argument == "-msaa") {
 				parseOptionValue("msaa", options.windowOptions.msaaLevel);
 			} else if (argument == "-main-menu-music") {
@@ -814,19 +817,27 @@ private:
 
 int main(int argc, char* argv[]) {
 	try {
-		try {
-			match(OptionsParser{argc, argv}.parseGameOptions())(
-				[&](const GameOptions& options) -> void {
-					Game game{argv[0], options};
-					game.run();
-				},
-				[&](const std::string& string) -> void { std::fprintf(stderr, "%s\n", string.c_str()); });
-		} catch (const std::exception& e) {
-			std::fprintf(stderr, "%s\n", e.what());
-			Game::showSimpleMessageBox(Game::MessageBoxType::ERROR_MESSAGE, "Error", e.what());
-			return EXIT_FAILURE;
+		Filesystem filesystem{argv[0],
+			FilesystemOptions{
+				.organizationName = "Donut",
+				.applicationName = "ExampleGame",
+				.dataDirectory = "data",
+				.archiveSearchPath = ".",
+				.archiveSearchFileExtension = "pk3",
+			}};
+
+		const Variant<GameOptions, std::string> options = OptionsParser{argc, argv}.parseGameOptions();
+		if (options.is<std::string>()) {
+			std::fprintf(stderr, "%s\n", options.as<std::string>().c_str());
+			return EXIT_SUCCESS;
 		}
-	} catch (...) {
+
+		ExampleGame game{filesystem, options.as<GameOptions>()};
+
+		game.run();
+	} catch (const std::exception& e) {
+		std::fprintf(stderr, "%s\n", e.what());
+		events::MessageBox::show(events::MessageBox::Type::ERROR_MESSAGE, "Error", e.what());
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;

@@ -4,11 +4,9 @@
 #include <donut/Time.hpp>
 #include <donut/UniqueHandle.hpp>
 #include <donut/audio/Listener.hpp>
+#include <donut/math.hpp>
 
-#include <glm/glm.hpp> // glm::...
-
-namespace donut {
-namespace audio {
+namespace donut::audio {
 
 class Sound; // Forward declaration, to avoid including Sound.hpp.
 
@@ -111,7 +109,7 @@ public:
 	 * \sa playSoundInBackground()
 	 * \sa createPausedSoundInBackground()
 	 */
-	SoundInstanceId playSound(const Sound& sound, float volume = -1.0f, glm::vec3 position = {0.0f, 0.0f, 0.0f}, glm::vec3 velocity = {0.0f, 0.0f, 0.0f});
+	SoundInstanceId playSound(const Sound& sound, float volume = -1.0f, vec3 position = {0.0f, 0.0f, 0.0f}, vec3 velocity = {0.0f, 0.0f, 0.0f});
 
 	/**
 	 * Create a new sound instance without any panning and start playing it.
@@ -284,7 +282,7 @@ public:
 	 * \sa setSoundVelocity()
 	 * \sa setSoundPositionAndVelocity()
 	 */
-	void setSoundPosition(SoundInstanceId id, glm::vec3 newPosition);
+	void setSoundPosition(SoundInstanceId id, vec3 newPosition);
 
 	/**
 	 * Set the current 3D velocity of a specific sound instance.
@@ -301,7 +299,7 @@ public:
 	 * \sa setSoundPosition()
 	 * \sa setSoundPositionAndVelocity()
 	 */
-	void setSoundVelocity(SoundInstanceId id, glm::vec3 newVelocity);
+	void setSoundVelocity(SoundInstanceId id, vec3 newVelocity);
 
 	/**
 	 * Set both the 3D position and 3D velocity of a specific sound instance at
@@ -321,7 +319,7 @@ public:
 	 * \sa setSoundPosition()
 	 * \sa setSoundVelocity()
 	 */
-	void setSoundPositionAndVelocity(SoundInstanceId id, glm::vec3 newPosition, glm::vec3 newVelocity);
+	void setSoundPositionAndVelocity(SoundInstanceId id, vec3 newPosition, vec3 newVelocity);
 
 	/**
 	 * Set the volume of a specific sound instance.
@@ -433,11 +431,10 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	UniqueHandle<void*, EngineDeleter, nullptr> engine{};
+	UniqueHandle<void*, EngineDeleter> engine{};
 	Time<float> time{};
 };
 
-} // namespace audio
-} // namespace donut
+} // namespace donut::audio
 
 #endif

@@ -4,8 +4,7 @@
 #include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Handle.hpp>
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Type of a ShaderStage in a ShaderProgram.
@@ -72,7 +71,6 @@ private:
 	UniqueHandle<Handle, ShaderDeleter> shader{};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

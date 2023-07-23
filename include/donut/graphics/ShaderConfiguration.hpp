@@ -4,8 +4,7 @@
 #include <compare> // std::strong_ordering
 #include <cstdint> // std::int32_t, std::uint8_t, std::uint32_t
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Depth buffer mode used in a ShaderConfiguration.
@@ -445,7 +444,6 @@ struct ShaderConfiguration {
 	[[nodiscard]] constexpr std::strong_ordering operator<=>(const ShaderConfiguration& other) const = default;
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

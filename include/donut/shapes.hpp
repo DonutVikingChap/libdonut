@@ -1,8 +1,7 @@
 #ifndef DONUT_SHAPES_HPP
 #define DONUT_SHAPES_HPP
 
-#include <glm/glm.hpp>      // glm::...
-#include <glm/gtx/norm.hpp> // glm::length2, glm::distance2
+#include <donut/math.hpp>
 
 namespace donut {
 
@@ -12,8 +11,8 @@ namespace donut {
  * \tparam L number of vector dimensions.
  * \tparam T component type for vector coordinates.
  */
-template <glm::length_t L, typename T>
-using Point = glm::vec<L, T>;
+template <length_t L, typename T>
+using Point = vec<L, T>;
 
 /**
  * Generic length in space.
@@ -21,8 +20,8 @@ using Point = glm::vec<L, T>;
  * \tparam L number of vector dimensions.
  * \tparam T component type for vector coordinates.
  */
-template <glm::length_t L, typename T>
-using Length = glm::vec<L, T>;
+template <length_t L, typename T>
+using Length = vec<L, T>;
 
 /**
  * Generic line segment between two points.
@@ -30,7 +29,7 @@ using Length = glm::vec<L, T>;
  * \tparam L number of vector dimensions.
  * \tparam T component type for vector coordinates.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 struct LineSegment {
 	Point<L, T> pointA; ///< Position of the first point of the line segment.
 	Point<L, T> pointB; ///< Position of the second point of the line segment.
@@ -42,7 +41,7 @@ struct LineSegment {
  * \tparam L number of vector dimensions.
  * \tparam T component type for vector coordinates.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 struct Sphere {
 	Point<L, T> center; ///< Position of the center of the sphere.
 	T radius;           ///< Radius of the sphere.
@@ -88,7 +87,7 @@ struct Circle {
  * \tparam L number of vector dimensions.
  * \tparam T component type for vector coordinates.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 struct Capsule {
 	LineSegment<L, T> centerLine; ///< Center line of the capsule.
 	T radius;                     ///< Radius of the capsule from the center line.
@@ -107,7 +106,7 @@ struct Capsule {
  * \tparam L number of vector dimensions.
  * \tparam T component type for vector coordinates.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 struct Box {
 	Point<L, T> min; ///< Position with the minimum coordinates of the box extents on each coordinate axis.
 	Point<L, T> max; ///< Position with the maximum coordinates of the box extents on each coordinate axis.
@@ -154,11 +153,11 @@ struct Rectangle {
  *
  * \return an axis-aligned box that contains the entire line segment.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr Box<L, T> getAabbOf(const LineSegment<L, T>& line) noexcept {
 	return {
-		.min = glm::min(line.pointA, line.pointB),
-		.max = glm::max(line.pointA, line.pointB),
+		.min = min(line.pointA, line.pointB),
+		.max = max(line.pointA, line.pointB),
 	};
 }
 
@@ -169,7 +168,7 @@ template <glm::length_t L, typename T>
  *
  * \return an axis-aligned box that contains the entire sphere.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr Box<L, T> getAabbOf(const Sphere<L, T>& sphere) noexcept {
 	return {
 		.min = sphere.center - Length<L, T>{sphere.radius},
@@ -199,11 +198,11 @@ template <typename T>
  *
  * \return an axis-aligned box that contains the entire capsule.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr Box<L, T> getAabbOf(const Capsule<L, T>& capsule) noexcept {
 	return {
-		.min = glm::min(capsule.centerLine.pointA, capsule.centerLine.pointB) - Length<L, T>{capsule.radius},
-		.max = glm::max(capsule.centerLine.pointA, capsule.centerLine.pointB) + Length<L, T>{capsule.radius},
+		.min = min(capsule.centerLine.pointA, capsule.centerLine.pointB) - Length<L, T>{capsule.radius},
+		.max = max(capsule.centerLine.pointA, capsule.centerLine.pointB) + Length<L, T>{capsule.radius},
 	};
 }
 
@@ -214,7 +213,7 @@ template <glm::length_t L, typename T>
  *
  * \return an axis-aligned box that contains the entire axis-aligned box.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr Box<L, T> getAabbOf(const Box<L, T>& box) noexcept {
 	return box;
 }
@@ -240,9 +239,9 @@ template <typename T>
  * \return true if the first and second spheres are colliding with each other,
  *         false otherwise.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr bool intersects(const Sphere<L, T>& a, const Sphere<L, T>& b) noexcept {
-	return glm::distance2(a.center, b.center) < glm::length2(a.radius + b.radius);
+	return distance2(a.center, b.center) < length2(a.radius + b.radius);
 }
 
 /**
@@ -268,9 +267,9 @@ template <typename T>
  * \return true if the first and second boxes are colliding with each other,
  *         false otherwise.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr bool intersects(const Box<L, T>& a, const Box<L, T>& b) noexcept {
-	for (glm::length_t i = 0; i < L; ++i) {
+	for (length_t i = 0; i < L; ++i) {
 		if (a.min[i] >= b.max[i] || a.max[i] <= b.min[i]) {
 			return false;
 		}
@@ -357,9 +356,9 @@ template <typename T>
  * \return true if the sphere and box are colliding with each other, false
  *         otherwise.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr bool intersects(const Sphere<L, T>& a, const Box<L, T>& b) noexcept {
-	return glm::distance2(a.center, glm::clamp(a.center, b.min, b.max)) < glm::length2(a.radius);
+	return distance2(a.center, clamp(a.center, b.min, b.max)) < length2(a.radius);
 }
 
 /**
@@ -371,7 +370,7 @@ template <glm::length_t L, typename T>
  * \return true if the box and sphere are colliding with each other, false
  *         otherwise.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr bool intersects(const Box<L, T>& a, const Sphere<L, T>& b) noexcept {
 	return intersects(b, a);
 }
@@ -469,22 +468,22 @@ template <typename T>
  * \return true if the sphere and capsule are colliding with each other, false
  *         otherwise.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr bool intersects(const Sphere<L, T>& a, const Capsule<L, T>& b) noexcept {
-	const float combinedRadiusSquared = glm::length2(a.radius + b.radius);
-	const glm::vec2 linePointAToPointB = b.centerLine.pointB - b.centerLine.pointA;
-	const glm::vec2 linePointAToSphereCenter = a.center - b.centerLine.pointA;
-	const float linePointAToSphereCenterAlongLine = glm::dot(linePointAToSphereCenter, linePointAToPointB);
+	const T combinedRadiusSquared = length2(a.radius + b.radius);
+	const vec<L, T> linePointAToPointB = b.centerLine.pointB - b.centerLine.pointA;
+	const vec<L, T> linePointAToSphereCenter = a.center - b.centerLine.pointA;
+	const T linePointAToSphereCenterAlongLine = dot(linePointAToSphereCenter, linePointAToPointB);
 	if (linePointAToSphereCenterAlongLine <= 0.0f) {
-		return glm::length2(linePointAToSphereCenter) < combinedRadiusSquared;
+		return length2(linePointAToSphereCenter) < combinedRadiusSquared;
 	}
-	const glm::vec2 linePointBToSphereCenter = a.center - b.centerLine.pointB;
-	const float linePointBToSphereCenterAlongLine = glm::dot(linePointBToSphereCenter, linePointAToPointB);
+	const vec<L, T> linePointBToSphereCenter = a.center - b.centerLine.pointB;
+	const T linePointBToSphereCenterAlongLine = dot(linePointBToSphereCenter, linePointAToPointB);
 	if (linePointBToSphereCenterAlongLine >= 0.0f) {
-		return glm::length2(linePointBToSphereCenter) < combinedRadiusSquared;
+		return length2(linePointBToSphereCenter) < combinedRadiusSquared;
 	}
-	const glm::vec2 lineToSphereCenterOrthogonal = linePointAToSphereCenter - linePointAToPointB * (linePointAToSphereCenterAlongLine / glm::length2(linePointAToPointB));
-	return glm::length2(lineToSphereCenterOrthogonal) < combinedRadiusSquared;
+	const vec<L, T> lineToSphereCenterOrthogonal = linePointAToSphereCenter - linePointAToPointB * (linePointAToSphereCenterAlongLine / length2(linePointAToPointB));
+	return length2(lineToSphereCenterOrthogonal) < combinedRadiusSquared;
 }
 
 /**
@@ -496,7 +495,7 @@ template <glm::length_t L, typename T>
  * \return true if the capsule and sphere are colliding with each other, false
  *         otherwise.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr bool intersects(const Capsule<L, T>& a, const Sphere<L, T>& b) noexcept {
 	return intersects(b, a);
 }
@@ -538,7 +537,7 @@ template <typename T>
  * \return true if the sphere and line segment are colliding with each other,
  *         false otherwise.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr bool intersects(const Sphere<L, T>& a, const LineSegment<L, T>& b) noexcept {
 	return intersects(a, Capsule<L, T>{.centerLine = b, .radius = T{0}});
 }
@@ -552,7 +551,7 @@ template <glm::length_t L, typename T>
  * \return true if the line segment and sphere are colliding with each other,
  *         false otherwise.
  */
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 [[nodiscard]] constexpr bool intersects(const LineSegment<L, T>& a, const Sphere<L, T>& b) noexcept {
 	return intersects(b, a);
 }
@@ -585,9 +584,9 @@ template <typename T>
 	return intersects(b, a);
 }
 
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 constexpr bool Sphere<L, T>::contains(const Point<L, T>& point) const noexcept {
-	return glm::distance2(center, point) < glm::length2(radius);
+	return distance2(center, point) < length2(radius);
 }
 
 template <typename T>
@@ -595,14 +594,14 @@ constexpr bool Circle<T>::contains(const Point<2, T>& point) const noexcept {
 	return static_cast<Sphere<2, T>>(*this).contains(point);
 }
 
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 constexpr bool Capsule<L, T>::contains(const Point<L, T>& point) const noexcept {
 	return intersects(*this, Sphere<L, T>{.center = point, .radius = T{0}});
 }
 
-template <glm::length_t L, typename T>
+template <length_t L, typename T>
 constexpr bool Box<L, T>::contains(const Point<L, T>& point) const noexcept {
-	for (glm::length_t i = 0; i < L; ++i) {
+	for (length_t i = 0; i < L; ++i) {
 		if (point[i] < min[i] || point[i] >= max[i]) {
 			return false;
 		}

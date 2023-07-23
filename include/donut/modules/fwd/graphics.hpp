@@ -4,8 +4,7 @@
 #include <cstddef> // std::size_t
 #include <cstdint> // std::uint32_t
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 class Buffer;
 
@@ -82,11 +81,9 @@ class VertexArray;
 
 struct Viewport;
 
-using WindowId = std::uint32_t;
 struct WindowOptions;
 class Window;
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

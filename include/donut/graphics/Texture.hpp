@@ -5,14 +5,13 @@
 #include <donut/UniqueHandle.hpp>
 #include <donut/graphics/Handle.hpp>
 #include <donut/graphics/Image.hpp>
+#include <donut/math.hpp>
 
-#include <cstddef>     // std::size_t
-#include <cstdint>     // std::int32_t
-#include <glm/glm.hpp> // glm::...
-#include <optional>    // std::optional
+#include <cstddef>  // std::size_t
+#include <cstdint>  // std::int32_t
+#include <optional> // std::optional
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 class Renderer; // Forward declaration, to avoid a circular include of Renderer.hpp.
 
@@ -467,7 +466,7 @@ public:
 	 * \sa getWidth()
 	 * \sa getHeight()
 	 */
-	[[nodiscard]] glm::vec2 getSize2D() const noexcept {
+	[[nodiscard]] vec2 getSize2D() const noexcept {
 		return {static_cast<float>(width), static_cast<float>(height)};
 	}
 
@@ -554,7 +553,6 @@ private:
 	TextureOptions options{};
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

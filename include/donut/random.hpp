@@ -9,8 +9,7 @@
 #include <limits>    // std::numeric_limits
 #include <ostream>   // std::basic_ostream
 
-namespace donut {
-namespace random {
+namespace donut::random {
 
 /**
  * Implementation of the SplitMix64 pseudorandom number generator that provides
@@ -194,7 +193,6 @@ private:
 	std::array<std::uint64_t, 2> state{};
 };
 
-} // namespace random
-} // namespace donut
+} // namespace donut::random
 
 #endif

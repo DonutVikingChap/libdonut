@@ -7,8 +7,7 @@
 #include <string>  // std::string, std::to_string
 #include <utility> // std::index_sequence, std::make_index_sequence
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 class ShaderProgram; // Forward declaration, to avoid a circular include of ShaderProgram.hpp.
 
@@ -65,7 +64,7 @@ public:
 	 *       be invalid.
 	 */
 	ShaderArray(const ShaderProgram& program, const char* name)
-		: array([&]<std::size_t... Indices>(std::index_sequence<Indices...>)->std::array<T, N> {
+		: array([&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> std::array<T, N> {
 			return {(T{program, (std::string{name} + "[" + std::to_string(Indices) + "]").c_str()})...};
 		}(std::make_index_sequence<N>{})) {}
 
@@ -125,7 +124,6 @@ private:
 	std::array<T, N> array;
 };
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

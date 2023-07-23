@@ -3,15 +3,13 @@
 
 #include <cstdint> // std::uint32_t
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 /**
  * Generic GPU resource handle.
  */
 using Handle = std::uint32_t;
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
 
 #endif

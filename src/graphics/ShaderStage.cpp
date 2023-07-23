@@ -7,8 +7,7 @@
 #include <cstddef> // std::size_t
 #include <string>  // std::string
 
-namespace donut {
-namespace graphics {
+namespace donut::graphics {
 
 ShaderStage::ShaderStage(ShaderStageType type, const char* definitions, const char* sourceCode) {
 	if (!sourceCode) {
@@ -59,5 +58,4 @@ void ShaderStage::ShaderDeleter::operator()(Handle handle) const noexcept {
 	glDeleteShader(handle);
 }
 
-} // namespace graphics
-} // namespace donut
+} // namespace donut::graphics
