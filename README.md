@@ -52,7 +52,7 @@ Libdonut is an application framework for cross-platform game development in C++2
     - Floating-point RGBA [Color](include/donut/Color.hpp) type that includes predefined constants for common web colors.
     - Virtual [Filesystem](include/donut/Filesystem.hpp) based on [PhysicsFS](https://icculus.org/physfs/):
         - Use virtual filepaths for uniform access to any resource [File](include/donut/File.hpp)  that resides in a mounted directory, regardless of its actual location.
-        - Supports automatic mounting of pak/zip/etc. archives at startup for easy mod loading.
+        - Supports automatic mounting of pk3/zip/etc. archives at startup for easy mod loading.
         - Used for all built-in resource loading in libdonut.
     - Custom [Variant](include/donut/Variant.hpp) implementation:
         - Enhances the API of std::variant by adding the methods `is<T>()`, `as<T>()`, `get<T>()` and `get_if<T>()` as well as a freestanding `match` function.
@@ -75,7 +75,7 @@ Libdonut is an application framework for cross-platform game development in C++2
 
 The following programs need to be installed in order to build an application using libdonut:
 
-- [CMake](https://cmake.org/) (version 3.15+).
+- [CMake](https://cmake.org/) (version 3.21+).
 - A C++20-compatible compiler, such as:
     - [GCC](https://gcc.gnu.org/) (version 13+), or
     - [Clang](https://clang.llvm.org/) (version 17+), or

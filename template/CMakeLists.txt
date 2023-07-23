@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 project("Your project name here")
 
 option(BUILD_SHARED_LIBS "Build dependencies as shared libraries" OFF)
@@ -20,21 +20,16 @@ add_executable("${APP_TARGET_NAME}"
 target_compile_features("${APP_TARGET_NAME}" PRIVATE cxx_std_20)
 
 target_compile_options("${APP_TARGET_NAME}" PRIVATE
-    $<$<CXX_COMPILER_ID:GNU>:   -std=c++20  -Wall -Wextra   -Wconversion    -Wpedantic      -Werror                 $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
-    $<$<CXX_COMPILER_ID:Clang>: -std=c++20  -Wall -Wextra   -Wconversion    -Wpedantic      -Werror                 $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
+    $<$<CXX_COMPILER_ID:GNU>:   -std=c++20  -Wall -Wextra   -Wconversion    -Wpedantic      -Werror                 $<$<CONFIG:Debug>:-g3>  $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g3>>
+    $<$<CXX_COMPILER_ID:Clang>: -std=c++20  -Wall -Wextra   -Wconversion    -Wpedantic      -Werror                 $<$<CONFIG:Debug>:-g3>  $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g3>>
     $<$<CXX_COMPILER_ID:MSVC>:  /std:c++20  /W4                             /permissive-    /WX     /wd4996 /utf-8  $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>    $<$<CONFIG:MinSizeRel>:/Os> $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
 
 target_link_libraries("${APP_TARGET_NAME}" PRIVATE
 	donut::donut
 	Threads::Threads)
 
-if(BUILD_SHARED_LIBS)
-	target_link_libraries("${APP_TARGET_NAME}" PRIVATE ${CMAKE_DL_LIBS})
-	add_custom_command(TARGET "${APP_TARGET_NAME}"
-		POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			$<TARGET_FILE:donut>
-			"$<TARGET_FILE_DIR:${APP_TARGET_NAME}>")
+if(CMAKE_IMPORT_LIBRARY_SUFFIX AND BUILD_SHARED_LIBS)
+	add_custom_command(TARGET "${APP_TARGET_NAME}" POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_RUNTIME_DLLS:${APP_TARGET_NAME}>" "$<TARGET_FILE_DIR:${APP_TARGET_NAME}>" COMMAND_EXPAND_LISTS)
 endif()
 
 include(GNUInstallDirs)

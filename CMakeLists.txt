@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 project("libdonut"
 	VERSION 0.2.9
 	DESCRIPTION "Application framework for cross-platform game development"
@@ -135,8 +135,8 @@ if(DONUT_ENABLE_LIBRARY)
 			$<$<CXX_COMPILER_ID:Clang>: -std=c++20>
 			$<$<CXX_COMPILER_ID:MSVC>:  /std:c++20  /utf-8>
 		PRIVATE
-			$<$<CXX_COMPILER_ID:GNU>:   -Wall   -Wextra -Wconversion    -Wpedantic              $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
-			$<$<CXX_COMPILER_ID:Clang>: -Wall   -Wextra -Wconversion    -Wpedantic              $<$<CONFIG:Debug>:-g>   $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g>>
+			$<$<CXX_COMPILER_ID:GNU>:   -Wall   -Wextra -Wconversion    -Wpedantic              $<$<CONFIG:Debug>:-g3>  $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g3>>
+			$<$<CXX_COMPILER_ID:Clang>: -Wall   -Wextra -Wconversion    -Wpedantic              $<$<CONFIG:Debug>:-g3>  $<$<CONFIG:Release>:-O3>  $<$<CONFIG:MinSizeRel>:-Os>   $<$<CONFIG:RelWithDebInfo>:-O3 -g3>>
 			$<$<CXX_COMPILER_ID:MSVC>:  /W4                             /permissive-    /wd4996 $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>  $<$<CONFIG:MinSizeRel>:/Os>   $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
 
 	target_link_libraries(donut
@@ -146,16 +146,6 @@ if(DONUT_ENABLE_LIBRARY)
 			${DONUT_PUBLIC_DEPENDENCIES}
 		PRIVATE
 			${DONUT_PRIVATE_DEPENDENCIES})
-
-	if(BUILD_SHARED_LIBS)
-		target_link_libraries(donut PRIVATE ${CMAKE_DL_LIBS})
-		add_custom_command(TARGET donut
-			POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-				$<TARGET_FILE:physfs>
-				$<TARGET_FILE:SDL2>
-				$<TARGET_FILE_DIR:donut>)
-	endif()
 
 	include(GNUInstallDirs)
 
