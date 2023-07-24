@@ -23,9 +23,9 @@ struct RendererOptions {};
  *
  * An instance of this class should be kept throughout the lifetime of the
  * application in order to continuously render the visual state of the latest
- * frame produced through the Application::display() callback. It can also be
- * used for smaller render jobs in the middle of a frame, such as copying a
- * GPU Texture.
+ * frame produced through the application::Application::display() callback. It
+ * can also be used for smaller render jobs in the middle of a frame, such as
+ * copying a GPU Texture.
  *
  * \sa RenderPass
  */
@@ -101,7 +101,7 @@ public:
 	 * \param camera camera to render from.
 	 *
 	 * \note This function should typically be called at least once every frame
-	 *       during the Application::display() callback.
+	 *       during the application::Application::display() callback.
 	 */
 	void render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const Camera& camera);
 
