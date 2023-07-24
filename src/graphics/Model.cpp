@@ -106,11 +106,20 @@ void generateTangentSpace(std::span<Model::Object::Vertex> vertices, std::span<c
 	return Texture{Image{filesystem, filepath.c_str(), {.highDynamicRange = filepath.ends_with(".hdr")}}};
 }
 
-void loadObjScene(Model& output, const Filesystem& filesystem, const obj::Scene& scene) {
+void loadObjScene(Model& output, const Filesystem& filesystem, const char* filepath) {
+	const obj::Scene scene = obj::Scene::parse(filesystem.openFile(filepath).readAllIntoString());
+
+	std::string filepathPrefix = filepath;
+	if (const std::size_t filepathLastSlashPosition = filepathPrefix.rfind('/'); filepathLastSlashPosition != std::string::npos) {
+		filepathPrefix.erase(filepathLastSlashPosition + 1, std::string::npos);
+	} else {
+		filepathPrefix.clear();
+	}
+
 	std::vector<obj::mtl::Library> materialLibraries{};
 	materialLibraries.reserve(scene.materialLibraryFilenames.size());
 	for (const std::string& materialLibraryFilename : scene.materialLibraryFilenames) {
-		materialLibraries.push_back(obj::mtl::Library::parse(filesystem.openFile(materialLibraryFilename.c_str()).readAllIntoString()));
+		materialLibraries.push_back(obj::mtl::Library::parse(filesystem.openFile((filepathPrefix + materialLibraryFilename).c_str()).readAllIntoString()));
 	}
 
 	struct FaceVertexHash {
@@ -174,13 +183,13 @@ void loadObjScene(Model& output, const Filesystem& filesystem, const obj::Scene&
 						it != materialLibrary.materials.end()) {
 						const obj::mtl::Material& material = *it;
 						if (!material.diffuseMapName.empty()) {
-							groupMaterial.diffuseMap = loadTexture(filesystem, material.diffuseMapName);
+							groupMaterial.diffuseMap = loadTexture(filesystem, filepathPrefix + material.diffuseMapName);
 						}
 						if (!material.specularMapName.empty()) {
-							groupMaterial.specularMap = loadTexture(filesystem, material.specularMapName);
+							groupMaterial.specularMap = loadTexture(filesystem, filepathPrefix + material.specularMapName);
 						}
 						if (!material.bumpMapName.empty()) {
-							groupMaterial.normalMap = loadTexture(filesystem, material.bumpMapName);
+							groupMaterial.normalMap = loadTexture(filesystem, filepathPrefix + material.bumpMapName);
 						}
 						groupMaterial.specularExponent = material.specularExponent;
 						break;
@@ -201,7 +210,7 @@ void loadObjScene(Model& output, const Filesystem& filesystem, const obj::Scene&
 
 Model::Model(const Filesystem& filesystem, const char* filepath) {
 	try {
-		loadObjScene(*this, filesystem, obj::Scene::parse(filesystem.openFile(filepath).readAllIntoString()));
+		loadObjScene(*this, filesystem, filepath);
 	} catch (const obj::Error& e) {
 		throw Error{std::format("Failed to load model \"{}\": Line {}: {}", filepath, e.lineNumber, e.what())};
 	} catch (const std::exception& e) {
