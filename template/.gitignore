@@ -1,0 +1,13 @@
+.vs/
+.vscode/
+.cache/
+build*/
+bin*/
+Testing/
+CMakeLists.txt.user*
+*.autosave
+*.creator
+*.creator.user*
+\#*\#
+.\#*
+*~
