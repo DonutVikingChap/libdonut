@@ -60,13 +60,22 @@ const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
         float quadraticFalloff;
     };
 
-    const uint POINT_LIGHT_COUNT = uint(1);
+    const uint POINT_LIGHT_COUNT = uint(2);
     const PointLight POINT_LIGHTS[POINT_LIGHT_COUNT] = PointLight[POINT_LIGHT_COUNT](
         PointLight(
             vec3(0.4, 1.6, 1.8), // position
-            vec3(0.005, 0.005, 0.005), // ambient
+            vec3(0.0, 0.0, 0.0), // ambient
             vec3(0.8, 0.8, 0.8), // diffuse
             vec3(0.8, 0.8, 0.8), // specular
+            1.0, // constantFalloff
+            0.04, // linearFalloff
+            0.012 // quadraticFalloff
+        ),
+        PointLight(
+            vec3(-0.4, -1.6, 1.0), // position
+            vec3(0.0, 0.0, 0.0), // ambient
+            vec3(0.4, 0.4, 0.4), // diffuse
+            vec3(0.4, 0.4, 0.4), // specular
             1.0, // constantFalloff
             0.04, // linearFalloff
             0.012 // quadraticFalloff
@@ -96,9 +105,8 @@ const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
     uniform float dissolveFactor;
     uniform float occlusionFactor;
 
-    float halfLambert(float cosine) {
-        float factor = 0.5 + 0.5 * cosine;
-        return factor * factor;
+    float lambert(float cosine) {
+        return max(cosine, 0.0);
     }
 
     float blinnPhong(vec3 normal, vec3 lightDirection, vec3 viewDirection) {
@@ -112,7 +120,7 @@ const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
         float lightDistance = sqrt(lightDistanceSquared);
         vec3 lightDirection = lightDifference * (1.0 / lightDistance);
         float cosine = dot(normal, lightDirection);
-        float diffuseFactor = halfLambert(cosine);
+        float diffuseFactor = lambert(cosine);
         float specularFactor = blinnPhong(normal, lightDirection, viewDirection);
         float attenuation = 1.0 / (light.constantFalloff + light.linearFalloff * lightDistance + light.quadraticFalloff * lightDistanceSquared);
         vec3 ambientTerm = light.ambient * ambient;
@@ -120,6 +128,10 @@ const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
         vec3 specularTerm = light.specular * specularFactor * specular;
         const float visibility = 1.0;
         return attenuation * (ambientTerm * occlusionFactor + (diffuseTerm + specularTerm) * visibility);
+    }
+
+    vec3 tonemap(vec3 color) {
+        return color / (color + vec3(1.0));
     }
 
     void main() {
@@ -138,7 +150,7 @@ const char* const Shader3D::fragmentShaderSourceCodeModelBlinnPhong = R"GLSL(
         for (uint i = uint(0); i < uint(POINT_LIGHT_COUNT); ++i) {
             color += calculatePointLight(POINT_LIGHTS[i], normal, viewDirection, vec3(1.0), diffuse.rgb, specular);
         }
-        outputColor = vec4(pow(color, vec3(1.0 / GAMMA)), diffuse.a);
+        outputColor = vec4(pow(tonemap(color), vec3(1.0 / GAMMA)), diffuse.a);
     }
 )GLSL";
 

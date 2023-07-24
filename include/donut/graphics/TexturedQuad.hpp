@@ -55,7 +55,8 @@ struct TexturedQuad {
 		{.coordinates{1.0f, 1.0f}},
 	}};
 
-	static constexpr std::int32_t TEXTURE_UNIT = 0; ///< Main texture unit index to use in the shader.
+	static constexpr std::int32_t TEXTURE_UNIT = 0;       ///< Main texture unit index to use in the shader.
+	static constexpr std::int32_t TEXTURE_UNIT_COUNT = 1; ///< Total number of texture units required to render a textured quad.
 
 	/**
 	 * Mesh data stored on the GPU.

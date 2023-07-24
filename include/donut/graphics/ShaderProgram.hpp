@@ -14,6 +14,7 @@
 
 namespace donut::graphics {
 
+class Texture;         // Forward declaration, to avoid including Texture.hpp.
 class ShaderParameter; // Forward declaration, to avoid a circular include of ShaderParameter.hpp.
 
 /**
@@ -347,10 +348,40 @@ public:
 	void setUniformMat4(const ShaderParameter& parameter, const mat4& value);
 
 	/**
+	 * Insert a new texture to be bound for a uniform shader variable of a GLSL
+	 * sampler type.
+	 *
+	 * \param parameter shader variable to set.
+	 * \param texture non-owning read-only pointer to the new texture to bind
+	 *        the variable to, or nullptr to remove the binding for the given
+	 *        variable.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \note The new texture is not bound immediately; instead it is stored in
+	 *       this shader program's texture binding list to be uploaded on the
+	 *       next render that uses this shader.
+	 *
+	 * \warning The pointed-to texture must remain valid for the duration of its
+	 *          use in the shader.
+	 *
+	 * \sa getTextureBindings()
+	 * \sa clearTextureBindings()
+	 */
+	void setUniformSampler(const ShaderParameter& parameter, const Texture* texture);
+
+	/**
 	 * Erase all entries from the queue of new uniform shader variable values.
 	 */
 	void clearUniformUploadQueue() noexcept {
 		uniformUploadQueue.clear();
+	}
+
+	/**
+	 * Erase all entries from the list of active texture bindings.
+	 */
+	void clearTextureBindings() noexcept {
+		textureBindings.clear();
 	}
 
 	/**
@@ -363,6 +394,19 @@ public:
 	 */
 	[[nodiscard]] std::span<const std::pair<std::int32_t, UniformValue>> getUniformUploadQueue() const noexcept {
 		return uniformUploadQueue;
+	}
+
+	/**
+	 * Get the list of active texture bindings to be synchronized with the shader.
+	 *
+	 * \return a non-owning read-only view over a sequence of pairs where the
+	 *         first element of each pair represents the location of a uniform
+	 *         shader variable and the second element is a non-owning read-only
+	 *         pointer to the texture that should be bound to it, or nullptr for
+	 *         no binding.
+	 */
+	[[nodiscard]] std::span<const std::pair<std::int32_t, const Texture*>> getTextureBindings() const noexcept {
+		return textureBindings;
 	}
 
 	/**
@@ -388,6 +432,7 @@ private:
 	ShaderStage vertexShader;
 	ShaderStage fragmentShader;
 	std::vector<std::pair<std::int32_t, UniformValue>> uniformUploadQueue{};
+	std::vector<std::pair<std::int32_t, const Texture*>> textureBindings{};
 };
 
 } // namespace donut::graphics

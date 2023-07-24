@@ -93,6 +93,16 @@ void uploadEnqueuedShaderUniformValues(ShaderProgram& program) {
 	program.clearUniformUploadQueue();
 }
 
+void bindTextures(ShaderProgram& program, std::int32_t textureUnitOffset) {
+	for (const auto& [location, texture] : program.getTextureBindings()) {
+		assert(texture);
+		glUniform1i(location, textureUnitOffset);
+		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + textureUnitOffset));
+		glBindTexture(GL_TEXTURE_2D, texture->get());
+		++textureUnitOffset;
+	}
+}
+
 void useShader(Shader3D& shader) {
 	glUseProgram(shader.program.get());
 	applyShaderConfiguration(shader.options.configuration);
@@ -101,6 +111,7 @@ void useShader(Shader3D& shader) {
 	glUniform1i(shader.specularMap.getLocation(), Model::Object::TEXTURE_UNIT_SPECULAR);
 	glUniform1i(shader.normalMap.getLocation(), Model::Object::TEXTURE_UNIT_NORMAL);
 	glUniform1i(shader.emissiveMap.getLocation(), Model::Object::TEXTURE_UNIT_EMISSIVE);
+	bindTextures(shader.program, Model::Object::TEXTURE_UNIT_COUNT);
 }
 
 void useShader(Shader2D& shader) {
@@ -108,6 +119,7 @@ void useShader(Shader2D& shader) {
 	applyShaderConfiguration(shader.options.configuration);
 	uploadEnqueuedShaderUniformValues(shader.program);
 	glUniform1i(shader.textureUnit.getLocation(), TexturedQuad::TEXTURE_UNIT);
+	bindTextures(shader.program, TexturedQuad::TEXTURE_UNIT_COUNT);
 }
 
 void uploadCameraToShader(auto& shader, const Camera& camera) {
@@ -121,16 +133,16 @@ void renderModelInstances(Shader3D& shader, std::span<const Model::Object> objec
 		glBindVertexArray(object.mesh.get());
 		glBindBuffer(GL_ARRAY_BUFFER, object.mesh.getInstanceBuffer());
 
-		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_DIFFUSE);
+		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_DIFFUSE));
 		glBindTexture(GL_TEXTURE_2D, (object.material.diffuseMap) ? object.material.diffuseMap.get() : Texture::defaultWhite->get());
 
-		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_SPECULAR);
+		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_SPECULAR));
 		glBindTexture(GL_TEXTURE_2D, (object.material.specularMap) ? object.material.specularMap.get() : Texture::defaultGray->get());
 
-		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_NORMAL);
+		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_NORMAL));
 		glBindTexture(GL_TEXTURE_2D, (object.material.normalMap) ? object.material.normalMap.get() : Texture::defaultNormal->get());
 
-		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_EMISSIVE);
+		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_EMISSIVE));
 		glBindTexture(GL_TEXTURE_2D, (object.material.emissiveMap) ? object.material.emissiveMap.get() : Texture::defaultTransparent->get());
 
 		glUniform3fv(shader.diffuseColor.getLocation(), 1, value_ptr(object.material.diffuseColor));
@@ -223,7 +235,7 @@ void Renderer::render( // NOLINT(readability-make-member-function-const)
 		glBindVertexArray(texturedQuad.mesh.get());
 		glBindBuffer(GL_ARRAY_BUFFER, texturedQuad.mesh.getInstanceBuffer());
 
-		glActiveTexture(GL_TEXTURE0 + TexturedQuad::TEXTURE_UNIT);
+		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + TexturedQuad::TEXTURE_UNIT));
 
 		// Render quads.
 		Shader2D* shader = nullptr;

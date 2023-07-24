@@ -137,33 +137,7 @@ protected:
 	void display(app::TickInfo /*tickInfo*/, app::FrameInfo frameInfo) override {
 		carrotCakeDisplayPosition = mix(carrotCakePreviousPosition, carrotCakeCurrentPosition, frameInfo.tickInterpolationAlpha);
 
-		const ExampleShader::PointLight baseLight = {
-			.position = carrotCakeDisplayPosition,
-			.ambient{0.005f, 0.005f, 0.005f},
-			.diffuse{0.5f + 0.5f * sin(frameInfo.elapsedTime), 0.8f, 0.8f},
-			.specular{0.8f, 0.8f, 0.8f},
-			.constantFalloff = 1.0f,
-			.linearFalloff = 0.04f,
-			.quadraticFalloff = 0.03f,
-		};
-
-		const auto baseLightWithOffset = [&](vec3 offset) -> ExampleShader::PointLight {
-			ExampleShader::PointLight result = baseLight;
-			result.position += offset;
-			return result;
-		};
-
-		const std::array<ExampleShader::PointLight, ExampleShader::POINT_LIGHT_COUNT> pointLights{{
-			baseLightWithOffset({-2.0f, 0.0f, 0.0f}),
-			baseLightWithOffset({0.0f, -2.0f, 0.0f}),
-			baseLightWithOffset({0.0f, 2.0f, 0.0f}),
-			baseLightWithOffset({0.0f, 0.0f, 2.0f}),
-		}};
-
-		const vec3 viewPosition{0.0f, 0.0f, 0.0f};
-
-		exampleShader.setPointLights(pointLights);
-		exampleShader.setViewPosition(viewPosition);
+		uploadShaderData(frameInfo);
 
 		gfx::Framebuffer& framebuffer = window.getFramebuffer();
 
@@ -278,10 +252,10 @@ private:
 
 			uniform PointLight pointLights[POINT_LIGHT_COUNT];
 			uniform vec3 viewPosition;
+			uniform sampler2D tintTexture;
 
-			float halfLambert(float cosine) {
-				float factor = 0.5 + 0.5 * cosine;
-				return factor * factor;
+			float lambert(float cosine) {
+				return max(cosine, 0.0);
 			}
 
 			float blinnPhong(vec3 normal, vec3 lightDirection, vec3 viewDirection) {
@@ -295,7 +269,7 @@ private:
 				float lightDistance = sqrt(lightDistanceSquared);
 				vec3 lightDirection = lightDifference * (1.0 / lightDistance);
 				float cosine = dot(normal, lightDirection);
-				float diffuseFactor = halfLambert(cosine);
+				float diffuseFactor = lambert(cosine);
 				float specularFactor = blinnPhong(normal, lightDirection, viewDirection);
 				float attenuation = 1.0 / (light.constantFalloff + light.linearFalloff * lightDistance + light.quadraticFalloff * lightDistanceSquared);
 				vec3 ambientTerm = light.ambient * ambient;
@@ -303,6 +277,10 @@ private:
 				vec3 specularTerm = light.specular * specularFactor * specular;
 				const float visibility = 1.0;
 				return attenuation * (ambientTerm * occlusionFactor + (diffuseTerm + specularTerm) * visibility);
+			}
+
+			vec3 tonemap(vec3 color) {
+				return color / (color + vec3(1.0));
 			}
 
 			void main() {
@@ -321,7 +299,10 @@ private:
 				for (uint i = uint(0); i < uint(POINT_LIGHT_COUNT); ++i) {
 					color += calculatePointLight(pointLights[i], normal, viewDirection, vec3(1.0), diffuse.rgb, specular);
 				}
-				outputColor = vec4(pow(color, vec3(1.0 / GAMMA)), diffuse.a);
+
+				color *= texture(tintTexture, fragmentTextureCoordinates).rgb;
+
+				outputColor = vec4(pow(tonemap(color), vec3(1.0 / GAMMA)), diffuse.a);
 			}
 		)GLSL";
 
@@ -348,9 +329,14 @@ private:
 			program.setUniformVec3(viewPosition, position);
 		}
 
+		void setTintTexture(const gfx::Texture* texture) {
+			program.setUniformSampler(tintTexture, texture);
+		}
+
 	private:
 		gfx::ShaderArray<PointLightParameters, POINT_LIGHT_COUNT> pointLights{program, "pointLights"};
 		gfx::ShaderParameter viewPosition{program, "viewPosition"};
+		gfx::ShaderParameter tintTexture{program, "tintTexture"};
 	};
 
 	void resize() {
@@ -463,6 +449,37 @@ private:
 		quadtree[getAabbOf(CIRCLE_D)].push_front(CIRCLE_D);
 		quadtree[getAabbOf(CIRCLE_E)].push_front(CIRCLE_E);
 		quadtree[getAabbOf(CIRCLE_F)].push_front(CIRCLE_F);
+	}
+
+	void uploadShaderData(app::FrameInfo frameInfo) {
+		const ExampleShader::PointLight baseLight = {
+			.position = carrotCakeDisplayPosition,
+			.ambient{0.001f, 0.001f, 0.001f},
+			.diffuse{0.5f + 0.5f * sin(frameInfo.elapsedTime), 0.8f, 0.8f},
+			.specular{0.8f, 0.8f, 0.8f},
+			.constantFalloff = 1.0f,
+			.linearFalloff = 0.04f,
+			.quadraticFalloff = 0.03f,
+		};
+
+		const auto baseLightWithOffset = [&](vec3 offset) -> ExampleShader::PointLight {
+			ExampleShader::PointLight result = baseLight;
+			result.position += offset;
+			return result;
+		};
+
+		const std::array<ExampleShader::PointLight, ExampleShader::POINT_LIGHT_COUNT> pointLights{{
+			baseLightWithOffset({-2.0f, 0.0f, 0.0f}),
+			baseLightWithOffset({0.0f, -2.0f, 0.0f}),
+			baseLightWithOffset({0.0f, 2.0f, 0.0f}),
+			baseLightWithOffset({0.0f, 0.0f, 2.0f}),
+		}};
+
+		const vec3 viewPosition{0.0f, 0.0f, 0.0f};
+
+		exampleShader.setPointLights(pointLights);
+		exampleShader.setViewPosition(viewPosition);
+		exampleShader.setTintTexture(&testTexture);
 	}
 
 	void drawBackground(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {

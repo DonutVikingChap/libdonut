@@ -93,6 +93,7 @@ struct Model {
 		static constexpr std::int32_t TEXTURE_UNIT_SPECULAR = 1; ///< Texture unit index to use for the Material::specularMap.
 		static constexpr std::int32_t TEXTURE_UNIT_NORMAL = 2;   ///< Texture unit index to use for the Material::normalMap.
 		static constexpr std::int32_t TEXTURE_UNIT_EMISSIVE = 3; ///< Texture unit index to use for the Material::emissiveMap.
+		static constexpr std::int32_t TEXTURE_UNIT_COUNT = 4;    ///< Total number of texture units required to render an object.
 
 		/**
 		 * Mesh data stored on the GPU.

@@ -4,8 +4,9 @@
 #include <donut/graphics/ShaderProgram.hpp>
 #include <donut/graphics/opengl.hpp>
 
-#include <cstddef> // std::size_t
-#include <string>  // std::string
+#include <algorithm> // std::find_if
+#include <cstddef>   // std::size_t
+#include <string>    // std::string
 
 namespace donut::graphics {
 
@@ -100,6 +101,21 @@ void ShaderProgram::setUniformMat3(const ShaderParameter& parameter, const mat3&
 
 void ShaderProgram::setUniformMat4(const ShaderParameter& parameter, const mat4& value) {
 	uniformUploadQueue.emplace_back(parameter.getLocation(), value);
+}
+
+void ShaderProgram::setUniformSampler(const ShaderParameter& parameter, const Texture* texture) {
+	const std::int32_t location = parameter.getLocation();
+	if (const auto it =
+			std::find_if(textureBindings.begin(), textureBindings.end(), [location](const std::pair<std::int32_t, const Texture*>& kv) -> bool { return kv.first == location; });
+		it != textureBindings.end()) {
+		if (texture) {
+			it->second = texture;
+		} else {
+			textureBindings.erase(it);
+		}
+	} else if (texture) {
+		textureBindings.emplace_back(location, texture);
+	}
 }
 
 void ShaderProgram::ProgramDeleter::operator()(Handle handle) const noexcept {
