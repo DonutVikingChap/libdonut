@@ -147,6 +147,10 @@ if(DONUT_ENABLE_LIBRARY)
 		PRIVATE
 			${DONUT_PRIVATE_DEPENDENCIES})
 
+	if(BUILD_SHARED_LIBS)
+		target_link_libraries(donut PRIVATE ${CMAKE_DL_LIBS})
+	endif()
+
 	include(GNUInstallDirs)
 
 	set_target_properties(donut PROPERTIES
