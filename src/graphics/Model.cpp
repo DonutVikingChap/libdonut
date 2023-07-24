@@ -184,7 +184,7 @@ void loadObjScene(Model& output, const Filesystem& filesystem, const char* filep
 				.specularColor{1.0f, 1.0f, 1.0f},
 				.normalScale{1.0f, 1.0f, 1.0f},
 				.emissiveColor{1.0f, 1.0f, 1.0f},
-				.specularExponent = 0.0f,
+				.specularExponent = 1.0f,
 				.dissolveFactor = 0.0f,
 				.occlusionFactor = 1.0f,
 			};

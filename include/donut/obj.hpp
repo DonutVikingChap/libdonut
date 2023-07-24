@@ -128,7 +128,7 @@ struct Material {
 	vec3 diffuseColor{1.0f, 1.0f, 1.0f};                           ///< Diffuse color factor to multiply the sampled diffuse map value by.
 	vec3 specularColor{1.0f, 1.0f, 1.0f};                          ///< Specular color factor to multiply the sampled specular map value by.
 	vec3 emissiveColor{0.0f, 0.0f, 0.0f};                          ///< Emissive color factor to multiply the sampled emissive map value by.
-	float specularExponent = 0.0f;                                 ///< Specular exponent factor to multiply th sampled specular exponent map value by.
+	float specularExponent = 1.0f;                                 ///< Specular exponent factor to multiply the sampled specular exponent map value by.
 	float dissolveFactor = 0.0f;                                   ///< Dissolve factor to multiply the sampled dissolve factor map value by.
 	IlluminationModel illuminationModel = IlluminationModel::FLAT; ///< Illumination model to use for rendering this material.
 };
