@@ -64,7 +64,14 @@ struct Model {
 			Texture diffuseMap;     ///< Texture used for the base color.
 			Texture specularMap;    ///< Texture used for specular highlights.
 			Texture normalMap;      ///< Texture used for normal mapping.
-			float specularExponent; ///< Specular exponent to use for specular highlights.
+			Texture emissiveMap;    ///< Texture used for emissive mapping.
+			vec3 diffuseColor;      ///< Base color.
+			vec3 specularColor;     ///< Specular color.
+			vec3 normalScale;       ///< Normal map scale.
+			vec3 emissiveColor;     ///< Emissive color.
+			float specularExponent; ///< Specular exponent for specular highlights.
+			float dissolveFactor;   ///< Dissolve factor for transparency.
+			float occlusionFactor;  ///< Occlusion factor.
 		};
 
 		/** Hint regarding the intended memory access pattern of the vertex buffer. */
@@ -85,6 +92,7 @@ struct Model {
 		static constexpr std::int32_t TEXTURE_UNIT_DIFFUSE = 0;  ///< Texture unit index to use for the Material::diffuseMap.
 		static constexpr std::int32_t TEXTURE_UNIT_SPECULAR = 1; ///< Texture unit index to use for the Material::specularMap.
 		static constexpr std::int32_t TEXTURE_UNIT_NORMAL = 2;   ///< Texture unit index to use for the Material::normalMap.
+		static constexpr std::int32_t TEXTURE_UNIT_EMISSIVE = 3; ///< Texture unit index to use for the Material::emissiveMap.
 
 		/**
 		 * Mesh data stored on the GPU.

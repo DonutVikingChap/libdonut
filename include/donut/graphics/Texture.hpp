@@ -75,6 +75,26 @@ struct TextureOptions {
 class Texture {
 public:
 	/**
+	 * Pointer to the statically allocated storage for the built-in transparent
+	 * 2D texture.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying texture will be present at
+	 *          all times.
+	 */
+	static const Texture* const defaultTransparent;
+
+	/**
+	 * Pointer to the statically allocated storage for the built-in black 2D
+	 * texture.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying texture will be present at
+	 *          all times.
+	 */
+	static const Texture* const defaultBlack;
+
+	/**
 	 * Pointer to the statically allocated storage for the built-in white 2D
 	 * texture.
 	 *

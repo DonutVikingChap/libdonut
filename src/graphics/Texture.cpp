@@ -20,27 +20,48 @@ namespace donut::graphics {
 namespace {
 
 std::size_t sharedTextureReferenceCount = 0;
+alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedTransparentTextureStorage;
+alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedBlackTextureStorage;
 alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedWhiteTextureStorage;
 alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedGrayTextureStorage;
 alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedNormalTextureStorage;
 
 } // namespace
 
+const Texture* const Texture::defaultTransparent = reinterpret_cast<Texture*>(sharedTransparentTextureStorage.data());
+const Texture* const Texture::defaultBlack = reinterpret_cast<Texture*>(sharedBlackTextureStorage.data());
 const Texture* const Texture::defaultWhite = reinterpret_cast<Texture*>(sharedWhiteTextureStorage.data());
 const Texture* const Texture::defaultGray = reinterpret_cast<Texture*>(sharedGrayTextureStorage.data());
 const Texture* const Texture::defaultNormal = reinterpret_cast<Texture*>(sharedNormalTextureStorage.data());
 
 void Texture::createSharedTextures() {
 	if (sharedTextureReferenceCount == 0) {
+		constexpr std::array<std::byte, 4> TRANSPARENT_PIXEL{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
+		constexpr std::array<std::byte, 4> BLACK_PIXEL{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{255}};
 		constexpr std::array<std::byte, 4> WHITE_PIXEL{std::byte{255}, std::byte{255}, std::byte{255}, std::byte{255}};
 		constexpr std::array<std::byte, 4> GRAY_PIXEL{std::byte{128}, std::byte{128}, std::byte{128}, std::byte{255}};
-		constexpr std::array<std::byte, 3> NORMAL_PIXEL{std::byte{128}, std::byte{128}, std::byte{255}};
+		constexpr std::array<std::byte, 4> NORMAL_PIXEL{std::byte{128}, std::byte{128}, std::byte{255}, std::byte{255}};
 		constexpr TextureOptions PIXEL_TEXTURE_OPTIONS{.repeat = true, .useLinearFiltering = false, .useMipmap = false};
-		std::construct_at(defaultWhite, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, WHITE_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
+		std::construct_at(defaultTransparent, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, TRANSPARENT_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
+		try {
+			std::construct_at(defaultBlack, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, BLACK_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
+		} catch (...) {
+			std::destroy_at(defaultTransparent);
+			throw;
+		}
+		try {
+			std::construct_at(defaultWhite, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, WHITE_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
+		} catch (...) {
+			std::destroy_at(defaultBlack);
+			std::destroy_at(defaultTransparent);
+			throw;
+		}
 		try {
 			std::construct_at(defaultGray, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, GRAY_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
 		} catch (...) {
 			std::destroy_at(defaultWhite);
+			std::destroy_at(defaultBlack);
+			std::destroy_at(defaultTransparent);
 			throw;
 		}
 		try {
@@ -48,6 +69,8 @@ void Texture::createSharedTextures() {
 		} catch (...) {
 			std::destroy_at(defaultGray);
 			std::destroy_at(defaultWhite);
+			std::destroy_at(defaultBlack);
+			std::destroy_at(defaultTransparent);
 			throw;
 		}
 	}
@@ -59,6 +82,8 @@ void Texture::destroySharedTextures() noexcept {
 		std::destroy_at(defaultNormal);
 		std::destroy_at(defaultGray);
 		std::destroy_at(defaultWhite);
+		std::destroy_at(defaultBlack);
+		std::destroy_at(defaultTransparent);
 	}
 }
 

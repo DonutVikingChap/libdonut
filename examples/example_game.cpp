@@ -139,7 +139,7 @@ protected:
 
 		const ExampleShader::PointLight baseLight = {
 			.position = carrotCakeDisplayPosition,
-			.ambient{0.2f, 0.2f, 0.2f},
+			.ambient{0.005f, 0.005f, 0.005f},
 			.diffuse{0.5f + 0.5f * sin(frameInfo.elapsedTime), 0.8f, 0.8f},
 			.specular{0.8f, 0.8f, 0.8f},
 			.constantFalloff = 1.0f,
@@ -241,6 +241,10 @@ private:
 
 		static constexpr std::size_t POINT_LIGHT_COUNT = 4;
 		static constexpr const char* FRAGMENT_SHADER_SOURCE_CODE = R"GLSL(
+			#ifndef GAMMA
+			#define GAMMA 2.2
+			#endif
+
 			struct PointLight {
 				vec3 position;
 				vec3 ambient;
@@ -263,7 +267,14 @@ private:
 			uniform sampler2D diffuseMap;
 			uniform sampler2D specularMap;
 			uniform sampler2D normalMap;
+			uniform sampler2D emissiveMap;
+			uniform vec3 diffuseColor;
+			uniform vec3 specularColor;
+			uniform vec3 normalScale;
+			uniform vec3 emissiveColor;
 			uniform float specularExponent;
+			uniform float dissolveFactor;
+			uniform float occlusionFactor;
 
 			uniform PointLight pointLights[POINT_LIGHT_COUNT];
 			uniform vec3 viewPosition;
@@ -278,7 +289,7 @@ private:
 				return pow(max(dot(normal, halfwayDirection), 0.0), specularExponent);
 			}
 
-			vec3 calculatePointLight(PointLight light, vec3 normal, vec3 viewDirection, vec3 ambientColor, vec3 diffuseColor, vec3 specularColor) {
+			vec3 calculatePointLight(PointLight light, vec3 normal, vec3 viewDirection, vec3 ambient, vec3 diffuse, vec3 specular) {
 				vec3 lightDifference = light.position - fragmentPosition;
 				float lightDistanceSquared = dot(lightDifference, lightDifference);
 				float lightDistance = sqrt(lightDistanceSquared);
@@ -287,28 +298,30 @@ private:
 				float diffuseFactor = halfLambert(cosine);
 				float specularFactor = blinnPhong(normal, lightDirection, viewDirection);
 				float attenuation = 1.0 / (light.constantFalloff + light.linearFalloff * lightDistance + light.quadraticFalloff * lightDistanceSquared);
-				vec3 ambientTerm = light.ambient * ambientColor;
-				vec3 diffuseTerm = light.diffuse * diffuseFactor * diffuseColor;
-				vec3 specularTerm = light.specular * specularFactor * specularColor;
+				vec3 ambientTerm = light.ambient * ambient;
+				vec3 diffuseTerm = light.diffuse * diffuseFactor * diffuse;
+				vec3 specularTerm = light.specular * specularFactor * specular;
 				const float visibility = 1.0;
-				return attenuation * (ambientTerm + (diffuseTerm + specularTerm) * visibility);
+				return attenuation * (ambientTerm * occlusionFactor + (diffuseTerm + specularTerm) * visibility);
 			}
 
 			void main() {
-				vec4 diffuseColor = fragmentTintColor * texture(diffuseMap, fragmentTextureCoordinates);
-				vec3 specularColor = texture(specularMap, fragmentTextureCoordinates).rgb;
+				vec4 sampledDiffuse = texture(diffuseMap, fragmentTextureCoordinates);
+				vec4 diffuse = fragmentTintColor * vec4(diffuseColor, 1.0 - dissolveFactor) * vec4(pow(sampledDiffuse.rgb, vec3(GAMMA)), sampledDiffuse.a);
+				vec3 specular = specularColor * texture(specularMap, fragmentTextureCoordinates).rgb;
+				vec3 emissive = emissiveColor * texture(emissiveMap, fragmentTextureCoordinates).rgb;
 				
 				mat3 TBN = mat3(normalize(fragmentTangent), normalize(fragmentBitangent), normalize(fragmentNormal));
-				vec3 surfaceNormal = texture(normalMap, fragmentTextureCoordinates).xyz * 2.0 - vec3(1.0);
+				vec3 surfaceNormal = normalScale * (texture(normalMap, fragmentTextureCoordinates).xyz * 2.0 - vec3(1.0));
 				vec3 normal = normalize(TBN * surfaceNormal);
 
 				vec3 viewDirection = normalize(viewPosition - fragmentPosition);
 
-				vec3 color = vec3(0.0, 0.0, 0.0);
+				vec3 color = emissive;
 				for (uint i = uint(0); i < uint(POINT_LIGHT_COUNT); ++i) {
-					color += calculatePointLight(pointLights[i], normal, viewDirection, diffuseColor.rgb, diffuseColor.rgb, specularColor);
+					color += calculatePointLight(pointLights[i], normal, viewDirection, vec3(1.0), diffuse.rgb, specular);
 				}
-				outputColor = vec4(color, diffuseColor.a);
+				outputColor = vec4(pow(color, vec3(1.0 / GAMMA)), diffuse.a);
 			}
 		)GLSL";
 

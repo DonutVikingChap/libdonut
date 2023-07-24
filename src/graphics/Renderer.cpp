@@ -100,6 +100,7 @@ void useShader(Shader3D& shader) {
 	glUniform1i(shader.diffuseMap.getLocation(), Model::Object::TEXTURE_UNIT_DIFFUSE);
 	glUniform1i(shader.specularMap.getLocation(), Model::Object::TEXTURE_UNIT_SPECULAR);
 	glUniform1i(shader.normalMap.getLocation(), Model::Object::TEXTURE_UNIT_NORMAL);
+	glUniform1i(shader.emissiveMap.getLocation(), Model::Object::TEXTURE_UNIT_EMISSIVE);
 }
 
 void useShader(Shader2D& shader) {
@@ -129,7 +130,16 @@ void renderModelInstances(Shader3D& shader, std::span<const Model::Object> objec
 		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_NORMAL);
 		glBindTexture(GL_TEXTURE_2D, (object.material.normalMap) ? object.material.normalMap.get() : Texture::defaultNormal->get());
 
+		glActiveTexture(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_EMISSIVE);
+		glBindTexture(GL_TEXTURE_2D, (object.material.emissiveMap) ? object.material.emissiveMap.get() : Texture::defaultTransparent->get());
+
+		glUniform3fv(shader.diffuseColor.getLocation(), 1, value_ptr(object.material.diffuseColor));
+		glUniform3fv(shader.specularColor.getLocation(), 1, value_ptr(object.material.specularColor));
+		glUniform3fv(shader.normalScale.getLocation(), 1, value_ptr(object.material.normalScale));
+		glUniform3fv(shader.emissiveColor.getLocation(), 1, value_ptr(object.material.emissiveColor));
 		glUniform1f(shader.specularExponent.getLocation(), object.material.specularExponent);
+		glUniform1f(shader.dissolveFactor.getLocation(), object.material.dissolveFactor);
+		glUniform1f(shader.occlusionFactor.getLocation(), object.material.occlusionFactor);
 
 		glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(instances.size() * sizeof(Model::Object::Instance)), instances.data(),
 			static_cast<GLenum>(Model::Object::INSTANCES_USAGE));

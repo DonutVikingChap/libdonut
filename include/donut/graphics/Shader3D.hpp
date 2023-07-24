@@ -106,10 +106,52 @@ public:
 	ShaderParameter normalMap{program, "normalMap"};
 
 	/**
+	 * Identifier for the uniform shader variable for the texture unit of the
+	 * active material's emissive map.
+	 */
+	ShaderParameter emissiveMap{program, "emissiveMap"};
+
+	/**
+	 * Identifier for the uniform shader variable for the active material's
+	 * diffuse color.
+	 */
+	ShaderParameter diffuseColor{program, "diffuseColor"};
+
+	/**
+	 * Identifier for the uniform shader variable for the active material's
+	 * specular color.
+	 */
+	ShaderParameter specularColor{program, "specularColor"};
+
+	/**
+	 * Identifier for the uniform shader variable for the active material's
+	 * normal scale.
+	 */
+	ShaderParameter normalScale{program, "normalScale"};
+
+	/**
+	 * Identifier for the uniform shader variable for the active material's
+	 * emissive color.
+	 */
+	ShaderParameter emissiveColor{program, "emissiveColor"};
+
+	/**
 	 * Identifier for the uniform shader variable for the active material's
 	 * specular exponent.
 	 */
 	ShaderParameter specularExponent{program, "specularExponent"};
+
+	/**
+	 * Identifier for the uniform shader variable for the active material's
+	 * specular exponent.
+	 */
+	ShaderParameter dissolveFactor{program, "dissolveFactor"};
+
+	/**
+	 * Identifier for the uniform shader variable for the active material's
+	 * occlusion factor.
+	 */
+	ShaderParameter occlusionFactor{program, "occlusionFactor"};
 
 	/**
 	 * Compile and link a 3D shader program.

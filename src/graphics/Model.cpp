@@ -175,7 +175,19 @@ void loadObjScene(Model& output, const Filesystem& filesystem, const char* filep
 			}
 			generateTangentSpace(vertices, indices);
 
-			Model::Object::Material groupMaterial{.diffuseMap{}, .specularMap{}, .normalMap{}, .specularExponent = 0.0f};
+			Model::Object::Material groupMaterial{
+				.diffuseMap{},
+				.specularMap{},
+				.normalMap{},
+				.emissiveMap{},
+				.diffuseColor{1.0f, 1.0f, 1.0f},
+				.specularColor{1.0f, 1.0f, 1.0f},
+				.normalScale{1.0f, 1.0f, 1.0f},
+				.emissiveColor{1.0f, 1.0f, 1.0f},
+				.specularExponent = 0.0f,
+				.dissolveFactor = 0.0f,
+				.occlusionFactor = 1.0f,
+			};
 			if (!group.materialName.empty()) {
 				for (const obj::mtl::Library& materialLibrary : materialLibraries) {
 					if (const auto it = std::find_if(materialLibrary.materials.begin(), materialLibrary.materials.end(),
@@ -191,7 +203,15 @@ void loadObjScene(Model& output, const Filesystem& filesystem, const char* filep
 						if (!material.bumpMapName.empty()) {
 							groupMaterial.normalMap = loadTexture(filesystem, filepathPrefix + material.bumpMapName);
 						}
+						if (!material.emissiveMapName.empty()) {
+							groupMaterial.emissiveMap = loadTexture(filesystem, filepathPrefix + material.emissiveMapName);
+						}
+						groupMaterial.diffuseColor = material.diffuseColor;
+						groupMaterial.specularColor = material.specularColor;
+						groupMaterial.emissiveColor = material.emissiveColor;
 						groupMaterial.specularExponent = material.specularExponent;
+						groupMaterial.dissolveFactor = material.dissolveFactor;
+						groupMaterial.occlusionFactor = material.ambientColor.x * material.ambientColor.y * material.ambientColor.z;
 						break;
 					}
 				}
