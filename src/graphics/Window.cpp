@@ -18,10 +18,6 @@
 namespace donut::graphics {
 
 Window::Window(const WindowOptions& options) {
-	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
-		throw Error{std::format("Failed to initialize SDL video subsystem:\n{}", SDL_GetError())};
-	}
-
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
@@ -66,10 +62,6 @@ Window::Window(const WindowOptions& options) {
 #endif
 
 	setVSync(options.vSync);
-}
-
-Window::~Window() {
-	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
 void Window::present() {
@@ -155,6 +147,16 @@ void Window::setVSync(bool vSync) {
 		throw Error{std::format("Failed to make OpenGL context current: {}", SDL_GetError())};
 	}
 	return framebuffer;
+}
+
+Window::VideoContext::VideoContext() {
+	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
+		throw Error{std::format("Failed to initialize SDL video subsystem:\n{}", SDL_GetError())};
+	}
+}
+
+Window::VideoContext::~VideoContext() {
+	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
 void Window::WindowDeleter::operator()(void* handle) const noexcept {

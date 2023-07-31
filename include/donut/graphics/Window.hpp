@@ -91,7 +91,7 @@ public:
 	explicit Window(const WindowOptions& options);
 
 	/** Destructor. */
-	~Window();
+	~Window() = default;
 
 	/** Copying a window is not allowed, since it manages global state. */
 	Window(const Window&) = delete;
@@ -213,6 +213,16 @@ public:
 	[[nodiscard]] Framebuffer& getFramebuffer();
 
 private:
+	struct VideoContext {
+		VideoContext();
+		~VideoContext();
+
+		VideoContext(const VideoContext&) = delete;
+		VideoContext(VideoContext&&) = delete;
+		VideoContext& operator=(const VideoContext&) = delete;
+		VideoContext& operator=(VideoContext&&) = delete;
+	};
+
 	struct WindowDeleter {
 		void operator()(void* handle) const noexcept;
 	};
@@ -221,6 +231,7 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
+	[[no_unique_address]] VideoContext videoContext{};
 	UniqueHandle<void*, WindowDeleter> window{};
 	UniqueHandle<void*, GLContextDeleter> glContext{};
 	Framebuffer framebuffer{Handle{}};
