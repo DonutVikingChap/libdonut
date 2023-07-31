@@ -8,6 +8,8 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+
 struct ApplicationOptions {
 	// TODO: Decide initial option values.
 	app::ApplicationOptions applicationOptions{
@@ -125,6 +127,8 @@ private:
 	audio::Listener listener{};
 	events::InputManager inputManager;
 };
+
+} // namespace
 
 int main(int /*argc*/, char* argv[]) {
 	try {
