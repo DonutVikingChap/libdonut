@@ -61,15 +61,7 @@ public:
 
 protected:
 	void update(app::FrameInfo frameInfo) override {
-		inputManager.prepareForEvents();
-		for (const events::Event& event : eventPump.pollEvents()) {
-			if (event.is<events::ApplicationQuitRequestedEvent>()) {
-				quit();
-			} else if (event.is<events::WindowSizeChangedEvent>()) {
-				resize();
-			}
-			inputManager.handleEvent(event);
-		}
+		handleEvents();
 
 		soundStage.update(frameInfo.deltaTime, listener);
 
@@ -90,7 +82,7 @@ protected:
 		{
 			gfx::RenderPass renderPass{};
 
-			// TODO: Draw the world to the render pass.
+			// TODO: Draw the 3D world to the render pass.
 
 			renderer.render(framebuffer, renderPass, viewport, worldCamera);
 		}
@@ -98,7 +90,7 @@ protected:
 		{
 			gfx::RenderPass renderPass{};
 
-			// TODO: Draw the user interface to the render pass.
+			// TODO: Draw the 2D user interface to the render pass.
 
 			renderer.render(framebuffer, renderPass, viewport, uiCamera);
 		}
@@ -115,6 +107,18 @@ private:
 			.aspectRatio = static_cast<float>(viewport.size.x) / static_cast<float>(viewport.size.y),
 		});
 		uiCamera = gfx::Camera::createOrthographic({.offset{0.0f, 0.0f}, .size = size});
+	}
+
+	void handleEvents() {
+		inputManager.prepareForEvents();
+		for (const events::Event& event : eventPump.pollEvents()) {
+			if (event.is<events::ApplicationQuitRequestedEvent>()) {
+				quit();
+			} else if (event.is<events::WindowSizeChangedEvent>()) {
+				resize();
+			}
+			inputManager.handleEvent(event);
+		}
 	}
 
 	events::EventPump eventPump{};

@@ -2,6 +2,12 @@
 
 Libdonut is an application framework for cross-platform game development in C++20.
 
+## Examples
+
+- Template project with some instructional comments: [template/src/main.cpp](template/src/main.cpp)
+- Single-file test game using various features: [examples/example_game.cpp](examples/example_game.cpp)
+- Basic application that renders a rectangle: [examples/example_rectangle.cpp](examples/example_rectangle.cpp)
+
 ## Features
 
 - Application framework:
@@ -71,6 +77,10 @@ Libdonut is an application framework for cross-platform game development in C++2
 
 - Donut the Vikingchap: https://steamcommunity.com/id/donutvikingchap/
 
+## Documentation
+
+The API reference for the latest version of libdonut is available here: https://donutvikingchap.github.io/libdonut/index.html
+
 ## Prerequisites
 
 The following programs need to be installed in order to build an application using libdonut:
@@ -122,13 +132,9 @@ When adding new source files to your project, make sure to also add their filepa
 
 When running the compiled executable, make sure that the current working directory is set to point to the folder where your main data directory is located, if you have one. Otherwise, your application will likely fail to run due to missing resources.
 
-## Documentation
+## Generating the documentation
 
-The API reference for the latest version of libdonut is available here: https://donutvikingchap.github.io/libdonut/index.html
-
-### Generating manually
-
-If you have [Doxygen](https://www.doxygen.nl/) installed, you can also build the API reference for libdonut as follows.
+If you have [Doxygen](https://www.doxygen.nl/) installed, you can build a local copy of the [API reference for libdonut](https://donutvikingchap.github.io/libdonut/index.html) as follows.
 
 After configuring your new project, run the following command from inside the `build/` directory to generate the documentation for libdonut's API:
 
@@ -140,7 +146,7 @@ The generated HTML file at `build/_deps/donut-build/docs/html/index.html` can th
 
 ## Distribution
 
-After compiling in release mode, the resulting application executable can be packaged into a folder along with its main data directory and be distributed according to the relevant licenses mentioned below. A sample `copyright.txt` file is provided in the project template to illustrate the copyright notices that must be included when distributing an application containing the code of libdonut and its direct dependencies. Note that this is only an example and not any form of legal advice.
+After compiling your project in release mode, the resulting application executable can be packaged into a folder along with its main data directory and be distributed according to the relevant licenses mentioned below. A sample `copyright.txt` file is provided in the project template to illustrate the copyright notices that must be included when distributing an application containing the code of libdonut and its direct dependencies. Note that this is only an example and not any form of legal advice.
 
 ## License
 

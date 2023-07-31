@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 project("libdonut"
 	VERSION 1.3.0
-	DESCRIPTION "Application framework for cross-platform game development"
+	DESCRIPTION "Application framework for cross-platform game development in C++20"
 	LANGUAGES C CXX)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
