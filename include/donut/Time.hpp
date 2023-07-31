@@ -476,7 +476,7 @@ struct std::formatter<donut::Time<T, Period>, CharT> {
 	}
 
 	auto format(const donut::Time<T, Period>& time, auto& fc) const {
-		return std::format_to(fc.out(), "{}", static_cast<donut::Time<T, Period>::Duration>(time));
+		return std::format_to(fc.out(), "{}", static_cast<typename donut::Time<T, Period>::Duration>(time));
 	}
 };
 
