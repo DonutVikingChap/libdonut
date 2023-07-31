@@ -20,7 +20,7 @@ struct ApplicationOptions {
 	 * application subsystems with updates at a fixed interval, independent from
 	 * the main frame rate of the application.
 	 *
-	 * Tick polling is performed on each frame of the application, which may
+	 * Tick processing is performed on each frame of the application, which may
 	 * result in anywhere from 0 to tickRate/minFrameRate ticks being processed,
 	 * depending on the time since the previous frame. When not enough time has
 	 * passed to process any ticks within a frame, the time is accumulated for
@@ -29,6 +29,9 @@ struct ApplicationOptions {
 	 * multiple ticks will be processed, and any remaining time will carry over
 	 * to the next frame. This results in a fixed average interval between
 	 * ticks even in the event of high framerates or small frame rate drops.
+	 *
+	 * If set to a non-positive value, no tick processing will occur, and tick()
+	 * will never be called.
 	 *
 	 * \sa minFrameRate
 	 * \sa maxFrameRate
@@ -219,7 +222,7 @@ public:
 	 * Set the frame rate parameters of the application.
 	 *
 	 * \param tickRate desired tick rate of the application, in hertz (ticks per
-	 *        second).
+	 *        second). Set to 0 or a negative value for no ticks.
 	 * \param minFrameRate minimum frame rate of the application, in hertz
 	 *        (frames per second), before tick slowdown occurs.
 	 * \param maxFrameRate maximum frame rate of the application, in hertz

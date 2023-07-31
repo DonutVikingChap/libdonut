@@ -71,10 +71,11 @@ void Application::quit() {
 }
 
 void Application::setFrameRateParameters(float tickRate, float minFrameRate, float maxFrameRate) {
-	tickInterval = ceil<Clock::duration>(Time<float>::Duration{1.0f / tickRate});
+	tickInterval = (tickRate <= 0.0f) ? Clock::duration{} : ceil<Clock::duration>(Time<float>::Duration{1.0f / tickRate});
 	tickInfo.tickInterval = duration_cast<decltype(tickInfo.tickInterval)::Duration>(tickInterval);
 	minFrameInterval = (maxFrameRate == 0.0f) ? Clock::duration{} : ceil<Clock::duration>(Time<float>::Duration{1.0f / maxFrameRate});
-	maxTicksPerFrame = (minFrameRate <= 0.0f || tickRate <= minFrameRate) ? Clock::rep{1} : static_cast<Clock::rep>(tickRate / minFrameRate);
+	maxTicksPerFrame = (tickRate <= 0.0f) ? Clock::rep{0} : (minFrameRate <= 0.0f || tickRate <= minFrameRate) ? Clock::rep{1} : static_cast<Clock::rep>(tickRate / minFrameRate);
+	latestTickProcessingEndTime = Clock::now();
 }
 
 void Application::setFrameRateLimiterSleepEnabled(bool frameRateLimiterSleepEnabled) {
@@ -108,12 +109,14 @@ void Application::runFrame() {
 	frameInfo.deltaTime = duration_cast<Time<float>::Duration>(deltaTime);
 
 	update(frameInfo);
-	const Clock::duration timeSinceLatestTick = currentTime - latestTickProcessingEndTime;
-	for (Clock::rep ticksToProcess = std::min(timeSinceLatestTick / tickInterval, maxTicksPerFrame); ticksToProcess > 0; --ticksToProcess) {
-		tick(tickInfo);
-		++tickInfo.processedTickCount;
-		tickInfo.processedTickTime += tickInfo.tickInterval;
-		latestTickProcessingEndTime += tickInterval;
+	if (maxTicksPerFrame > 0) {
+		const Clock::duration timeSinceLatestTick = currentTime - latestTickProcessingEndTime;
+		for (Clock::rep ticksToProcess = std::min(timeSinceLatestTick / tickInterval, maxTicksPerFrame); ticksToProcess > 0; --ticksToProcess) {
+			tick(tickInfo);
+			++tickInfo.processedTickCount;
+			tickInfo.processedTickTime += tickInfo.tickInterval;
+			latestTickProcessingEndTime += tickInterval;
+		}
 	}
 
 	frameInfo.tickInterpolationAlpha =

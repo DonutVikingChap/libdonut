@@ -15,7 +15,8 @@ struct TickInfo {
 	 * The average time, in seconds, that should elapse between each tick.
 	 *
 	 * This is calculated as the reciprocal of the desired application tick
-	 * rate, i.e. tickInterval = 1 / ApplicationOptions::tickRate.
+	 * rate, i.e. tickInterval = 1 / ApplicationOptions::tickRate, assuming the
+	 * tick rate is positive. If not, the value will be 0.
 	 *
 	 * The tick interval should be used as the time delta when updating
 	 * physics, timers, etc. within a tick. This will ensure a fixed update
