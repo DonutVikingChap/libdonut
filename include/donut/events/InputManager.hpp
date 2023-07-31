@@ -470,7 +470,7 @@ public:
 	 *         returns an empty optional.
 	 *
 	 * \note Instead of reading the state of the mouse directly, prefer to use
-	 *       the getAbsoluteVector() or getRelativeVector() functions with an
+	 *       the getAbsoluteValue() or getRelativeValue() functions with an
 	 *       abstract output number whenever possible, since this can allow the
 	 *       user to bind a different form of input, such as a joystick, to the
 	 *       control instead, according to their preferences.
@@ -545,9 +545,9 @@ public:
 	 *         and 1 that represents it. Otherwise, returns an empty optional.
 	 *
 	 * \note Instead of reading the state of the controller directly, prefer to
-	 *       use the getAbsoluteVector() or getRelativeVector() functions with
-	 *       an abstract output number whenever possible, since this can allow
-	 *       the user to bind a different form of input, such as a mouse, to the
+	 *       use the getAbsoluteValue() or getRelativeValue() functions with an
+	 *       abstract output number whenever possible, since this can allow the
+	 *       user to bind a different form of input, such as a mouse, to the
 	 *       control instead, according to their preferences.
 	 *
 	 * \sa isControllerConnected()
@@ -564,9 +564,9 @@ public:
 	 *         and 1 that represents it. Otherwise, returns an empty optional.
 	 *
 	 * \note Instead of reading the state of the controller directly, prefer to
-	 *       use the getAbsoluteVector() or getRelativeVector() functions with
-	 *       an abstract output number whenever possible, since this can allow
-	 *       the user to bind a different form of input, such as a mouse, to the
+	 *       use the getAbsoluteValue() or getRelativeValue() functions with an
+	 *       abstract output number whenever possible, since this can allow the
+	 *       user to bind a different form of input, such as a mouse, to the
 	 *       control instead, according to their preferences.
 	 *
 	 * \sa isControllerConnected()
@@ -583,9 +583,9 @@ public:
 	 *         represents it. Otherwise, returns an empty optional.
 	 *
 	 * \note Instead of reading the state of the controller directly, prefer to
-	 *       use the getAbsoluteVector() or getRelativeVector() functions with
-	 *       an abstract output number whenever possible, since this can allow
-	 *       the user to bind a different form of input, such as a key, to the
+	 *       use the getAbsoluteValue() or getRelativeValue() functions with an
+	 *       abstract output number whenever possible, since this can allow the
+	 *       user to bind a different form of input, such as a key, to the
 	 *       control instead, according to their preferences.
 	 *
 	 * \sa isControllerConnected()
@@ -602,9 +602,9 @@ public:
 	 *         represents it. Otherwise, returns an empty optional.
 	 *
 	 * \note Instead of reading the state of the controller directly, prefer to
-	 *       use the getAbsoluteVector() or getRelativeVector() functions with
-	 *       an abstract output number whenever possible, since this can allow
-	 *       the user to bind a different form of input, such as a key, to the
+	 *       use the getAbsoluteValue() or getRelativeValue() functions with an
+	 *       abstract output number whenever possible, since this can allow the
+	 *       user to bind a different form of input, such as a key, to the
 	 *       control instead, according to their preferences.
 	 *
 	 * \sa isControllerConnected()
@@ -691,7 +691,7 @@ public:
 	 *         returns an empty optional.
 	 *
 	 * \note Instead of reading the state of the finger directly, prefer to use
-	 *       the getAbsoluteVector() or getRelativeVector() functions with an
+	 *       the getAbsoluteValue() or getRelativeValue() functions with an
 	 *       abstract output number whenever possible, since this can allow the
 	 *       user to bind a different form of input, such as a joystick, to the
 	 *       control instead, according to their preferences.
@@ -710,7 +710,7 @@ public:
 	 *         [0, 1], that represents it. Otherwise, returns an empty optional.
 	 *
 	 * \note Instead of reading the state of the finger directly, prefer to use
-	 *       the getAbsoluteVector() or getRelativeVector() functions with an
+	 *       the getAbsoluteValue() or getRelativeValue() functions with an
 	 *       abstract output number whenever possible, since this can allow the
 	 *       user to bind a different form of input, such as a trigger, to the
 	 *       control instead, according to their preferences.
@@ -880,16 +880,16 @@ public:
 	 *         pressed) when only a single input is controlling it, though it
 	 *         could be any value.
 	 *
-	 * \note For most situations, using getAbsoluteVector() instead is
+	 * \note For most situations, using getAbsoluteValue() instead is
 	 *       preferable instead since it provides a more intuitive range of
 	 *       floating-point values compared to the raw signed integer value of
 	 *       this function.
 	 *
+	 * \sa getRelativeState()
+	 * \sa getAbsoluteValue()
 	 * \sa getRelativeValue()
-	 * \sa getAbsoluteVector()
-	 * \sa getRelativeVector()
 	 */
-	[[nodiscard]] i32 getAbsoluteValue(std::size_t output) const noexcept;
+	[[nodiscard]] i32 getAbsoluteState(std::size_t output) const noexcept;
 
 	/**
 	 * Get the current raw total relative value of a specific output, which
@@ -903,16 +903,15 @@ public:
 	 *         when only a single input is controlling it, though it could be
 	 *         any value.
 	 *
-	 * \note For most situations, using getRelativeVector() instead is
-	 *       preferable instead since it provides a more intuitive range of
-	 *       floating-point values compared to the raw signed integer value of
-	 *       this function.
+	 * \note For most situations, using getRelativeValue() instead is preferable
+	 *       instead since it provides a more intuitive range of floating-point
+	 *       values compared to the raw signed integer value of this function.
 	 *
+	 * \sa getAbsoluteState()
 	 * \sa getAbsoluteValue()
-	 * \sa getAbsoluteVector()
-	 * \sa getRelativeVector()
+	 * \sa getRelativeValue()
 	 */
-	[[nodiscard]] i32 getRelativeValue(std::size_t output) const noexcept;
+	[[nodiscard]] i32 getRelativeState(std::size_t output) const noexcept;
 
 	/**
 	 * Get the current scaled absolute value of a specific output in a single
@@ -928,11 +927,11 @@ public:
 	 *         unpressed) and 1 (fully presssed) when only a single input is
 	 *         controlling it, though it could be any non-negative value.
 	 *
-	 * \sa getAbsoluteValue()
+	 * \sa getAbsoluteState()
+	 * \sa getRelativeState()
 	 * \sa getRelativeValue()
-	 * \sa getRelativeVector()
 	 */
-	[[nodiscard]] float getAbsoluteVector(std::size_t outputPositive) const noexcept;
+	[[nodiscard]] float getAbsoluteValue(std::size_t outputPositive) const noexcept;
 
 	/**
 	 * Get the current scaled relative value of a specific output in a single
@@ -948,11 +947,11 @@ public:
 	 *         usually between -1 and 1 when only a single input is controlling
 	 *         it, though it could be any non-negative value.
 	 *
+	 * \sa getAbsoluteState()
+	 * \sa getRelativeState()
 	 * \sa getAbsoluteValue()
-	 * \sa getRelativeValue()
-	 * \sa getAbsoluteVector()
 	 */
-	[[nodiscard]] float getRelativeVector(std::size_t outputPositive) const noexcept;
+	[[nodiscard]] float getRelativeValue(std::size_t outputPositive) const noexcept;
 
 	/**
 	 * Get the current combined scaled absolute value of two specific outputs in
@@ -971,11 +970,11 @@ public:
 	 *         only a single input is controlling each direction, though it
 	 *         could be any value.
 	 *
-	 * \sa getAbsoluteValue()
+	 * \sa getAbsoluteState()
+	 * \sa getRelativeState()
 	 * \sa getRelativeValue()
-	 * \sa getRelativeVector()
 	 */
-	[[nodiscard]] float getAbsoluteVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept;
+	[[nodiscard]] float getAbsoluteValue(std::size_t outputNegative, std::size_t outputPositive) const noexcept;
 
 	/**
 	 * Get the current combined scaled relative value of two specific outputs in
@@ -994,11 +993,11 @@ public:
 	 *         usually between -1 and 1 when only a single input is controlling
 	 *         each direction, though it could be any value.
 	 *
+	 * \sa getAbsoluteState()
+	 * \sa getRelativeState()
 	 * \sa getAbsoluteValue()
-	 * \sa getRelativeValue()
-	 * \sa getAbsoluteVector()
 	 */
-	[[nodiscard]] float getRelativeVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept;
+	[[nodiscard]] float getRelativeValue(std::size_t outputNegative, std::size_t outputPositive) const noexcept;
 
 	/**
 	 * Get the current combined scaled absolute value of four specific outputs
@@ -1031,11 +1030,11 @@ public:
 	 *         binding multiple inputs to one direction and pressing them at the
 	 *         same time such that they increase the accumulated value above 1.
 	 *
-	 * \sa getAbsoluteValue()
+	 * \sa getAbsoluteState()
+	 * \sa getRelativeState()
 	 * \sa getRelativeValue()
-	 * \sa getRelativeVector()
 	 */
-	[[nodiscard]] vec2 getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept;
+	[[nodiscard]] vec2 getAbsoluteValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept;
 
 	/**
 	 * Get the current combined scaled relative value of four specific outputs
@@ -1060,11 +1059,11 @@ public:
 	 *         component is usually between -1 and 1 when only a single input is
 	 *         controlling each direction, though it could be any value.
 	 *
+	 * \sa getAbsoluteState()
+	 * \sa getRelativeState()
 	 * \sa getAbsoluteValue()
-	 * \sa getRelativeValue()
-	 * \sa getAbsoluteVector()
 	 */
-	[[nodiscard]] vec2 getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept;
+	[[nodiscard]] vec2 getRelativeValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept;
 
 	/**
 	 * Get the current combined scaled absolute value of six specific outputs
@@ -1104,11 +1103,11 @@ public:
 	 *         direction and pressing them at the same time such that they
 	 *         increase the accumulated value above 1.
 	 *
-	 * \sa getAbsoluteValue()
+	 * \sa getAbsoluteState()
+	 * \sa getRelativeState()
 	 * \sa getRelativeValue()
-	 * \sa getRelativeVector()
 	 */
-	[[nodiscard]] vec3 getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY,
+	[[nodiscard]] vec3 getAbsoluteValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY,
 		std::size_t outputNegativeZ, std::size_t outputPositiveZ) const noexcept;
 
 	/**
@@ -1140,11 +1139,11 @@ public:
 	 *         component is usually between -1 and 1 when only a single input is
 	 *         controlling each direction, though it could be any value.
 	 *
+	 * \sa getAbsoluteState()
+	 * \sa getRelativeState()
 	 * \sa getAbsoluteValue()
-	 * \sa getRelativeValue()
-	 * \sa getAbsoluteVector()
 	 */
-	[[nodiscard]] vec3 getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY,
+	[[nodiscard]] vec3 getRelativeValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY,
 		std::size_t outputNegativeZ, std::size_t outputPositiveZ) const noexcept;
 
 	/**
@@ -1273,6 +1272,30 @@ public:
 	}
 
 	/**
+	 * Like getAbsoluteState(std::size_t) const, but accepts an "action" of any
+	 * enum type, which is interpreted as corresponding to the output number
+	 * equal to its underlying value.
+	 *
+	 * \sa getAbsoluteState(std::size_t) const
+	 */
+	template <typename Action>
+	[[nodiscard]] i32 getAbsoluteState(Action action) const noexcept requires(std::is_enum_v<Action>) {
+		return getAbsoluteState(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
+	}
+
+	/**
+	 * Like getRelativeState(std::size_t) const, but accepts an "action" of any
+	 * enum type, which is interpreted as corresponding to the output number
+	 * equal to its underlying value.
+	 *
+	 * \sa getRelativeState(std::size_t) const
+	 */
+	template <typename Action>
+	[[nodiscard]] i32 getRelativeState(Action action) const noexcept requires(std::is_enum_v<Action>) {
+		return getRelativeState(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
+	}
+
+	/**
 	 * Like getAbsoluteValue(std::size_t) const, but accepts an "action" of any
 	 * enum type, which is interpreted as corresponding to the output number
 	 * equal to its underlying value.
@@ -1280,8 +1303,8 @@ public:
 	 * \sa getAbsoluteValue(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] i32 getAbsoluteValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
-		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
+	[[nodiscard]] float getAbsoluteValue(Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
 	}
 
 	/**
@@ -1292,109 +1315,85 @@ public:
 	 * \sa getRelativeValue(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] i32 getRelativeValue(Action action) const noexcept requires(std::is_enum_v<Action>) {
-		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
+	[[nodiscard]] float getRelativeValue(Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
 	}
 
 	/**
-	 * Like getAbsoluteVector(std::size_t) const, but accepts an "action" of any
-	 * enum type, which is interpreted as corresponding to the output number
-	 * equal to its underlying value.
-	 *
-	 * \sa getAbsoluteVector(std::size_t) const
-	 */
-	template <typename Action>
-	[[nodiscard]] float getAbsoluteVector(Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
-		return getAbsoluteVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
-	}
-
-	/**
-	 * Like getRelativeVector(std::size_t) const, but accepts an "action" of any
-	 * enum type, which is interpreted as corresponding to the output number
-	 * equal to its underlying value.
-	 *
-	 * \sa getRelativeVector(std::size_t) const
-	 */
-	template <typename Action>
-	[[nodiscard]] float getRelativeVector(Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
-		return getRelativeVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
-	}
-
-	/**
-	 * Like getAbsoluteVector(std::size_t, std::size_t) const, but accepts
+	 * Like getAbsoluteValue(std::size_t, std::size_t) const, but accepts
 	 * "actions" of any enum type, which are interpreted as corresponding to
 	 * output numbers equal to their underlying values.
 	 *
-	 * \sa getAbsoluteVector(std::size_t, std::size_t) const
+	 * \sa getAbsoluteValue(std::size_t, std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] float getAbsoluteVector(Action actionNegative, Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
-		return getAbsoluteVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegative)),
+	[[nodiscard]] float getAbsoluteValue(Action actionNegative, Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegative)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
 	}
 
 	/**
-	 * Like getRelativeVector(std::size_t, std::size_t) const, but accepts
+	 * Like getRelativeValue(std::size_t, std::size_t) const, but accepts
 	 * "actions" of any enum type, which are interpreted as corresponding to
 	 * output numbers equal to their underlying values.
 	 *
-	 * \sa getRelativeVector(std::size_t, std::size_t) const
+	 * \sa getRelativeValue(std::size_t, std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] float getRelativeVector(Action actionNegative, Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
-		return getRelativeVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegative)),
+	[[nodiscard]] float getRelativeValue(Action actionNegative, Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegative)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
 	}
 
 	/**
-	 * Like getAbsoluteVector(std::size_t, std::size_t, std::size_t,
+	 * Like getAbsoluteValue(std::size_t, std::size_t, std::size_t,
 	 * std::size_t) const, but accepts "actions" of any enum type, which are
 	 * interpreted as corresponding to the output numbers equal to their
 	 * underlying values.
 	 *
-	 * \sa getAbsoluteVector(std::size_t, std::size_t, std::size_t,
+	 * \sa getAbsoluteValue(std::size_t, std::size_t, std::size_t,
 	 *     std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] vec2 getAbsoluteVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
+	[[nodiscard]] vec2 getAbsoluteValue(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
 		requires(std::is_enum_v<Action>) {
-		return getAbsoluteVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
+		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveY)));
 	}
 
 	/**
-	 * Like getRelativeVector(std::size_t, std::size_t, std::size_t,
+	 * Like getRelativeValue(std::size_t, std::size_t, std::size_t,
 	 * std::size_t) const, but accepts "actions" of any enum type, which are
 	 * interpreted as corresponding to the output numbers equal to their
 	 * underlying values.
 	 *
-	 * \sa getRelativeVector(std::size_t, std::size_t, std::size_t,
+	 * \sa getRelativeValue(std::size_t, std::size_t, std::size_t,
 	 *     std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] vec2 getRelativeVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
+	[[nodiscard]] vec2 getRelativeValue(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
 		requires(std::is_enum_v<Action>) {
-		return getRelativeVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
+		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveY)));
 	}
 
 	/**
-	 * Like getAbsoluteVector(std::size_t, std::size_t, std::size_t,
+	 * Like getAbsoluteValue(std::size_t, std::size_t, std::size_t,
 	 * std::size_t, std::size_t, std::size_t) const, but accepts "actions" of
 	 * any enum type, which are interpreted as corresponding to the output
 	 * numbers equal to their underlying values.
 	 *
-	 * \sa getAbsoluteVector(std::size_t, std::size_t, std::size_t,
+	 * \sa getAbsoluteValue(std::size_t, std::size_t, std::size_t,
 	 *     std::size_t, std::size_t, std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] vec3 getAbsoluteVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY, Action actionNegativeZ,
+	[[nodiscard]] vec3 getAbsoluteValue(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY, Action actionNegativeZ,
 		Action actionPositiveZ) const noexcept requires(std::is_enum_v<Action>) {
-		return getAbsoluteVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
+		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveY)),
@@ -1403,18 +1402,18 @@ public:
 	}
 
 	/**
-	 * Like getRelativeVector(std::size_t, std::size_t, std::size_t,
+	 * Like getRelativeValue(std::size_t, std::size_t, std::size_t,
 	 * std::size_t, std::size_t, std::size_t) const, but accepts "actions" of
 	 * any enum type, which are interpreted as corresponding to the output
 	 * numbers equal to their underlying values.
 	 *
-	 * \sa getRelativeVector(std::size_t, std::size_t, std::size_t,
+	 * \sa getRelativeValue(std::size_t, std::size_t, std::size_t,
 	 *     std::size_t, std::size_t, std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] vec3 getRelativeVector(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY, Action actionNegativeZ,
+	[[nodiscard]] vec3 getRelativeValue(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY, Action actionNegativeZ,
 		Action actionPositiveZ) const noexcept requires(std::is_enum_v<Action>) {
-		return getRelativeVector(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
+		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveY)),
@@ -1455,8 +1454,8 @@ private:
 	Outputs previousPersistentOutputs{};
 	Outputs transientOutputPresses{};
 	Outputs transientOutputReleases{};
-	std::array<i32, OUTPUT_COUNT> outputAbsoluteValues{};
-	std::array<i32, OUTPUT_COUNT> outputRelativeValues{};
+	std::array<i32, OUTPUT_COUNT> outputAbsoluteStates{};
+	std::array<i32, OUTPUT_COUNT> outputRelativeStates{};
 	std::array<u8, OUTPUT_COUNT> outputPersistentPresses{};
 	std::bitset<INPUT_COUNT> currentPersistentInputs{};
 	std::bitset<INPUT_COUNT> previousPersistentInputs{};

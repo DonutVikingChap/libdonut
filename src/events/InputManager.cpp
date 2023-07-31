@@ -40,7 +40,7 @@ void InputManager::prepareForEvents() {
 	previousPersistentOutputs = currentPersistentOutputs;
 	transientOutputPresses = {};
 	transientOutputReleases = {};
-	outputRelativeValues.fill(0);
+	outputRelativeStates.fill(0);
 	previousPersistentInputs = currentPersistentInputs;
 	transientInputPresses = {};
 	transientInputReleases = {};
@@ -163,9 +163,9 @@ void InputManager::press(Input input, i32 offset) noexcept {
 		transientOutputPresses |= outputs;
 		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
 			if (outputs.test(i)) {
-				outputRelativeValues[i] += offset;
+				outputRelativeStates[i] += offset;
 				if (wasReleased) {
-					outputAbsoluteValues[i] += offset;
+					outputAbsoluteStates[i] += offset;
 					++outputPersistentPresses[i];
 				}
 			}
@@ -183,9 +183,9 @@ void InputManager::release(Input input, i32 offset) noexcept {
 		transientOutputReleases |= outputs;
 		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
 			if (outputs.test(i)) {
-				outputRelativeValues[i] += offset;
+				outputRelativeStates[i] += offset;
 				if (wasPressed) {
-					outputAbsoluteValues[i] += offset;
+					outputAbsoluteStates[i] += offset;
 					if (outputPersistentPresses[i] > 1) {
 						--outputPersistentPresses[i];
 					} else {
@@ -209,7 +209,7 @@ void InputManager::move(Input input, i32 offset) noexcept {
 			transientOutputReleases |= outputs;
 			for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
 				if (outputs.test(i)) {
-					outputRelativeValues[i] += offset;
+					outputRelativeStates[i] += offset;
 				}
 			}
 		}
@@ -221,7 +221,7 @@ void InputManager::set(Input input, i32 value) noexcept {
 		const Outputs outputs = it->second;
 		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
 			if (outputs.test(i)) {
-				outputAbsoluteValues[i] = value;
+				outputAbsoluteStates[i] = value;
 			}
 		}
 	}
@@ -236,8 +236,8 @@ void InputManager::resetAllInputs() noexcept {
 	currentPersistentOutputs = {};
 	transientOutputReleases = {};
 	transientOutputPresses = {};
-	outputAbsoluteValues.fill(0);
-	outputRelativeValues.fill(0);
+	outputAbsoluteStates.fill(0);
+	outputRelativeStates.fill(0);
 	outputPersistentPresses.fill(0);
 	currentPersistentInputs = {};
 	transientInputReleases = {};
@@ -396,59 +396,59 @@ bool InputManager::justReleased(std::size_t output) const noexcept {
 	return getJustReleasedOutputs().test(output);
 }
 
-i32 InputManager::getAbsoluteValue(std::size_t output) const noexcept {
-	return outputAbsoluteValues[output];
+i32 InputManager::getAbsoluteState(std::size_t output) const noexcept {
+	return outputAbsoluteStates[output];
 }
 
-i32 InputManager::getRelativeValue(std::size_t output) const noexcept {
-	return outputRelativeValues[output];
+i32 InputManager::getRelativeState(std::size_t output) const noexcept {
+	return outputRelativeStates[output];
 }
 
-float InputManager::getAbsoluteVector(std::size_t outputPositive) const noexcept {
-	return getFloatValue(max(i32{0}, getAbsoluteValue(outputPositive)));
+float InputManager::getAbsoluteValue(std::size_t outputPositive) const noexcept {
+	return getFloatValue(max(i32{0}, getAbsoluteState(outputPositive)));
 }
 
-float InputManager::getRelativeVector(std::size_t outputPositive) const noexcept {
-	return getFloatValue(max(i32{0}, getRelativeValue(outputPositive)));
+float InputManager::getRelativeValue(std::size_t outputPositive) const noexcept {
+	return getFloatValue(max(i32{0}, getRelativeState(outputPositive)));
 }
 
-float InputManager::getAbsoluteVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
-	return getAbsoluteVector(outputPositive) - getAbsoluteVector(outputNegative);
+float InputManager::getAbsoluteValue(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
+	return getAbsoluteValue(outputPositive) - getAbsoluteValue(outputNegative);
 }
 
-float InputManager::getRelativeVector(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
-	return getRelativeVector(outputPositive) - getRelativeVector(outputNegative);
+float InputManager::getRelativeValue(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
+	return getRelativeValue(outputPositive) - getRelativeValue(outputNegative);
 }
 
-vec2 InputManager::getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
+vec2 InputManager::getAbsoluteValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
 	return {
-		getAbsoluteVector(outputNegativeX, outputPositiveX),
-		getAbsoluteVector(outputNegativeY, outputPositiveY),
+		getAbsoluteValue(outputNegativeX, outputPositiveX),
+		getAbsoluteValue(outputNegativeY, outputPositiveY),
 	};
 }
 
-vec2 InputManager::getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
+vec2 InputManager::getRelativeValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
 	return {
-		getRelativeVector(outputNegativeX, outputPositiveX),
-		getRelativeVector(outputNegativeY, outputPositiveY),
+		getRelativeValue(outputNegativeX, outputPositiveX),
+		getRelativeValue(outputNegativeY, outputPositiveY),
 	};
 }
 
-vec3 InputManager::getAbsoluteVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY,
-	std::size_t outputNegativeZ, std::size_t outputPositiveZ) const noexcept {
+vec3 InputManager::getAbsoluteValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY, std::size_t outputNegativeZ,
+	std::size_t outputPositiveZ) const noexcept {
 	return {
-		getAbsoluteVector(outputNegativeX, outputPositiveX),
-		getAbsoluteVector(outputNegativeY, outputPositiveY),
-		getAbsoluteVector(outputNegativeZ, outputPositiveZ),
+		getAbsoluteValue(outputNegativeX, outputPositiveX),
+		getAbsoluteValue(outputNegativeY, outputPositiveY),
+		getAbsoluteValue(outputNegativeZ, outputPositiveZ),
 	};
 }
 
-vec3 InputManager::getRelativeVector(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY,
-	std::size_t outputNegativeZ, std::size_t outputPositiveZ) const noexcept {
+vec3 InputManager::getRelativeValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY, std::size_t outputNegativeZ,
+	std::size_t outputPositiveZ) const noexcept {
 	return {
-		getRelativeVector(outputNegativeX, outputPositiveX),
-		getRelativeVector(outputNegativeY, outputPositiveY),
-		getRelativeVector(outputNegativeZ, outputPositiveZ),
+		getRelativeValue(outputNegativeX, outputPositiveX),
+		getRelativeValue(outputNegativeY, outputPositiveY),
+		getRelativeValue(outputNegativeZ, outputPositiveZ),
 	};
 }
 

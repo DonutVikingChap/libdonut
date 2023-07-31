@@ -78,15 +78,7 @@ protected:
 	void update(app::FrameInfo frameInfo) override {
 		using namespace std::chrono_literals;
 
-		inputManager.prepareForEvents();
-		for (const events::Event& event : eventPump.pollEvents()) {
-			if (event.is<events::ApplicationQuitRequestedEvent>()) {
-				quit();
-			} else if (event.is<events::WindowSizeChangedEvent>()) {
-				resize();
-			}
-			inputManager.handleEvent(event);
-		}
+		handleEvents();
 
 		if (soundStage) {
 			soundStage->update(frameInfo.deltaTime, listener);
@@ -109,7 +101,7 @@ protected:
 
 		const float sprintInput = (inputManager.isPressed(Action::SPRINT)) ? 4.0f : 1.0f;
 
-		vec2 movementInput = inputManager.getAbsoluteVector(Action::MOVE_LEFT, Action::MOVE_RIGHT, Action::MOVE_DOWN, Action::MOVE_UP);
+		vec2 movementInput = inputManager.getAbsoluteValue(Action::MOVE_LEFT, Action::MOVE_RIGHT, Action::MOVE_DOWN, Action::MOVE_UP);
 		if (const float movementInputLengthSquared = length2(movementInput); movementInputLengthSquared > 1.0f) {
 			movementInput /= sqrt(movementInputLengthSquared);
 		}
@@ -117,11 +109,11 @@ protected:
 		carrotCakeVelocity = {movementInput * carrotCakeSpeed, 0.0f};
 
 		if (inputManager.isPressed(Action::CONFIRM)) {
-			const vec2 aimInput = inputManager.getRelativeVector(Action::AIM_LEFT, Action::AIM_RIGHT, Action::AIM_DOWN, Action::AIM_UP);
+			const vec2 aimInput = inputManager.getRelativeValue(Action::AIM_LEFT, Action::AIM_RIGHT, Action::AIM_DOWN, Action::AIM_UP);
 			carrotCakeScale = clamp(carrotCakeScale + aimInput * 10.0f, 0.25f, 4.0f);
 		}
 
-		const float scrollInput = inputManager.getRelativeVector(Action::SCROLL_DOWN, Action::SCROLL_UP);
+		const float scrollInput = inputManager.getRelativeValue(Action::SCROLL_DOWN, Action::SCROLL_UP);
 		carrotCakeCurrentPosition.z -= scrollInput * 0.25f * sprintInput;
 
 		const bool triggerInput = inputManager.isPressed(Action::CANCEL);
@@ -449,6 +441,18 @@ private:
 		quadtree[getAabbOf(CIRCLE_D)].push_front(CIRCLE_D);
 		quadtree[getAabbOf(CIRCLE_E)].push_front(CIRCLE_E);
 		quadtree[getAabbOf(CIRCLE_F)].push_front(CIRCLE_F);
+	}
+
+	void handleEvents() {
+		inputManager.prepareForEvents();
+		for (const events::Event& event : eventPump.pollEvents()) {
+			if (event.is<events::ApplicationQuitRequestedEvent>()) {
+				quit();
+			} else if (event.is<events::WindowSizeChangedEvent>()) {
+				resize();
+			}
+			inputManager.handleEvent(event);
+		}
 	}
 
 	void uploadShaderData(app::FrameInfo frameInfo) {
