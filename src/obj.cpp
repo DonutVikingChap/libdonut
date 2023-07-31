@@ -162,7 +162,7 @@ private:
 
 	[[nodiscard]] std::string parseString() {
 		const std::string_view::iterator begin = it;
-		while (it != end && *it != '\r' && *it != '\n' && !isWhitespace(*it)) {
+		while (it != end && *it != '\r' && *it != '\n') {
 			++it;
 		}
 		if (it == begin) {
