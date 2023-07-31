@@ -299,8 +299,8 @@ public:
 	void release(Input input, i32 offset = -32767) noexcept;
 
 	/**
-	 * Trigger a transient activation of an input that only lasts for the current
-	 * frame and apply a relative offset to all of its bound outputs.
+	 * Trigger a transient press and release of an input that only lasts for the
+	 * current frame and apply a relative offset to all of its bound outputs.
 	 *
 	 * \param input physical input to trigger.
 	 * \param offset signed integer offset to apply to all bound outputs. The
@@ -787,8 +787,8 @@ public:
 	 * frame.
 	 *
 	 * \return the set of outputs that are currently active, but were not active
-	 *         on the previous frame, combined with all transient outputs from
-	 *         the current frame.
+	 *         on the previous frame, combined with all transient output presses
+	 *         from the current frame.
 	 *
 	 * \sa getCurrentOutputs()
 	 * \sa getPreviousOutputs()
@@ -802,8 +802,8 @@ public:
 	 * frame.
 	 *
 	 * \return the set of outputs that are currently not active, but were active
-	 *         on the previous frame, combined with all transient outputs from
-	 *         the current frame.
+	 *         on the previous frame, combined with all transient output
+	 *         releases from the current frame.
 	 *
 	 * \sa getCurrentOutputs()
 	 * \sa getPreviousOutputs()
@@ -1453,13 +1453,15 @@ private:
 	std::optional<float> touchPressure{};
 	Outputs currentPersistentOutputs{};
 	Outputs previousPersistentOutputs{};
-	Outputs transientOutputs{};
+	Outputs transientOutputPresses{};
+	Outputs transientOutputReleases{};
 	std::array<i32, OUTPUT_COUNT> outputAbsoluteValues{};
 	std::array<i32, OUTPUT_COUNT> outputRelativeValues{};
 	std::array<u8, OUTPUT_COUNT> outputPersistentPresses{};
 	std::bitset<INPUT_COUNT> currentPersistentInputs{};
 	std::bitset<INPUT_COUNT> previousPersistentInputs{};
-	std::bitset<INPUT_COUNT> transientInputs{};
+	std::bitset<INPUT_COUNT> transientInputPresses{};
+	std::bitset<INPUT_COUNT> transientInputReleases{};
 	bool mouseTransientMotion = false;
 	bool mouseWheelHorizontalTransientMotion = false;
 	bool mouseWheelVerticalTransientMotion = false;

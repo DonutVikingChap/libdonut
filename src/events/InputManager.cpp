@@ -38,10 +38,12 @@ InputManager::~InputManager() {
 
 void InputManager::prepareForEvents() {
 	previousPersistentOutputs = currentPersistentOutputs;
-	transientOutputs = {};
+	transientOutputPresses = {};
+	transientOutputReleases = {};
 	outputRelativeValues.fill(0);
 	previousPersistentInputs = currentPersistentInputs;
-	transientInputs = {};
+	transientInputPresses = {};
+	transientInputReleases = {};
 	mouseTransientMotion = false;
 	mouseWheelHorizontalTransientMotion = false;
 	mouseWheelVerticalTransientMotion = false;
@@ -154,9 +156,11 @@ void InputManager::press(Input input, i32 offset) noexcept {
 	const std::size_t inputIndex = getInputIndex(input);
 	const bool wasReleased = !currentPersistentInputs.test(inputIndex);
 	currentPersistentInputs.set(inputIndex);
+	transientInputPresses.set(inputIndex);
 	if (const auto it = bindings.find(input); it != bindings.end()) {
 		const Outputs outputs = it->second;
 		currentPersistentOutputs |= outputs;
+		transientOutputPresses |= outputs;
 		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
 			if (outputs.test(i)) {
 				outputRelativeValues[i] += offset;
@@ -173,8 +177,10 @@ void InputManager::release(Input input, i32 offset) noexcept {
 	const std::size_t inputIndex = getInputIndex(input);
 	const bool wasPressed = currentPersistentInputs.test(inputIndex);
 	currentPersistentInputs.set(inputIndex, false);
+	transientInputReleases.set(inputIndex);
 	if (const auto it = bindings.find(input); it != bindings.end()) {
 		const Outputs outputs = it->second;
+		transientOutputReleases |= outputs;
 		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
 			if (outputs.test(i)) {
 				outputRelativeValues[i] += offset;
@@ -195,10 +201,12 @@ void InputManager::release(Input input, i32 offset) noexcept {
 void InputManager::move(Input input, i32 offset) noexcept {
 	if (offset > 0) {
 		const std::size_t inputIndex = getInputIndex(input);
-		transientInputs.set(inputIndex);
+		transientInputPresses.set(inputIndex);
+		transientInputReleases.set(inputIndex);
 		if (const auto it = bindings.find(input); it != bindings.end()) {
 			const Outputs outputs = it->second;
-			transientOutputs |= outputs;
+			transientOutputPresses |= outputs;
+			transientOutputReleases |= outputs;
 			for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
 				if (outputs.test(i)) {
 					outputRelativeValues[i] += offset;
@@ -226,12 +234,14 @@ void InputManager::resetAllInputs() noexcept {
 	touchPosition = {};
 	touchPressure = {};
 	currentPersistentOutputs = {};
-	transientOutputs = {};
+	transientOutputReleases = {};
+	transientOutputPresses = {};
 	outputAbsoluteValues.fill(0);
 	outputRelativeValues.fill(0);
 	outputPersistentPresses.fill(0);
 	currentPersistentInputs = {};
-	transientInputs = {};
+	transientInputReleases = {};
+	transientInputPresses = {};
 }
 
 void InputManager::setMouseSensitivity(float sensitivity) noexcept {
@@ -367,11 +377,11 @@ InputManager::Outputs InputManager::getPreviousOutputs() const noexcept {
 }
 
 InputManager::Outputs InputManager::getJustPressedOutputs() const noexcept {
-	return transientOutputs | (currentPersistentOutputs & ~previousPersistentOutputs);
+	return transientOutputPresses | (currentPersistentOutputs & ~previousPersistentOutputs);
 }
 
 InputManager::Outputs InputManager::getJustReleasedOutputs() const noexcept {
-	return transientOutputs | (previousPersistentOutputs & ~currentPersistentOutputs);
+	return transientOutputReleases | (previousPersistentOutputs & ~currentPersistentOutputs);
 }
 
 bool InputManager::isPressed(std::size_t output) const noexcept {
@@ -447,11 +457,11 @@ bool InputManager::isPressed(Input input) const noexcept {
 }
 
 bool InputManager::justPressed(Input input) const noexcept {
-	return (transientInputs | (currentPersistentInputs & ~previousPersistentInputs)).test(getInputIndex(input));
+	return (transientInputPresses | (currentPersistentInputs & ~previousPersistentInputs)).test(getInputIndex(input));
 }
 
 bool InputManager::justReleased(Input input) const noexcept {
-	return (transientInputs | (previousPersistentInputs & ~currentPersistentInputs)).test(getInputIndex(input));
+	return (transientInputReleases | (previousPersistentInputs & ~currentPersistentInputs)).test(getInputIndex(input));
 }
 
 void InputManager::ControllerDeleter::operator()(void* handle) const noexcept {
