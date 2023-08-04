@@ -74,7 +74,10 @@ void Application::setFrameRateParameters(float tickRate, float minFrameRate, flo
 	tickInterval = (tickRate <= 0.0f) ? Clock::duration{} : ceil<Clock::duration>(Time<float>::Duration{1.0f / tickRate});
 	tickInfo.tickInterval = duration_cast<decltype(tickInfo.tickInterval)::Duration>(tickInterval);
 	minFrameInterval = (maxFrameRate == 0.0f) ? Clock::duration{} : ceil<Clock::duration>(Time<float>::Duration{1.0f / maxFrameRate});
-	maxTicksPerFrame = (tickRate <= 0.0f) ? Clock::rep{0} : (minFrameRate <= 0.0f || tickRate <= minFrameRate) ? Clock::rep{1} : static_cast<Clock::rep>(tickRate / minFrameRate);
+	maxTicksPerFrame =
+		(tickRate <= 0.0f) ? Clock::rep{0}
+		: (minFrameRate <= 0.0f || tickRate <= minFrameRate) ? Clock::rep{1}
+		: (maxFrameRate <= 0.0f || minFrameRate <= maxFrameRate) ? static_cast<Clock::rep>(tickRate / minFrameRate) : static_cast<Clock::rep>(tickRate / maxFrameRate);
 	latestTickProcessingEndTime = Clock::now();
 }
 
