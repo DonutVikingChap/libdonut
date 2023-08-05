@@ -31,7 +31,7 @@ constexpr stbi_io_callbacks IMAGE_FILE_INPUT_CALLBACKS{
 	},
 };
 
-void imageFileOutputCallback(void* context, void* data, int size) noexcept {
+void imageFileOutputCallback(void* context, void* data, int size) {
 	File& file = *static_cast<File*>(context);
 	file.write(std::span{reinterpret_cast<const std::byte*>(data), static_cast<std::size_t>(size)});
 }
