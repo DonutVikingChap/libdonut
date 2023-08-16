@@ -1899,7 +1899,7 @@ public:
 	 *          mutates an internal lookahead buffer. Exclusive access is
 	 *          therefore required for safety.
 	 */
-	[[nodiscard]] const Token& peek() const noexcept {
+	[[nodiscard]] const Token& peek() const {
 		if (!currentToken) {
 			currentToken = lexer.scan();
 		}
