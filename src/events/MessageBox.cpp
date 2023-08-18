@@ -1,8 +1,8 @@
 #include <donut/events/Error.hpp>
 #include <donut/events/MessageBox.hpp>
 
-#include <SDL.h>  // SDL..., Uint32
-#include <format> // std::format
+#include <SDL.h>        // SDL..., Uint32
+#include <fmt/format.h> // fmt::format
 
 namespace donut::events {
 
@@ -14,7 +14,7 @@ void MessageBox::show(Type type, const char* title, const char* message) {
 		case Type::INFO_MESSAGE: flags = SDL_MESSAGEBOX_INFORMATION; break;
 	}
 	if (SDL_ShowSimpleMessageBox(flags, title, message, nullptr) != 0) {
-		throw Error{std::format("Failed to show simple message box: {}", SDL_GetError())};
+		throw Error{fmt::format("Failed to show simple message box: {}", SDL_GetError())};
 	}
 }
 

@@ -14,7 +14,7 @@
 #include <cstdint>          // std::uint8_t, std::uint32_t
 #include <cstdlib>          // std::strtoull, std::strtod
 #include <cstring>          // std::memcpy
-#include <format>           // std::format_to
+#include <fmt/format.h>     // fmt::format_to
 #include <initializer_list> // std::initializer_list
 #include <istream>          // std::istream
 #include <iterator>         // std::begin, std::end, std::istreambuf_iterator, std::ostreambuf_iterator
@@ -2347,7 +2347,7 @@ public:
 				stream << "Infinity";
 			}
 		} else {
-			[[likely]] std::format_to(std::ostreambuf_iterator{stream}, "{}", value);
+			[[likely]] fmt::format_to(std::ostreambuf_iterator{stream}, "{}", value);
 		}
 	}
 

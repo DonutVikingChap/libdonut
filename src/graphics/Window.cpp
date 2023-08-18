@@ -12,8 +12,8 @@
 #endif
 //
 
-#include <cstdint> // std::uint32_t
-#include <format>  // std::format
+#include <cstdint>      // std::uint32_t
+#include <fmt/format.h> // fmt::format
 
 namespace donut::graphics {
 
@@ -47,12 +47,12 @@ Window::Window(const WindowOptions& options) {
 
 	window.reset(SDL_CreateWindow(options.title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, options.size.x, options.size.y, windowFlags));
 	if (!window) {
-		throw Error{std::format("Failed to create window: {}", SDL_GetError())};
+		throw Error{fmt::format("Failed to create window: {}", SDL_GetError())};
 	}
 
 	glContext.reset(SDL_GL_CreateContext(static_cast<SDL_Window*>(window.get())));
 	if (!glContext) {
-		throw Error{std::format("Failed to create OpenGL context: {}", SDL_GetError())};
+		throw Error{fmt::format("Failed to create OpenGL context: {}", SDL_GetError())};
 	}
 
 #ifndef __EMSCRIPTEN__
@@ -84,29 +84,29 @@ void Window::setFullscreen(bool fullscreen) {
 	if (fullscreen && SDL_GetWindowFlags(static_cast<SDL_Window*>(window.get())) & SDL_WINDOW_RESIZABLE) {
 		const int displayIndex = SDL_GetWindowDisplayIndex(static_cast<SDL_Window*>(window.get()));
 		if (displayIndex < 0) {
-			throw Error{std::format("Failed to get window display index: {}", SDL_GetError())};
+			throw Error{fmt::format("Failed to get window display index: {}", SDL_GetError())};
 		}
 		SDL_DisplayMode desktopDisplayMode{};
 		if (SDL_GetDesktopDisplayMode(displayIndex, &desktopDisplayMode) != 0) {
-			throw Error{std::format("Failed to get desktop display mode: {}", SDL_GetError())};
+			throw Error{fmt::format("Failed to get desktop display mode: {}", SDL_GetError())};
 		}
 		if (SDL_SetWindowDisplayMode(static_cast<SDL_Window*>(window.get()), &desktopDisplayMode) != 0) {
-			throw Error{std::format("Failed to set window display mode: {}", SDL_GetError())};
+			throw Error{fmt::format("Failed to set window display mode: {}", SDL_GetError())};
 		}
 	}
 	if (SDL_SetWindowFullscreen(static_cast<SDL_Window*>(window.get()), (fullscreen) ? SDL_WINDOW_FULLSCREEN : 0) != 0) {
-		throw Error{std::format("Failed to set fullscreen: {}", SDL_GetError())};
+		throw Error{fmt::format("Failed to set fullscreen: {}", SDL_GetError())};
 	}
 }
 
 void Window::setVSync(bool vSync) {
 	if (vSync) {
 		if (SDL_GL_SetSwapInterval(-1) != 0 && SDL_GL_SetSwapInterval(1) != 0) {
-			throw Error{std::format("Failed to enable VSync: {}", SDL_GetError())};
+			throw Error{fmt::format("Failed to enable VSync: {}", SDL_GetError())};
 		}
 	} else {
 		if (SDL_GL_SetSwapInterval(0) != 0) {
-			throw Error{std::format("Failed to disable VSync: {}", SDL_GetError())};
+			throw Error{fmt::format("Failed to disable VSync: {}", SDL_GetError())};
 		}
 	}
 }
@@ -137,21 +137,21 @@ void Window::setVSync(bool vSync) {
 [[nodiscard]] std::uint32_t Window::getId() const {
 	const Uint32 id = SDL_GetWindowID(static_cast<SDL_Window*>(window.get()));
 	if (id == 0) {
-		throw Error{std::format("Failed to get window ID: {}", SDL_GetError())};
+		throw Error{fmt::format("Failed to get window ID: {}", SDL_GetError())};
 	}
 	return id;
 }
 
 [[nodiscard]] Framebuffer& Window::getFramebuffer() {
 	if (SDL_GL_MakeCurrent(static_cast<SDL_Window*>(window.get()), static_cast<SDL_GLContext>(glContext.get())) != 0) {
-		throw Error{std::format("Failed to make OpenGL context current: {}", SDL_GetError())};
+		throw Error{fmt::format("Failed to make OpenGL context current: {}", SDL_GetError())};
 	}
 	return framebuffer;
 }
 
 Window::VideoContext::VideoContext() {
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
-		throw Error{std::format("Failed to initialize SDL video subsystem:\n{}", SDL_GetError())};
+		throw Error{fmt::format("Failed to initialize SDL video subsystem:\n{}", SDL_GetError())};
 	}
 }
 

@@ -1,14 +1,14 @@
 #include <donut/json.hpp>
 
-#include <cmath>       // std::isinf, std::isnan, std::signbit
-#include <format>      // std::format
-#include <limits>      // std::numeric_limits
-#include <optional>    // std::optional
-#include <sstream>     // std::istringstream, std::ostringstream
-#include <stdexcept>   // std::runtime_error
-#include <string>      // std::string
-#include <string_view> // std::string_view, std::u8string_view
-#include <utility>     // std::move
+#include <cmath>        // std::isinf, std::isnan, std::signbit
+#include <fmt/format.h> // fmt::format
+#include <limits>       // std::numeric_limits
+#include <optional>     // std::optional
+#include <sstream>      // std::istringstream, std::ostringstream
+#include <stdexcept>    // std::runtime_error
+#include <string>       // std::string
+#include <string_view>  // std::string_view, std::u8string_view
+#include <utility>      // std::move
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h> // TEST_SUITE, TEST_CASE, SUBCASE, CHECK
@@ -21,7 +21,7 @@ namespace {
 	try {
 		return json::Value::parse(jsonString);
 	} catch (const json::Error& e) {
-		throw std::runtime_error{std::format("Line {}, Column {}: {}", e.source.lineNumber, e.source.columnNumber, e.what())};
+		throw std::runtime_error{fmt::format("Line {}, Column {}: {}", e.source.lineNumber, e.source.columnNumber, e.what())};
 	}
 }
 
@@ -36,7 +36,7 @@ namespace {
 		CHECK(subsequentString == "Can't-touch-this");
 		return result;
 	} catch (const json::Error& e) {
-		throw std::runtime_error{std::format("Line {}, Column {}: {}", e.source.lineNumber, e.source.columnNumber, e.what())};
+		throw std::runtime_error{fmt::format("Line {}, Column {}: {}", e.source.lineNumber, e.source.columnNumber, e.what())};
 	}
 }
 

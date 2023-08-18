@@ -1,21 +1,21 @@
 #include <donut/File.hpp>
 #include <donut/Filesystem.hpp>
 
-#include <cassert>  // assert
-#include <cstddef>  // std::size_t
-#include <cstring>  // std::strlen
-#include <format>   // std::format
-#include <physfs.h> // PHYSFS_...
-#include <span>     // std::span
-#include <string>   // std::string
-#include <utility>  // std::move
-#include <vector>   // std::vector
+#include <cassert>      // assert
+#include <cstddef>      // std::size_t
+#include <cstring>      // std::strlen
+#include <fmt/format.h> // fmt::format
+#include <physfs.h>     // PHYSFS_...
+#include <span>         // std::span
+#include <string>       // std::string
+#include <utility>      // std::move
+#include <vector>       // std::vector
 
 namespace donut {
 
 Filesystem::Filesystem(const char* programFilepath, const FilesystemOptions& options) {
 	if (PHYSFS_init(programFilepath) == 0) {
-		throw File::Error{std::format("Failed to initialize filesystem:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to initialize filesystem:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	if (options.organizationName && options.applicationName) {
 		if (std::string standardOutputDirectory = getStandardOutputDirectory(options.organizationName, options.applicationName); !standardOutputDirectory.empty()) {
@@ -75,7 +75,7 @@ std::string Filesystem::getOutputDirectory() const {
 
 void Filesystem::setOutputDirectory(std::string path) {
 	if (PHYSFS_setWriteDir(path.c_str()) == 0) {
-		throw File::Error{std::format("Failed to set output directory:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to set output directory:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	outputDirectory = std::move(path);
 }
@@ -83,14 +83,14 @@ void Filesystem::setOutputDirectory(std::string path) {
 void Filesystem::mountArchive(const char* path, FilesystemMountPriority priority) {
 	assert(path);
 	if (PHYSFS_mount(path, nullptr, (priority == FilesystemMountPriority::LOWER) ? 1 : 0) == 0) {
-		throw File::Error{std::format("Failed to mount archive \"{}\":\n{}\n", path, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to mount archive \"{}\":\n{}\n", path, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 }
 
 void Filesystem::unmountArchive(const char* path) {
 	assert(path);
 	if (PHYSFS_unmount(path) == 0) {
-		throw File::Error{std::format("Failed to unmount archive \"{}\":\n{}\n", path, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to unmount archive \"{}\":\n{}\n", path, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 }
 
@@ -120,9 +120,9 @@ std::vector<std::string> Filesystem::mountArchives(const char* filepath, const c
 			}
 			const char* directory = PHYSFS_getRealDir(fname);
 			if (!directory) {
-				throw File::Error{std::format("Failed to get the real directory of archive \"{}\": {}\n", filename, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+				throw File::Error{fmt::format("Failed to get the real directory of archive \"{}\": {}\n", filename, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 			}
-			std::string archiveFilepath = std::format("{}{}{}", directory, PHYSFS_getDirSeparator(), fname);
+			std::string archiveFilepath = fmt::format("{}{}{}", directory, PHYSFS_getDirSeparator(), fname);
 			context.filesystem.mountArchive(archiveFilepath.c_str(), context.priority);
 			context.mountedFilepaths.push_back(std::move(archiveFilepath));
 			return PHYSFS_ENUM_OK;
@@ -145,14 +145,14 @@ const char* Filesystem::findArchiveOfFile(const char* filepath) const {
 void Filesystem::createDirectory(const char* filepath) {
 	assert(filepath);
 	if (PHYSFS_mkdir(filepath) == 0) {
-		throw File::Error{std::format("Failed to create directory \"{}\": {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to create directory \"{}\": {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 }
 
 void Filesystem::deleteFile(const char* filepath) {
 	assert(filepath);
 	if (PHYSFS_delete(filepath) == 0) {
-		throw File::Error{std::format("Failed to delete file \"{}\": {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to delete file \"{}\": {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 }
 
@@ -165,7 +165,7 @@ File::Metadata Filesystem::getFileMetadata(const char* filepath) const {
 	assert(filepath);
 	PHYSFS_Stat metadata{};
 	if (PHYSFS_stat(filepath, &metadata) == 0) {
-		throw File::Error{std::format("Failed to get file metadata: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to get file metadata: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	File::Kind kind{};
 	switch (metadata.filetype) {
@@ -194,7 +194,7 @@ std::vector<std::string> Filesystem::getFilenamesInDirectory(const char* filepat
 				return PHYSFS_ENUM_OK;
 			},
 			&result) == 0) {
-		throw File::Error{std::format("Failed to enumerate directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to enumerate directory: {}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	return result;
 }
@@ -203,7 +203,7 @@ File Filesystem::openFile(const char* filepath) const {
 	assert(filepath);
 	File result{PHYSFS_openRead(filepath)};
 	if (!result) {
-		throw File::Error{std::format("Failed to open file \"{}\" for reading: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to open file \"{}\" for reading: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	return result;
 }
@@ -212,7 +212,7 @@ File Filesystem::createFile(const char* filepath) {
 	assert(filepath);
 	File result{PHYSFS_openWrite(filepath)};
 	if (!result) {
-		throw File::Error{std::format("Failed to create file \"{}\" for writing: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to create file \"{}\" for writing: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	return result;
 }
@@ -221,7 +221,7 @@ File Filesystem::appendFile(const char* filepath) {
 	assert(filepath);
 	File result{PHYSFS_openAppend(filepath)};
 	if (!result) {
-		throw File::Error{std::format("Failed to open file \"{}\" for appending: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
+		throw File::Error{fmt::format("Failed to open file \"{}\" for appending: {}", filepath, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 	return result;
 }

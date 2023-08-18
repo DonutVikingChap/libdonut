@@ -4,14 +4,14 @@
 #include <donut/events/Input.hpp>
 #include <donut/math.hpp>
 
-#include <SDL.h>    // SDL..., Uint8
-#include <array>    // std::array
-#include <format>   // std::format
-#include <limits>   // std::numeric_limits
-#include <optional> // std::optional
-#include <span>     // std::span
-#include <string>   // std::string
-#include <utility>  // std::move
+#include <SDL.h>        // SDL..., Uint8
+#include <array>        // std::array
+#include <fmt/format.h> // fmt::format
+#include <limits>       // std::numeric_limits
+#include <optional>     // std::optional
+#include <span>         // std::span
+#include <string>       // std::string
+#include <utility>      // std::move
 
 namespace donut::events {
 
@@ -300,7 +300,7 @@ constexpr std::array<Input, SDL_CONTROLLER_BUTTON_MAX> CONTROLLER_BUTTON_MAP = [
 EventPump::EventPump()
 	: events{} { // NOLINT(readability-redundant-member-init)
 	if (SDL_InitSubSystem(SDL_INIT_EVENTS) != 0) {
-		throw Error{std::format("Failed to initialize SDL events subsystem:\n{}", SDL_GetError())};
+		throw Error{fmt::format("Failed to initialize SDL events subsystem:\n{}", SDL_GetError())};
 	}
 	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
 }
@@ -321,7 +321,7 @@ std::span<const Event> EventPump::pollEvents() {
 
 void EventPump::setRelativeMouseMode(bool relativeMouseMode) {
 	if (SDL_SetRelativeMouseMode((relativeMouseMode) ? SDL_TRUE : SDL_FALSE) != 0) {
-		throw Error{std::format("Failed to set relative mouse mode:\n{}", SDL_GetError())};
+		throw Error{fmt::format("Failed to set relative mouse mode:\n{}", SDL_GetError())};
 	}
 }
 

@@ -4,7 +4,7 @@
 #include <donut/audio/Sound.hpp>
 
 #include <cstddef>       // std::size_t
-#include <format>        // std::format
+#include <fmt/format.h>  // fmt::format
 #include <soloud.h>      // SoLoud::...
 #include <soloud_file.h> // SoLoud::File
 #include <soloud_wav.h>  // SoLoud::Wav
@@ -67,7 +67,7 @@ Sound::Sound(const Filesystem& filesystem, const char* filepath, const SoundOpti
 	SoLoud::Wav& wav = *static_cast<SoLoud::Wav*>(buffer.get());
 	SoundFile file{filesystem, filepath};
 	if (const SoLoud::result errorCode = wav.loadFile(&file); errorCode != SoLoud::SO_NO_ERROR) {
-		throw Error{std::format("Failed to load sound file \"{}\"", filepath), errorCode};
+		throw Error{fmt::format("Failed to load sound file \"{}\"", filepath), errorCode};
 	}
 	wav.setVolume(options.volume);
 	wav.setInaudibleBehavior(false, true);

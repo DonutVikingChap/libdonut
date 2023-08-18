@@ -3,10 +3,10 @@
 
 #include <donut/math.hpp>
 
-#include <chrono>  // std::chrono::...
-#include <cstddef> // std::size_t
-#include <format>  // std::formatter, std::format_to
-#include <ratio>   // std::ratio
+#include <chrono>       // std::chrono::...
+#include <cstddef>      // std::size_t
+#include <fmt/format.h> // fmt::formatter, fmt::format_to
+#include <ratio>        // std::ratio
 
 namespace donut {
 
@@ -470,13 +470,13 @@ template <length_t L, typename T, typename Period>
 } // namespace donut
 
 template <typename T, typename Period, typename CharT>
-struct std::formatter<donut::Time<T, Period>, CharT> {
+struct fmt::formatter<donut::Time<T, Period>, CharT> {
 	constexpr auto parse(auto& pc) {
 		return pc.begin();
 	}
 
 	auto format(const donut::Time<T, Period>& time, auto& fc) const {
-		return std::format_to(fc.out(), "{}", static_cast<typename donut::Time<T, Period>::Duration>(time));
+		return fmt::format_to(fc.out(), "{}", static_cast<typename donut::Time<T, Period>::Duration>(time));
 	}
 };
 

@@ -11,7 +11,7 @@
 #include <algorithm>     // std::find_if
 #include <cstddef>       // std::size_t
 #include <exception>     // std::exception
-#include <format>        // std::format
+#include <fmt/format.h>  // fmt::format
 #include <functional>    // std::hash
 #include <numbers>       // std::numbers_pi_v
 #include <span>          // std::span
@@ -232,11 +232,11 @@ Model::Model(const Filesystem& filesystem, const char* filepath) {
 	try {
 		loadObjScene(*this, filesystem, filepath);
 	} catch (const obj::Error& e) {
-		throw Error{std::format("Failed to load model \"{}\": Line {}: {}", filepath, e.lineNumber, e.what())};
+		throw Error{fmt::format("Failed to load model \"{}\": Line {}: {}", filepath, e.lineNumber, e.what())};
 	} catch (const std::exception& e) {
-		throw Error{std::format("Failed to load model \"{}\": {}", filepath, e.what())};
+		throw Error{fmt::format("Failed to load model \"{}\": {}", filepath, e.what())};
 	} catch (...) {
-		throw Error{std::format("Failed to load model \"{}\".", filepath)};
+		throw Error{fmt::format("Failed to load model \"{}\".", filepath)};
 	}
 }
 

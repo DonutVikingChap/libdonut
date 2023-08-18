@@ -3,11 +3,11 @@
 #include <donut/events/InputManager.hpp>
 #include <donut/math.hpp>
 
-#include <SDL.h>    // SDL...
-#include <cstddef>  // std::size_t
-#include <format>   // std::format
-#include <optional> // std::optional
-#include <vector>   // std::vector
+#include <SDL.h>        // SDL...
+#include <cstddef>      // std::size_t
+#include <fmt/format.h> // fmt::format
+#include <optional>     // std::optional
+#include <vector>       // std::vector
 
 namespace donut::events {
 
@@ -28,7 +28,7 @@ constexpr float DIAGONAL_RATIO = 0.41421356237f; // sqrt(2) - 1 or tan(pi / 8)
 InputManager::InputManager(const InputManagerOptions& options)
 	: options(options) {
 	if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0) {
-		throw Error{std::format("Failed to initialize SDL gamecontroller subsystem:\n{}", SDL_GetError())};
+		throw Error{fmt::format("Failed to initialize SDL gamecontroller subsystem:\n{}", SDL_GetError())};
 	}
 }
 

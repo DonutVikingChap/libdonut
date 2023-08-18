@@ -87,7 +87,7 @@ The following programs need to be installed in order to build an application usi
 
 - [CMake](https://cmake.org/) (version 3.21+).
 - A C++20-compatible compiler, such as:
-    - [GCC](https://gcc.gnu.org/) (version 13+), or
+    - [GCC](https://gcc.gnu.org/) (version 12+), or
     - [Clang](https://clang.llvm.org/) (version 17+), or
     - [MSVC](https://visualstudio.microsoft.com/) (VS 2022 version 17+).
 
@@ -156,6 +156,7 @@ Libdonut is distributed under the **MIT License**. See the included [LICENSE](LI
 
 Libdonut depends on the C++ standard library, for which any C++20-compatible implementation may be used, as well as the following third-party libraries, each one having its own license, with some including further dependencies:
 
+- [{fmt}](https://github.com/fmtlib/fmt) (MIT License)
 - [glad](https://github.com/Dav1dde/glad) (glad/gl.h is Public Domain, khrplatform.h is under MIT License)
 - [GLM](https://github.com/g-truc/glm) (MIT License)
 - [libschrift](https://github.com/tomolt/libschrift) (ISC License)
