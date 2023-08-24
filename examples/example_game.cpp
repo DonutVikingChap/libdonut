@@ -175,7 +175,36 @@ private:
 		SCROLL_DOWN,
 	};
 
-	struct ExampleShader : gfx::Shader3D {
+	struct ExampleShader2D : gfx::Shader2D {
+		static constexpr const char* FRAGMENT_SHADER_SOURCE_CODE = R"GLSL(
+			in vec2 fragmentTextureCoordinates;
+			in vec4 fragmentTintColor;
+
+			out vec4 outputColor;
+
+			uniform sampler2D textureUnit;
+			uniform float time;
+
+			void main() {
+				outputColor = fragmentTintColor * vec4(0.5 + 0.5 * cos(time), 0.5 + 0.5 * sin(time), 0.5 + 0.5 * sin(time + 1.5), 1.0) * texture(textureUnit, fragmentTextureCoordinates);
+			}
+		)GLSL";
+
+		ExampleShader2D()
+			: gfx::Shader2D({
+				  .vertexShaderSourceCode = gfx::Shader2D::vertexShaderSourceCodeInstancedTexturedQuad,
+				  .fragmentShaderSourceCode = FRAGMENT_SHADER_SOURCE_CODE,
+			  }) {}
+
+		void setTime(float elapsedTime) {
+			program.setUniformFloat(time, elapsedTime);
+		}
+
+	private:
+		gfx::ShaderParameter time{program, "time"};
+	};
+
+	struct ExampleShader3D : gfx::Shader3D {
 		struct PointLight {
 			vec3 position;
 			vec3 ambient;
@@ -298,7 +327,7 @@ private:
 			}
 		)GLSL";
 
-		ExampleShader()
+		ExampleShader3D()
 			: gfx::Shader3D({
 				  .definitions = fmt::format("#define POINT_LIGHT_COUNT {}", POINT_LIGHT_COUNT).c_str(),
 				  .vertexShaderSourceCode = gfx::Shader3D::vertexShaderSourceCodeInstancedModel,
@@ -456,7 +485,7 @@ private:
 	}
 
 	void uploadShaderData(app::FrameInfo frameInfo) {
-		const ExampleShader::PointLight baseLight = {
+		const ExampleShader3D::PointLight baseLight = {
 			.position = carrotCakeDisplayPosition,
 			.ambient{0.001f, 0.001f, 0.001f},
 			.diffuse{0.5f + 0.5f * sin(frameInfo.elapsedTime), 0.8f, 0.8f},
@@ -466,13 +495,13 @@ private:
 			.quadraticFalloff = 0.03f,
 		};
 
-		const auto baseLightWithOffset = [&](vec3 offset) -> ExampleShader::PointLight {
-			ExampleShader::PointLight result = baseLight;
+		const auto baseLightWithOffset = [&](vec3 offset) -> ExampleShader3D::PointLight {
+			ExampleShader3D::PointLight result = baseLight;
 			result.position += offset;
 			return result;
 		};
 
-		const std::array<ExampleShader::PointLight, ExampleShader::POINT_LIGHT_COUNT> pointLights{{
+		const std::array<ExampleShader3D::PointLight, ExampleShader3D::POINT_LIGHT_COUNT> pointLights{{
 			baseLightWithOffset({-2.0f, 0.0f, 0.0f}),
 			baseLightWithOffset({0.0f, -2.0f, 0.0f}),
 			baseLightWithOffset({0.0f, 2.0f, 0.0f}),
@@ -481,9 +510,11 @@ private:
 
 		const vec3 viewPosition{0.0f, 0.0f, 0.0f};
 
-		exampleShader.setPointLights(pointLights);
-		exampleShader.setViewPosition(viewPosition);
-		exampleShader.setTintTexture(&testTexture);
+		exampleShader2D.setTime(frameInfo.elapsedTime);
+
+		exampleShader3D.setPointLights(pointLights);
+		exampleShader3D.setViewPosition(viewPosition);
+		exampleShader3D.setTintTexture(&testTexture);
 	}
 
 	void drawBackground(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
@@ -513,7 +544,7 @@ private:
 		});
 
 		renderPass.draw(gfx::ModelInstance{
-			.shader = &exampleShader,
+			.shader = &exampleShader3D,
 			.model = &carrotCakeModel,
 			.transformation = translate(vec3{-0.6f, 0.2f, -3.0f}) *                                                //
 		                      scale(vec3{5.0f, 5.0f, 5.0f}) *                                                      //
@@ -524,11 +555,31 @@ private:
 
 	void drawUserInterface(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
 		renderPass.draw(gfx::RectangleInstance{
+			.shader = &exampleShader2D,
+			.texture = &testTexture,
+			.position{40.0f, 370.0f},
+			.size{180.0f, 70.0f},
+			.angle = frameInfo.elapsedTime,
+			.origin{0.5f, 0.5f},
+			.tintColor{1.0f, 1.0f, 1.0f, 0.2f},
+		});
+
+		renderPass.draw(gfx::RectangleInstance{
 			.texture = &testTexture,
 			.position{100.0f, 380.0f},
 			.size{180.0f, 70.0f},
 			.angle = frameInfo.elapsedTime,
 			.origin{0.5f, 0.5f},
+		});
+
+		renderPass.draw(gfx::RectangleInstance{
+			.shader = &exampleShader2D,
+			.texture = &testTexture,
+			.position{160.0f, 390.0f},
+			.size{180.0f, 70.0f},
+			.angle = frameInfo.elapsedTime,
+			.origin{0.5f, 0.5f},
+			.tintColor{1.0f, 1.0f, 1.0f, 0.2f},
 		});
 
 		renderPass.draw(gfx::TextureInstance{
@@ -732,7 +783,8 @@ private:
 	gfx::SpriteAtlas::SpriteId testSprite;
 	gfx::SpriteAtlas::SpriteId testSubSprite;
 	gfx::Font mainFont;
-	ExampleShader exampleShader{};
+	ExampleShader2D exampleShader2D{};
+	ExampleShader3D exampleShader3D{};
 	events::InputManager inputManager{};
 	std::optional<audio::SoundStage> soundStage{};
 	std::optional<audio::Sound> music{};
