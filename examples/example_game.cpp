@@ -143,8 +143,14 @@ protected:
 
 		{
 			gfx::RenderPass renderPass{};
-			drawWorld(renderPass, frameInfo);
+			drawWorld3D(renderPass, frameInfo);
 			renderer.render(framebuffer, renderPass, worldViewport, worldCamera);
+		}
+
+		{
+			gfx::RenderPass renderPass{};
+			drawWorld2D(renderPass, frameInfo);
+			renderer.render(framebuffer, renderPass, screenViewport, screenCamera, worldScissor);
 		}
 
 		{
@@ -378,6 +384,7 @@ private:
 			.position = screenViewport.position + WORLD_VIEWPORT_POSITION * scale,
 			.size = WORLD_VIEWPORT_SIZE * scale,
 		};
+		worldScissor = {.position = worldViewport.position, .size = worldViewport.size};
 		worldCamera = gfx::Camera::createPerspective({
 			.verticalFieldOfView = verticalFieldOfView,
 			.aspectRatio = static_cast<float>(worldViewport.size.x) / static_cast<float>(worldViewport.size.y),
@@ -534,7 +541,7 @@ private:
 		});
 	}
 
-	void drawWorld(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
+	void drawWorld3D(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
 		renderPass.draw(gfx::ModelInstance{
 			.model = &carrotCakeModel,
 			.transformation = translate(vec3{0.6f, 0.7f, -3.0f} + carrotCakeDisplayPosition) *                     //
@@ -553,7 +560,7 @@ private:
 		});
 	}
 
-	void drawUserInterface(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
+	void drawWorld2D(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
 		renderPass.draw(gfx::RectangleInstance{
 			.shader = &exampleShader2D,
 			.texture = &testTexture,
@@ -581,7 +588,9 @@ private:
 			.origin{0.5f, 0.5f},
 			.tintColor{1.0f, 1.0f, 1.0f, 0.2f},
 		});
+	}
 
+	void drawUserInterface(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
 		renderPass.draw(gfx::TextureInstance{
 			.texture = &testTexture,
 			.position{200.0f + cos(frameInfo.elapsedTime) * 50.0f, 120.0f + sin(frameInfo.elapsedTime) * 50.0f},
@@ -773,6 +782,7 @@ private:
 	gfx::Renderer renderer{};
 	gfx::Viewport screenViewport{};
 	gfx::Viewport worldViewport{};
+	Rectangle<int> worldScissor{};
 	gfx::Camera screenCamera{};
 	gfx::Camera worldCamera{};
 	audio::Listener listener{};

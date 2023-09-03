@@ -9,6 +9,9 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
 #include <donut/graphics/Viewport.hpp>
+#include <donut/shapes.hpp>
+
+#include <optional> // std::optional
 
 namespace donut::graphics {
 
@@ -99,11 +102,13 @@ public:
 	 * \param viewport rectangular region of the framebuffer to render inside
 	 *        of.
 	 * \param camera camera to render from.
+	 * \param scissor if set, specifies a rectangular region of the framebuffer
+	 *        outside of which any attempts to render a pixel will be discarded.
 	 *
 	 * \note This function should typically be called at least once every frame
 	 *       during the application::Application::display() callback.
 	 */
-	void render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const Camera& camera);
+	void render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const Camera& camera, std::optional<Rectangle<int>> scissor = {});
 
 private:
 	TexturedQuad texturedQuad{};

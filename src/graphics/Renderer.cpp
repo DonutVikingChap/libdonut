@@ -208,12 +208,20 @@ void Renderer::clearFramebufferColorAndDepth(Framebuffer& framebuffer, Color col
 }
 
 void Renderer::render( // NOLINT(readability-make-member-function-const)
-	Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const Camera& camera) {
+	Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const Camera& camera, std::optional<Rectangle<int>> scissor) {
 	// Bind framebuffer.
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
 
 	// Setup viewport.
 	glViewport(viewport.position.x, viewport.position.y, viewport.size.x, viewport.size.y);
+
+	// Setup scissor.
+	if (scissor) {
+		glEnable(GL_SCISSOR_TEST);
+		glScissor(scissor->position.x, scissor->position.y, scissor->size.x, scissor->size.y);
+	} else {
+		glDisable(GL_SCISSOR_TEST);
+	}
 
 	// Render 3D objects.
 	{
