@@ -59,7 +59,7 @@ struct Element {
  */
 struct Document {
 	/**
-	 * Parse a document form an XML string.
+	 * Parse a document from an XML string.
 	 *
 	 * \param xmlString read-only view over the XML string to parse.
 	 *
