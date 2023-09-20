@@ -10,7 +10,7 @@
 #include <bitset>        // std::bitset
 #include <cstddef>       // std::size_t
 #include <optional>      // std::optional
-#include <type_traits>   // std::is_enum_v, std::underlying_type_t
+#include <type_traits>   // std::is_same_v, std::is_enum_v, std::underlying_type_t
 #include <unordered_map> // std::unordered_map
 #include <vector>        // std::vector
 
@@ -1215,7 +1215,7 @@ public:
 	 * \sa bind(Input, Outputs)
 	 */
 	template <typename... Actions>
-	void bind(Input input, Actions... actions) requires(std::is_enum_v<Actions> && ...) {
+	void bind(Input input, Actions... actions) requires((std::is_enum_v<Actions> && !std::is_same_v<Actions, Input>) && ...) {
 		Outputs outputs{};
 		(outputs.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Actions>>(actions))), ...);
 		bind(input, outputs);
@@ -1229,7 +1229,7 @@ public:
 	 * \sa addBinding(Input, Outputs)
 	 */
 	template <typename... Actions>
-	void addBinding(Input input, Actions... actions) requires(std::is_enum_v<Actions> && ...) {
+	void addBinding(Input input, Actions... actions) requires((std::is_enum_v<Actions> && !std::is_same_v<Actions, Input>) && ...) {
 		Outputs outputs{};
 		(outputs.set(static_cast<std::size_t>(static_cast<std::underlying_type_t<Actions>>(actions))), ...);
 		addBinding(input, outputs);
@@ -1243,7 +1243,7 @@ public:
 	 * \sa isPressed(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] bool isPressed(Action action) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] bool isPressed(Action action) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return isPressed(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
 	}
 
@@ -1255,7 +1255,7 @@ public:
 	 * \sa justPressed(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] bool justPressed(Action action) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] bool justPressed(Action action) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return justPressed(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
 	}
 
@@ -1267,7 +1267,7 @@ public:
 	 * \sa justReleased(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] bool justReleased(Action action) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] bool justReleased(Action action) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return justReleased(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
 	}
 
@@ -1279,7 +1279,7 @@ public:
 	 * \sa getAbsoluteState(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] i32 getAbsoluteState(Action action) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] i32 getAbsoluteState(Action action) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return getAbsoluteState(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
 	}
 
@@ -1291,7 +1291,7 @@ public:
 	 * \sa getRelativeState(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] i32 getRelativeState(Action action) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] i32 getRelativeState(Action action) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return getRelativeState(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(action)));
 	}
 
@@ -1303,7 +1303,7 @@ public:
 	 * \sa getAbsoluteValue(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] float getAbsoluteValue(Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] float getAbsoluteValue(Action actionPositive) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
 	}
 
@@ -1315,7 +1315,7 @@ public:
 	 * \sa getRelativeValue(std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] float getRelativeValue(Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] float getRelativeValue(Action actionPositive) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
 	}
 
@@ -1327,7 +1327,7 @@ public:
 	 * \sa getAbsoluteValue(std::size_t, std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] float getAbsoluteValue(Action actionNegative, Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] float getAbsoluteValue(Action actionNegative, Action actionPositive) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegative)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
 	}
@@ -1340,7 +1340,7 @@ public:
 	 * \sa getRelativeValue(std::size_t, std::size_t) const
 	 */
 	template <typename Action>
-	[[nodiscard]] float getRelativeValue(Action actionNegative, Action actionPositive) const noexcept requires(std::is_enum_v<Action>) {
+	[[nodiscard]] float getRelativeValue(Action actionNegative, Action actionPositive) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegative)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositive)));
 	}
@@ -1356,7 +1356,7 @@ public:
 	 */
 	template <typename Action>
 	[[nodiscard]] vec2 getAbsoluteValue(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
-		requires(std::is_enum_v<Action>) {
+		requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
@@ -1374,7 +1374,7 @@ public:
 	 */
 	template <typename Action>
 	[[nodiscard]] vec2 getRelativeValue(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY) const noexcept
-		requires(std::is_enum_v<Action>) {
+		requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
@@ -1392,7 +1392,7 @@ public:
 	 */
 	template <typename Action>
 	[[nodiscard]] vec3 getAbsoluteValue(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY, Action actionNegativeZ,
-		Action actionPositiveZ) const noexcept requires(std::is_enum_v<Action>) {
+		Action actionPositiveZ) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return getAbsoluteValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
@@ -1412,7 +1412,7 @@ public:
 	 */
 	template <typename Action>
 	[[nodiscard]] vec3 getRelativeValue(Action actionNegativeX, Action actionPositiveX, Action actionNegativeY, Action actionPositiveY, Action actionNegativeZ,
-		Action actionPositiveZ) const noexcept requires(std::is_enum_v<Action>) {
+		Action actionPositiveZ) const noexcept requires(std::is_enum_v<Action> && !std::is_same_v<Action, Input>) {
 		return getRelativeValue(static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionPositiveX)),
 			static_cast<std::size_t>(static_cast<std::underlying_type_t<Action>>(actionNegativeY)),
