@@ -153,6 +153,16 @@ struct SerializationOptions {
 	 * \sa prettyPrint
 	 */
 	std::size_t prettyPrintMaxSingleLineArrayItemCount = 4;
+
+	/**
+	 * Non-owning pointer to a null-terminated ASCII string representing the
+	 * newline sequence to use when performing line breaks.
+	 *
+	 * Defaults to CRLF (carriage return followed by line feed).
+	 *
+	 * \warning Must not be set to nullptr.
+	 */
+	const char* newlineString = "\r\n";
 };
 
 /**
@@ -2222,12 +2232,12 @@ public:
 	}
 
 	/**
-	 * Write a raw CRLF newline sequence to the output.
+	 * Write a newline sequence to the output.
 	 *
 	 * \throws any exception thrown by the underlying output stream.
 	 */
 	void writeNewline() {
-		write("\r\n");
+		stream << options.newlineString;
 	}
 
 	/**
