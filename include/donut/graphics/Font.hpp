@@ -118,7 +118,7 @@ public:
 	/** Move constructor. */
 	Font(Font&& other) noexcept = default;
 
-	/** 
+	/**
 	 * Copying a font is not allowed, since the memory location of the file
 	 * contents must remain stable.
 	 */

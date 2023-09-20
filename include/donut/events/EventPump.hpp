@@ -46,30 +46,30 @@ public:
 	EventPump& operator=(EventPump&&) = delete;
 
 	/**
-     * Poll events from the environment and update the internal event buffer.
-     *
-     * \return a non-owning read-only view over the polled events, stored in the
-     *         internal event buffer, which is valid until the next call to
-     *         pollEvents() or until the event pump is destroyed, whichever
-     *         happens first.
-     *
-     * \throws std::bad_alloc on allocation failure.
-     *
-     * \sa getLatestPolledEvents()
-     */
+	 * Poll events from the environment and update the internal event buffer.
+	 *
+	 * \return a non-owning read-only view over the polled events, stored in the
+	 *         internal event buffer, which is valid until the next call to
+	 *         pollEvents() or until the event pump is destroyed, whichever
+	 *         happens first.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \sa getLatestPolledEvents()
+	 */
 	std::span<const Event> pollEvents();
 
 	/**
 	 * Enable or disable relative mouse mode.
-     *
-     * When relative mouse mode is enabled, it hides the mouse cursor, locks it
-     * to the window and causes all further mouse motion to be provided as
-     * relative motion events until it is disabled again.
+	 *
+	 * When relative mouse mode is enabled, it hides the mouse cursor, locks it
+	 * to the window and causes all further mouse motion to be provided as
+	 * relative motion events until it is disabled again.
 	 *
 	 * \param relativeMouseMode true to enable relative mouse mode, false to
-     *        disable.
-     *
-     * \throws events::Error on failure to set the relative mouse mode.
+	 *        disable.
+	 *
+	 * \throws events::Error on failure to set the relative mouse mode.
 	 */
 	void setRelativeMouseMode(bool relativeMouseMode);
 
@@ -101,16 +101,16 @@ public:
 	void stopTextInput();
 
 	/**
-     * Get the latest events in the internal event buffer that were polled using
-     * pollEvents().
-     *
-     * \return a non-owning read-only view over the polled events, stored in the
-     *         internal event buffer, which is valid until the next call to
-     *         pollEvents() or until the event pump is destroyed, whichever
-     *         happens first.
-     *
-     * \sa pollEvents()
-     */
+	 * Get the latest events in the internal event buffer that were polled using
+	 * pollEvents().
+	 *
+	 * \return a non-owning read-only view over the polled events, stored in the
+	 *         internal event buffer, which is valid until the next call to
+	 *         pollEvents() or until the event pump is destroyed, whichever
+	 *         happens first.
+	 *
+	 * \sa pollEvents()
+	 */
 	[[nodiscard]] std::span<const Event> getLatestPolledEvents() const noexcept;
 
 	/**

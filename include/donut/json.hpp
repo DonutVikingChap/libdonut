@@ -598,7 +598,7 @@ public:
 
 	/**
 	 * Get a JSON string representation of the value.
-	 * 
+	 *
 	 * \param options options for JSON serialization, see SerializationOptions.
 	 *
 	 * \return a JSON string containing a representation of the value as it

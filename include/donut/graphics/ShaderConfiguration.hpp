@@ -100,7 +100,7 @@ enum class StencilBufferMode : std::uint8_t {
 	 * Evaluate the stencil test defined by the StencilTestPredicate to
 	 * determine whether the pixel should be rendered or discarded, then perform
 	 * the corresponding StencilBufferOperation on the stencil buffer value.
-	 * 
+	 *
 	 * If the test fails, the new pixel is discarded and will not be rendered.
 	 */
 	USE_STENCIL_TEST,
