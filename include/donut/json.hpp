@@ -1221,48 +1221,48 @@ public:
 
 	/**
 	 * Polymorphic interface for visitation-based parsing of JSON object
-	 * elements.
+	 * properties.
 	 */
-	class ElementVisitor {
+	class PropertyVisitor {
 	public:
 		/**
-		 * Callback for each object element.
+		 * Callback for each object property.
 		 *
-		 * \param source location of the beginning of the element's value.
-		 * \param key the element's key string.
-		 * \param parser parser that should be used to parse the element's
+		 * \param source location of the beginning of the property's value.
+		 * \param key the property's name string.
+		 * \param parser parser that should be used to parse the property's
 		 *        value.
 		 *
 		 * \warning Implementations must advance the parser to the end of the
 		 *          encountered value.
 		 * \warning Implementations must not advance the parser past the end of
-		 *          the element's value.
+		 *          the property's value.
 		 *
 		 * \throws json::Error on invalid input.
 		 * \throws any exception thrown by the concrete implementation.
 		 */
-		virtual void visitElement(const SourceLocation& source, String&& key, Parser& parser) = 0;
+		virtual void visitProperty(const SourceLocation& source, String&& key, Parser& parser) = 0;
 
 	protected:
-		~ElementVisitor() = default;
+		~PropertyVisitor() = default;
 	};
 
 	/**
-	 * Implementation of ElementVisitor for freestanding classes that implement
+	 * Implementation of PropertyVisitor for freestanding classes that implement
 	 * all or parts of its interface without directly inheriting from it.
 	 *
-	 * \tparam Visitor freestanding element visitor type to adapt.
+	 * \tparam Visitor freestanding property visitor type to adapt.
 	 */
 	template <typename Visitor>
-	struct ConcreteElementVisitor final : ElementVisitor {
+	struct ConcretePropertyVisitor final : PropertyVisitor {
 		Visitor visitor;
 
-		ConcreteElementVisitor(Visitor visitor)
+		ConcretePropertyVisitor(Visitor visitor)
 			: visitor(std::move(visitor)) {}
 
-		void visitElement(const SourceLocation& source, String&& key, Parser& parser) override {
-			if constexpr (requires { visitor.visitElement(source, std::move(key), parser); }) {
-				visitor.visitElement(source, std::move(key), parser);
+		void visitProperty(const SourceLocation& source, String&& key, Parser& parser) override {
+			if constexpr (requires { visitor.visitProperty(source, std::move(key), parser); }) {
+				visitor.visitProperty(source, std::move(key), parser);
 			}
 		}
 	};
@@ -1277,18 +1277,18 @@ public:
 		void visitBoolean(const SourceLocation& source, Boolean value) override { (void)source; (void)value; }
 		void visitString(const SourceLocation& source, String&& value) override { (void)source; (void)std::move(value); }
 		void visitNumber(const SourceLocation& source, Number value) override { (void)source; (void)value; }
-		void visitObject(const SourceLocation& source, Parser& parser) override { (void)source; parser.parseObject(SkipElementVisitor{}); }
+		void visitObject(const SourceLocation& source, Parser& parser) override { (void)source; parser.parseObject(SkipPropertyVisitor{}); }
 		void visitArray(const SourceLocation& source, Parser& parser) override { (void)source; parser.parseValue(SkipValueVisitor{}); }
 		// clang-format on
 	};
 
 	/**
-	 * Implementation of ElementVisitor that skips over the parsed element and
+	 * Implementation of PropertyVisitor that skips over the parsed property and
 	 * discards the result.
 	 */
-	struct SkipElementVisitor final : ElementVisitor {
+	struct SkipPropertyVisitor final : PropertyVisitor {
 		// clang-format off
-		void visitElement(const SourceLocation& source, String&& key, Parser& parser) override { (void)source; (void)std::move(key); parser.parseValue(SkipValueVisitor{}); }
+		void visitProperty(const SourceLocation& source, String&& key, Parser& parser) override { (void)source; (void)std::move(key); parser.parseValue(SkipValueVisitor{}); }
 		// clang-format on
 	};
 
@@ -1445,19 +1445,20 @@ public:
 	}
 
 	/**
-	 * Read a single JSON object from the input and visit each of its elements.
+	 * Read a single JSON object from the input and visit each of its
+	 * properties.
 	 *
-	 * \param visitor visitor to give each parsed element of the object to.
+	 * \param visitor visitor to give each parsed property of the object to.
 	 *
 	 * \throws json::Error on invalid input.
 	 * \throws std::bad_alloc on allocation failure.
 	 * \throws any exception thrown by the underlying input iterator.
 	 * \throws any exception thrown by the visitor.
 	 *
-	 * \sa json::onElement()
+	 * \sa json::onProperty()
 	 * \sa parseObject()
 	 */
-	void parseObject(ElementVisitor& visitor) {
+	void parseObject(PropertyVisitor& visitor) {
 		if (const Token& token = peek(); token.type != TokenType::PUNCTUATOR_OPEN_CURLY_BRACE) {
 			throw Error{"Expected an object.", token.source};
 		}
@@ -1490,7 +1491,7 @@ public:
 				throw Error{"Expected a colon.", token.source};
 			}
 			const SourceLocation source = peek().source;
-			visitor.visitElement(source, std::move(key), *this);
+			visitor.visitProperty(source, std::move(key), *this);
 			if (peek().source == source) {
 				struct SkipValue final : ValueVisitor {
 					// clang-format off
@@ -1570,9 +1571,9 @@ public:
 	}
 
 	/**
-	 * \sa parseObject(ElementVisitor&)
+	 * \sa parseObject(PropertyVisitor&)
 	 */
-	void parseObject(ElementVisitor&& visitor) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+	void parseObject(PropertyVisitor&& visitor) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
 		parseObject(visitor);
 	}
 
@@ -1600,11 +1601,11 @@ public:
 	}
 
 	/**
-	 * \sa parseObject(ElementVisitor&)
+	 * \sa parseObject(PropertyVisitor&)
 	 */
 	template <typename Visitor>
 	void parseObject(Visitor visitor) {
-		parseObject(static_cast<ElementVisitor&&>(ConcreteElementVisitor<Visitor>{std::move(visitor)}));
+		parseObject(static_cast<PropertyVisitor&&>(ConcretePropertyVisitor<Visitor>{std::move(visitor)}));
 	}
 
 	/**
@@ -1803,20 +1804,20 @@ public:
 	 * \throws std::bad_alloc on allocation failure.
 	 * \throws any exception thrown by the underlying input iterator.
 	 *
-	 * \sa parseObject(ElementVisitor&)
+	 * \sa parseObject(PropertyVisitor&)
 	 * \sa parseValue()
 	 */
 	Object parseObject() {
 		const Token& token = peek();
 		switch (token.type) {
 			case TokenType::PUNCTUATOR_OPEN_CURLY_BRACE: {
-				struct Visitor final : ElementVisitor {
+				struct Visitor final : PropertyVisitor {
 					Object& result;
 
 					explicit Visitor(Object& result) noexcept
 						: result(result) {}
 
-					void visitElement(const SourceLocation&, String&& key, Parser& parser) override {
+					void visitProperty(const SourceLocation&, String&& key, Parser& parser) override {
 						result.emplace(std::move(key), std::move(parser.parseValue()));
 					}
 				};
@@ -1967,8 +1968,8 @@ using StreamParser = Parser<std::istreambuf_iterator<char>>;
 
 namespace detail {
 
-template <typename T, typename ObjectElementFilter = detail::AlwaysTrue, typename ArrayElementFilter = detail::AlwaysTrue>
-[[nodiscard]] std::size_t getRecursiveSize(const T& value, ObjectElementFilter objectElementFilter, ArrayElementFilter arrayElementFilter);
+template <typename T, typename ObjectPropertyFilter = detail::AlwaysTrue, typename ArrayItemFilter = detail::AlwaysTrue>
+[[nodiscard]] std::size_t getRecursiveSize(const T& value, ObjectPropertyFilter objectPropertyFilter, ArrayItemFilter arrayItemFilter);
 
 } // namespace detail
 
@@ -2035,8 +2036,8 @@ struct SerializationOptions {
 	 *
 	 * Disable to use a more compact layout without whitespace or indentation.
 	 *
-	 * \sa prettyPrintMaxSingleLineObjectElementCount
-	 * \sa prettyPrintMaxSingleLineArrayElementCount
+	 * \sa prettyPrintMaxSingleLineObjectPropertyCount
+	 * \sa prettyPrintMaxSingleLineArrayItemCount
 	 */
 	bool prettyPrint = true;
 
@@ -2052,7 +2053,7 @@ struct SerializationOptions {
 	 *
 	 * \sa prettyPrint
 	 */
-	std::size_t prettyPrintMaxSingleLineObjectElementCount = 4;
+	std::size_t prettyPrintMaxSingleLineObjectPropertyCount = 4;
 
 	/**
 	 * Maximum size of an array before it is split into multiple lines when
@@ -2066,7 +2067,7 @@ struct SerializationOptions {
 	 *
 	 * \sa prettyPrint
 	 */
-	std::size_t prettyPrintMaxSingleLineArrayElementCount = 4;
+	std::size_t prettyPrintMaxSingleLineArrayItemCount = 4;
 };
 
 /**
@@ -2356,7 +2357,7 @@ public:
 	 * JSON-serializable key-value pairs.
 	 *
 	 * \param value range to write as an object.
-	 * \param elementFilter predicate that each key-value pair from the range
+	 * \param propertyFilter predicate that each key-value pair from the range
 	 *        must pass in order to be included in the output. Defaults to
 	 *        always pass.
 	 * \param getKey function for getting the key from each key-value pair.
@@ -2368,23 +2369,23 @@ public:
 	 * \throws any exception thrown by the Serializer implementations of the
 	 *         given key/value types.
 	 */
-	template <typename ElementFilter = detail::AlwaysTrue, typename GetKey = detail::GetFirst, typename GetValue = detail::GetSecond>
-	void writeObject(const auto& value, ElementFilter elementFilter = {}, GetKey getKey = {}, GetValue getValue = {}) {
+	template <typename PropertyFilter = detail::AlwaysTrue, typename GetKey = detail::GetFirst, typename GetValue = detail::GetSecond>
+	void writeObject(const auto& value, PropertyFilter propertyFilter = {}, GetKey getKey = {}, GetValue getValue = {}) {
 		auto it = std::begin(value);
 		const auto end = std::end(value);
-		while (it != end && !elementFilter(*it)) {
+		while (it != end && !propertyFilter(*it)) {
 			++it;
 		}
 		if (options.prettyPrint) {
 			if (it == end) {
 				write("{}");
-			} else if (detail::getRecursiveSize(value, elementFilter, {}) <= options.prettyPrintMaxSingleLineObjectElementCount) {
+			} else if (detail::getRecursiveSize(value, propertyFilter, {}) <= options.prettyPrintMaxSingleLineObjectPropertyCount) {
 				write("{ ");
 				writeString(getKey(*it));
 				write(": ");
 				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					if (elementFilter(*it)) {
+					if (propertyFilter(*it)) {
 						write(", ");
 						writeString(getKey(*it));
 						write(": ");
@@ -2401,7 +2402,7 @@ public:
 				write(": ");
 				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					if (elementFilter(*it)) {
+					if (propertyFilter(*it)) {
 						write(',');
 						writeNewline();
 						writeIndentation();
@@ -2422,7 +2423,7 @@ public:
 				write(':');
 				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					if (elementFilter(*it)) {
+					if (propertyFilter(*it)) {
 						write(',');
 						writeString(getKey(*it));
 						write(':');
@@ -2439,8 +2440,8 @@ public:
 	 * JSON-serializable values.
 	 *
 	 * \param value range to write as an array.
-	 * \param elementFilter predicate that each value from the range must pass
-	 *        in order to be included in the output. Defaults to always pass.
+	 * \param itemFilter predicate that each value from the range must pass in
+	 *        order to be included in the output. Defaults to always pass.
 	 * \param getValue function for getting the value from each value of the
 	 *        range. Defaults to returning each value without modification.
 	 *
@@ -2448,21 +2449,21 @@ public:
 	 * \throws any exception thrown by the Serializer implementation of the
 	 *         element type of the given value type.
 	 */
-	template <typename ElementFilter = detail::AlwaysTrue, typename GetValue = detail::Get>
-	void writeArray(const auto& value, ElementFilter elementFilter = {}, GetValue getValue = {}) {
+	template <typename ItemFilter = detail::AlwaysTrue, typename GetValue = detail::Get>
+	void writeArray(const auto& value, ItemFilter itemFilter = {}, GetValue getValue = {}) {
 		auto it = std::begin(value);
 		const auto end = std::end(value);
-		while (it != end && !elementFilter(*it)) {
+		while (it != end && !itemFilter(*it)) {
 			++it;
 		}
 		if (options.prettyPrint) {
 			if (it == end) {
 				write("[]");
-			} else if (detail::getRecursiveSize(value, {}, elementFilter) <= options.prettyPrintMaxSingleLineArrayElementCount) {
+			} else if (detail::getRecursiveSize(value, {}, itemFilter) <= options.prettyPrintMaxSingleLineArrayItemCount) {
 				write('[');
 				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					if (elementFilter(*it)) {
+					if (itemFilter(*it)) {
 						write(", ");
 						serialize(getValue(*it));
 					}
@@ -2475,7 +2476,7 @@ public:
 				writeIndentation();
 				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					if (elementFilter(*it)) {
+					if (itemFilter(*it)) {
 						write(',');
 						writeNewline();
 						writeIndentation();
@@ -2492,7 +2493,7 @@ public:
 			if (it != end) {
 				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
-					if (elementFilter(*it)) {
+					if (itemFilter(*it)) {
 						write(',');
 						serialize(getValue(*it));
 					}
@@ -2540,7 +2541,7 @@ public:
 			const auto& [v] = value;
 			serialize(v);
 		} else if (options.prettyPrint) {
-			if (detail::getRecursiveSize(value, {}, {}) <= options.prettyPrintMaxSingleLineArrayElementCount) {
+			if (detail::getRecursiveSize(value, {}, {}) <= options.prettyPrintMaxSingleLineArrayItemCount) {
 				write('[');
 				bool successor = false;
 				reflection::forEach(reflection::fields(value), [&](const auto& v) {
@@ -2821,7 +2822,7 @@ public:
 	 *         `emplace(std::move(key), std::move(value))`.
 	 *
 	 * \warning If an exception is thrown, the output value may be left empty or
-	 *          with some successfully parsed elements added to it, since they
+	 *          with some successfully parsed properties added to it, since they
 	 *          are not removed automatically if a later operation fails.
 	 */
 	SourceLocation readObject(auto& value) {
@@ -2832,14 +2833,14 @@ public:
 		value.clear();
 		if (parser.peek().type != TokenType::PUNCTUATOR_CLOSE_CURLY_BRACE) {
 			while (true) {
-				std::remove_cvref_t<decltype(std::begin(value)->first)> elementKey{};
-				std::remove_cvref_t<decltype(std::begin(value)->second)> elementValue{};
-				readString(elementKey);
+				std::remove_cvref_t<decltype(std::begin(value)->first)> propertyKey{};
+				std::remove_cvref_t<decltype(std::begin(value)->second)> propertyValue{};
+				readString(propertyKey);
 				if (const Token token = parser.eat(); token.type != TokenType::PUNCTUATOR_COLON) {
 					throw Error{"Expected a colon.", token.source};
 				}
-				deserialize(elementValue);
-				value.emplace(std::move(elementKey), std::move(elementValue));
+				deserialize(propertyValue);
+				value.emplace(std::move(propertyKey), std::move(propertyValue));
 				const Token token = parser.eat();
 				if (token.type == TokenType::PUNCTUATOR_CLOSE_CURLY_BRACE) {
 					break;
@@ -2898,8 +2899,8 @@ public:
 	 * \throws any exception thrown by `clear()` or `push_back(std::move(element))`.
 	 *
 	 * \warning If an exception is thrown, the output value may be left empty or
-	 *          with some successfully parsed elements added to it, since they
-	 *          are not removed automatically if a later operation fails.
+	 *          with some successfully parsed items added to it, since they are
+	 *          not removed automatically if a later operation fails.
 	 */
 	SourceLocation readArray(auto& value) {
 		const SourceLocation source = parser.peek().source;
@@ -2909,9 +2910,9 @@ public:
 		value.clear();
 		if (parser.peek().type != TokenType::PUNCTUATOR_CLOSE_SQUARE_BRACKET) {
 			while (true) {
-				std::remove_cvref_t<decltype(*std::begin(value))> element{};
-				deserialize(element);
-				value.push_back(std::move(element));
+				std::remove_cvref_t<decltype(*std::begin(value))> item{};
+				deserialize(item);
+				value.push_back(std::move(item));
 				const Token token = parser.eat();
 				if (token.type == TokenType::PUNCTUATOR_CLOSE_SQUARE_BRACKET) {
 					break;
@@ -3219,23 +3220,23 @@ struct VisitArray : Base {
 };
 
 template <typename Base, typename Callback>
-struct VisitElement : Base {
+struct VisitProperty : Base {
 	[[no_unique_address]] Callback callback;
 
-	VisitElement(Callback callback)
+	VisitProperty(Callback callback)
 		: callback(std::move(callback)) {}
 
-	VisitElement(Base base, Callback callback)
+	VisitProperty(Base base, Callback callback)
 		: Base(std::move(base))
 		, callback(std::move(callback)) {}
 
-	void visitElement(const SourceLocation& source, String&& key, auto& parser) {
+	void visitProperty(const SourceLocation& source, String&& key, auto& parser) {
 		callback(source, std::move(key), parser);
 	}
 
 	template <typename NewBase>
 	[[nodiscard]] auto operator|(NewBase other) && {
-		return VisitElement<NewBase, Callback>{std::move(other), std::move(callback)};
+		return VisitProperty<NewBase, Callback>{std::move(other), std::move(callback)};
 	}
 };
 
@@ -3404,11 +3405,11 @@ template <typename Callback>
 }
 
 /**
- * Build a Parser::ElementVisitor that handles object elements with a given
+ * Build a Parser::PropertyVisitor that handles object properties with a given
  * callback function.
  *
  * \param callback function object that is callable with the same signature as
- *        ElementVisitor::visitElement() and has the same semantics.
+ *        PropertyVisitor::visitProperty() and has the same semantics.
  *
  * \return a visitor that uses the given callback for visiting arrays. This
  *         visitor can be combined with other related visitors using the pipe
@@ -3416,11 +3417,11 @@ template <typename Callback>
  *
  * \throws any exception thrown by the move constructor of the callback type.
  *
- * \sa Parser::parseObject(Parser::ElementVisitor&)
+ * \sa Parser::parseObject(Parser::PropertyVisitor&)
  */
 template <typename Callback>
-[[nodiscard]] inline auto onElement(Callback callback) {
-	return detail::VisitElement<detail::NoVisitor, Callback>{std::move(callback)};
+[[nodiscard]] inline auto onProperty(Callback callback) {
+	return detail::VisitProperty<detail::NoVisitor, Callback>{std::move(callback)};
 }
 
 namespace detail {
@@ -3508,10 +3509,10 @@ concept deserializable_as_optional = //
 template <typename T>
 inline constexpr bool always_false_v = false;
 
-template <typename T, typename ObjectElementFilter, typename ArrayElementFilter>
-inline std::size_t getRecursiveSize(const T& value, ObjectElementFilter objectElementFilter, ArrayElementFilter arrayElementFilter) {
+template <typename T, typename ObjectPropertyFilter, typename ArrayItemFilter>
+inline std::size_t getRecursiveSize(const T& value, ObjectPropertyFilter objectPropertyFilter, ArrayItemFilter arrayItemFilter) {
 	if constexpr (std::is_same_v<T, Value>) {
-		return match(value)([&](const auto& v) -> std::size_t { return getRecursiveSize(v, objectElementFilter, arrayElementFilter); });
+		return match(value)([&](const auto& v) -> std::size_t { return getRecursiveSize(v, objectPropertyFilter, arrayItemFilter); });
 	} else if constexpr (serializable_as_string<T>) {
 		return 1;
 	} else if constexpr (serializable_as_object<T>) {
@@ -3521,7 +3522,7 @@ inline std::size_t getRecursiveSize(const T& value, ObjectElementFilter objectEl
 			}
 		}
 		return std::accumulate(std::begin(value), std::end(value), std::size_t{1}, [&](std::size_t count, const auto& kv) -> std::size_t {
-			if (objectElementFilter(kv)) {
+			if (objectPropertyFilter(kv)) {
 				count += getRecursiveSize(kv.second, {}, {});
 			}
 			return count;
@@ -3533,7 +3534,7 @@ inline std::size_t getRecursiveSize(const T& value, ObjectElementFilter objectEl
 			}
 		}
 		return std::accumulate(std::begin(value), std::end(value), std::size_t{1}, [&](std::size_t count, const auto& v) -> std::size_t {
-			if (arrayElementFilter(v)) {
+			if (arrayItemFilter(v)) {
 				count += getRecursiveSize(v, {}, {});
 			}
 			return count;

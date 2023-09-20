@@ -413,7 +413,7 @@ private:
 
 		try {
 			json::StringParser{filesystem.openFile(filepath).readAllIntoString()}.parseObject(
-				json::onElement([&](const json::SourceLocation&, const json::String& key, json::StringParser& parser) -> void {
+				json::onProperty([&](const json::SourceLocation&, const json::String& key, json::StringParser& parser) -> void {
 					if (const events::Input input = events::findInput(key); input != events::Input::UNKNOWN) {
 						const auto bindAction = [&](const json::SourceLocation&, const json::String& value) -> void {
 							if (const auto it = actionsByIdentifier.find(value); it != actionsByIdentifier.end()) {
