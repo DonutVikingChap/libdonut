@@ -2381,7 +2381,7 @@ public:
 		if (options.prettyPrint) {
 			if (it == end) {
 				write("{}");
-			} else if (detail::getRecursiveSize(value, propertyFilter, {}) <= options.prettyPrintMaxSingleLineObjectPropertyCount) {
+			} else if (detail::getRecursiveSize(value, propertyFilter, {}) - 1 <= options.prettyPrintMaxSingleLineObjectPropertyCount) {
 				write("{ ");
 				writeString(getKey(*it));
 				write(": ");
@@ -2461,7 +2461,7 @@ public:
 		if (options.prettyPrint) {
 			if (it == end) {
 				write("[]");
-			} else if (detail::getRecursiveSize(value, {}, itemFilter) <= options.prettyPrintMaxSingleLineArrayItemCount) {
+			} else if (detail::getRecursiveSize(value, {}, itemFilter) - 1 <= options.prettyPrintMaxSingleLineArrayItemCount) {
 				write('[');
 				serialize(getValue(*it));
 				for (++it; it != end; ++it) {
@@ -2543,7 +2543,7 @@ public:
 			const auto& [v] = value;
 			serialize(v);
 		} else if (options.prettyPrint) {
-			if (detail::getRecursiveSize(value, {}, {}) <= options.prettyPrintMaxSingleLineArrayItemCount) {
+			if (detail::getRecursiveSize(value, {}, {}) - 1 <= options.prettyPrintMaxSingleLineArrayItemCount) {
 				write('[');
 				bool successor = false;
 				reflection::forEach(reflection::fields(value), [&](const auto& v) {

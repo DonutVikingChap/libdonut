@@ -449,10 +449,7 @@ TEST_SUITE("JSON") {
 				json::Object{
 					{"image", json::Object{{"width", 1920}, {"height", 1080}, {"aspect-ratio", "16:9"}}},
 				}}.toString();
-			constexpr std::string_view EXPECTED_STRING =
-				"{\r\n"
-				"    \"image\": { \"aspect-ratio\": \"16:9\", \"height\": 1080, \"width\": 1920 }\r\n"
-				"}";
+			constexpr std::string_view EXPECTED_STRING = "{ \"image\": { \"aspect-ratio\": \"16:9\", \"height\": 1080, \"width\": 1920 } }";
 			CHECK(string == EXPECTED_STRING);
 		}
 
@@ -516,13 +513,7 @@ TEST_SUITE("JSON") {
 					{"onlyFractionPart", .45},
 					{"withExponent", 123e-45},
 				}}.toString();
-			constexpr std::string_view EXPECTED_STRING =
-				"{\r\n"
-				"    \"integer\": 123,\r\n"
-				"    \"onlyFractionPart\": 0.45,\r\n"
-				"    \"withExponent\": 1.23e-43,\r\n"
-				"    \"withFractionPart\": 123.45\r\n"
-				"}";
+			constexpr std::string_view EXPECTED_STRING = "{ \"integer\": 123, \"onlyFractionPart\": 0.45, \"withExponent\": 1.23e-43, \"withFractionPart\": 123.45 }";
 			CHECK(string == EXPECTED_STRING);
 		}
 
