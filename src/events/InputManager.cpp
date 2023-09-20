@@ -231,6 +231,8 @@ void InputManager::resetAllInputs() noexcept {
 	mousePosition = {};
 	controllerLeftStickPosition = {};
 	controllerRightStickPosition = {};
+	controllerLeftTriggerPosition = {};
+	controllerRightTriggerPosition = {};
 	touchPosition = {};
 	touchPressure = {};
 	currentPersistentOutputs = {};
