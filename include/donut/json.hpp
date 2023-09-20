@@ -95,6 +95,71 @@ struct Error : std::runtime_error {
 		, source(source) {}
 };
 
+/**
+ * Options for JSON serialization.
+ */
+struct SerializationOptions {
+	/**
+	 * The starting indentation level, expressed as the number of indentation
+	 * characters.
+	 */
+	std::size_t indentation = 0;
+
+	/**
+	 * The number of indentation characters that each new level of indentation
+	 * will add.
+	 */
+	std::size_t relativeIndentation = 4;
+
+	/**
+	 * The character to use when performing indentation.
+	 */
+	char indentationCharacter = ' ';
+
+	/**
+	 * Format the output in a way that is nicely human-readable.
+	 *
+	 * Disable to use a more compact layout without whitespace or indentation.
+	 *
+	 * \sa prettyPrintMaxSingleLineObjectPropertyCount
+	 * \sa prettyPrintMaxSingleLineArrayItemCount
+	 */
+	bool prettyPrint = true;
+
+	/**
+	 * Maximum size of an object before it is split into multiple lines when
+	 * pretty printing.
+	 *
+	 * When set to a positive value, objects at or below this size will be
+	 * written in a single line. Set to 0 to always split non-empty objects into
+	 * multiple lines regardless of size.
+	 *
+	 * \note This option only applies when #prettyPrint is true.
+	 *
+	 * \sa prettyPrint
+	 */
+	std::size_t prettyPrintMaxSingleLineObjectPropertyCount = 4;
+
+	/**
+	 * Maximum size of an array before it is split into multiple lines when
+	 * pretty printing.
+	 *
+	 * When set to a positive value, arrays at or below this size will be
+	 * written in a single line. Set to 0 to always split non-empty arrays into
+	 * multiple lines regardless of size.
+	 *
+	 * \note This option only applies when #prettyPrint is true.
+	 *
+	 * \sa prettyPrint
+	 */
+	std::size_t prettyPrintMaxSingleLineArrayItemCount = 4;
+};
+
+/**
+ * Options for JSON deserialization.
+ */
+struct DeserializationOptions {};
+
 // Forward declaration of the definition below, so that Object and Array can contain objects of type Value through indirection, despite Value being defined in terms of them.
 class Value;
 
@@ -523,15 +588,17 @@ public:
 
 	/**
 	 * Get a JSON string representation of the value.
+	 * 
+	 * \param options options for JSON serialization, see SerializationOptions.
 	 *
 	 * \return a JSON string containing a representation of the value as it
 	 *         would be if it had been serialized to an output stream with the
-	 *         default SerializationOptions.
+	 *         given options.
 	 *
 	 * \throws Error on failure to serialize the value.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	[[nodiscard]] std::string toString() const;
+	[[nodiscard]] std::string toString(const SerializationOptions& options = {}) const;
 
 	/**
 	 * Compare this value to another for equality.
@@ -2009,71 +2076,6 @@ struct Serializer;
  */
 template <typename T>
 struct Deserializer;
-
-/**
- * Options for JSON serialization.
- */
-struct SerializationOptions {
-	/**
-	 * The starting indentation level, expressed as the number of indentation
-	 * characters.
-	 */
-	std::size_t indentation = 0;
-
-	/**
-	 * The number of indentation characters that each new level of indentation
-	 * will add.
-	 */
-	std::size_t relativeIndentation = 4;
-
-	/**
-	 * The character to use when performing indentation.
-	 */
-	char indentationCharacter = ' ';
-
-	/**
-	 * Format the output in a way that is nicely human-readable.
-	 *
-	 * Disable to use a more compact layout without whitespace or indentation.
-	 *
-	 * \sa prettyPrintMaxSingleLineObjectPropertyCount
-	 * \sa prettyPrintMaxSingleLineArrayItemCount
-	 */
-	bool prettyPrint = true;
-
-	/**
-	 * Maximum size of an object before it is split into multiple lines when
-	 * pretty printing.
-	 *
-	 * When set to a positive value, objects at or below this size will be
-	 * written in a single line. Set to 0 to always split non-empty objects into
-	 * multiple lines regardless of size.
-	 *
-	 * \note This option only applies when #prettyPrint is true.
-	 *
-	 * \sa prettyPrint
-	 */
-	std::size_t prettyPrintMaxSingleLineObjectPropertyCount = 4;
-
-	/**
-	 * Maximum size of an array before it is split into multiple lines when
-	 * pretty printing.
-	 *
-	 * When set to a positive value, arrays at or below this size will be
-	 * written in a single line. Set to 0 to always split non-empty arrays into
-	 * multiple lines regardless of size.
-	 *
-	 * \note This option only applies when #prettyPrint is true.
-	 *
-	 * \sa prettyPrint
-	 */
-	std::size_t prettyPrintMaxSingleLineArrayItemCount = 4;
-};
-
-/**
- * Options for JSON deserialization.
- */
-struct DeserializationOptions {};
 
 /**
  * Serialize a value of any JSON-serializable type to an output stream.
@@ -4284,9 +4286,9 @@ inline Value Value::parse(std::string_view jsonString) {
 	return parse(std::u8string_view{reinterpret_cast<const char8_t*>(jsonString.data()), jsonString.size()});
 }
 
-inline std::string Value::toString() const {
+inline std::string Value::toString(const SerializationOptions& options) const {
 	std::ostringstream stream{};
-	stream << *this;
+	json::serialize(stream, *this, options);
 	return std::move(stream).str();
 }
 
