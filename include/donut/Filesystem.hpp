@@ -195,9 +195,6 @@ public:
 	 * \throws File::Error if initialization failed.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note To start, no host directories will be mounted, meaning that
-	 *	   creating or opening virtual files will always fail.
-	 *
 	 * \warning The behavior of passing programFilepath a value other than the
 	 *		  argv[0] string received from main is undefined.
 	 * \warning There can only be one active virtual filesystem in a program at
