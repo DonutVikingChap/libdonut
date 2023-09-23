@@ -20,7 +20,7 @@ public:
 	explicit LinearMemoryResource(std::span<std::byte> initialMemory) noexcept
 		: remainingMemoryBegin(initialMemory.data())
 		, remainingMemorySize(initialMemory.size())
-		, nextChunkSize(std::max(std::size_t{1024}, initialMemory.size() * GROWTH_FACTOR)) {}
+		, nextChunkSize(std::max(std::size_t{1024}, initialMemory.size() + initialMemory.size() / 2)) {}
 
 	void* allocate(std::size_t size, std::size_t alignment) {
 		if (size == 0) {
@@ -32,15 +32,22 @@ public:
 			[[unlikely]];
 			const std::size_t newChunkSize = std::max(size, nextChunkSize);
 			const std::size_t newChunkAlignment = std::max(alignment, alignof(std::max_align_t));
+			if (extraMemory.capacity() < 4) {
+				extraMemory.reserve(4);
+			}
 			AlignedHeapMemoryChunk& newChunk = extraMemory.emplace_back(newChunkSize, newChunkAlignment);
 			remainingMemoryBegin = newChunk.memory;
 			remainingMemorySize = newChunkSize;
-			nextChunkSize *= GROWTH_FACTOR;
+			nextChunkSize += nextChunkSize / 2;
 			result = remainingMemoryBegin;
 		}
 		remainingMemoryBegin = static_cast<std::byte*>(remainingMemoryBegin) + size;
 		remainingMemorySize -= size;
 		return result;
+	}
+
+	[[nodiscard]] std::size_t getRemainingCapacity() const noexcept {
+		return remainingMemorySize;
 	}
 
 private:
@@ -70,8 +77,6 @@ private:
 			return *this;
 		}
 	};
-
-	static constexpr std::size_t GROWTH_FACTOR = 2;
 
 	void* remainingMemoryBegin;
 	std::size_t remainingMemorySize;

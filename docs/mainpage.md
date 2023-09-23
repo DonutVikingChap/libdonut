@@ -27,7 +27,7 @@ The main API of libdonut is organized into the following modules, listed along w
     - [InputManager](@ref donut::events::InputManager) - Mapping between physical inputs and abstract output numbers
 - [donut::graphics](@ref donut::graphics) - Graphics rendering module
     - [Camera](@ref donut::graphics::Camera) - Perspective to render from
-    - [Font](@ref donut::graphics::Font) - Text shaping facility
+    - [Font](@ref donut::graphics::Font) - Font loading for text rendering
     - [Framebuffer](@ref donut::graphics::Framebuffer) - Render target on the GPU
     - [Image](@ref donut::graphics::Image) - Image loading/saving
     - [Renderer](@ref donut::graphics::Renderer) - Rendering onto a framebuffer
@@ -36,6 +36,7 @@ The main API of libdonut is organized into the following modules, listed along w
     - [Shader2D](@ref donut::graphics::Shader2D) - Shader program for instanced 2D textured quads
     - [Shader3D](@ref donut::graphics::Shader3D) - Shader program for instanced 3D models
     - [SpriteAtlas](@ref donut::graphics::SpriteAtlas) - Packing of sprites into an expandable spritesheet
+    - [Text](@ref donut::graphics::Text) - Text shaping facility
     - [Texture](@ref donut::graphics::Texture) - Texture data stored on the GPU
     - [Viewport](@ref donut::graphics::Viewport) - Rectangular region of a framebuffer
     - [Window](@ref donut::graphics::Window) - Graphical window that can be rendered to

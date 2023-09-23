@@ -32,20 +32,20 @@ public:
 	 * Pointer to a statically allocated string containing the GLSL source code
 	 * for a plain vertex shader.
 	 */
-	static const char* const vertexShaderSourceCodeInstancedTexturedQuad;
+	static const char* const VERTEX_SHADER_SOURCE_CODE_INSTANCED_TEXTURED_QUAD;
 
 	/**
 	 * Pointer to a statically allocated string containing the GLSL source code
 	 * for a plain fragment shader.
 	 */
-	static const char* const fragmentShaderSourceCodeTexturedQuadPlain;
+	static const char* const FRAGMENT_SHADER_SOURCE_CODE_PLAIN;
 
 	/**
 	 * Pointer to a statically allocated string containing the GLSL source code
 	 * for a fragment shader that interprets the red channel as alpha with a
 	 * white base color.
 	 */
-	static const char* const fragmentShaderSourceCodeTexturedQuadAlpha;
+	static const char* const FRAGMENT_SHADER_SOURCE_CODE_ALPHA;
 
 	/**
 	 * Pointer to the statically allocated storage for the built-in plain
@@ -55,7 +55,7 @@ public:
 	 *          not guaranteed that the underlying shader will be present at all
 	 *          times.
 	 */
-	static Shader2D* const plainShader;
+	static Shader2D* const PLAIN;
 
 	/**
 	 * Pointer to the statically allocated storage for the built-in alpha
@@ -65,7 +65,7 @@ public:
 	 *          not guaranteed that the underlying shader will be present at all
 	 *          times.
 	 */
-	static Shader2D* const alphaShader;
+	static Shader2D* const ALPHA;
 
 	/**
 	 * Shader configuration that was supplied in the constructor.

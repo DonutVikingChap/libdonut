@@ -82,7 +82,7 @@ public:
 	 *          not guaranteed that the underlying texture will be present at
 	 *          all times.
 	 */
-	static const Texture* const defaultTransparent;
+	static const Texture* const TRANSPARENT;
 
 	/**
 	 * Pointer to the statically allocated storage for the built-in black 2D
@@ -92,7 +92,7 @@ public:
 	 *          not guaranteed that the underlying texture will be present at
 	 *          all times.
 	 */
-	static const Texture* const defaultBlack;
+	static const Texture* const BLACK;
 
 	/**
 	 * Pointer to the statically allocated storage for the built-in white 2D
@@ -102,27 +102,27 @@ public:
 	 *          not guaranteed that the underlying texture will be present at
 	 *          all times.
 	 */
-	static const Texture* const defaultWhite;
+	static const Texture* const WHITE;
 
 	/**
-	 * Pointer to the statically allocated storage for the built-in mid-gray 2D
-	 * texture.
+	 * Pointer to the statically allocated storage for the built-in default
+	 * specular-map 2D texture.
 	 *
 	 * \warning This pointer must not be dereferenced in application code. It is
 	 *          not guaranteed that the underlying texture will be present at
 	 *          all times.
 	 */
-	static const Texture* const defaultGray;
+	static const Texture* const DEFAULT_SPECULAR;
 
 	/**
-	 * Pointer to the statically allocated storage for the built-in normal-map
-	 * 2D texture.
+	 * Pointer to the statically allocated storage for the built-in default
+	 * normal-map 2D texture.
 	 *
 	 * \warning This pointer must not be dereferenced in application code. It is
 	 *          not guaranteed that the underlying texture will be present at
 	 *          all times.
 	 */
-	static const Texture* const defaultNormal;
+	static const Texture* const DEFAULT_NORMAL;
 
 	/**
 	 * Get the number of texel component channels defined by an internal texel
@@ -450,6 +450,7 @@ public:
 	 *         texture data might not be reported directly.
 	 *
 	 * \sa copy2D()
+	 * \sa copyGrow2D()
 	 */
 	void grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<Color> backgroundColor = {});
 
@@ -470,8 +471,37 @@ public:
 	 *         texture data might not be reported directly.
 	 *
 	 * \sa grow2D()
+	 * \sa copyGrow2D()
 	 */
 	[[nodiscard]] Texture copy2D(Renderer& renderer) const;
+
+	/**
+	 * Create a new texture object and allocate GPU memory in an expanded
+	 * version of this texture onto which the 2D texture data of this 2D texture
+	 * is copied.
+	 *
+	 * \param renderer renderer to use for copying the texture data.
+	 * \param newWidth new width of the 2D image data to allocate, in texels.
+	 *        Must be greater than or equal to the old width.
+	 * \param newHeight new height of the 2D image data to allocate, in texels.
+	 *        Must be greater than or equal to the old height.
+	 * \param backgroundColor if set, the new texture data is cleared to this
+	 *        color before copying the old data onto it.
+	 *
+	 * \return the new expanded copied texture.
+	 *
+	 * \warning This function must only be called on textures that are set up to
+	 *          store 2D image data.
+	 * \warning The internal texture format must be framebuffer-compatible.
+	 *
+	 * \throws std::bad_alloc on allocation failure. Note: this pertains only to
+	 *         CPU memory allocations. Failure to allocate GPU memory for the
+	 *         texture data might not be reported directly.
+	 *
+	 * \sa grow2D()
+	 * \sa copy2D()
+	 */
+	[[nodiscard]] Texture copyGrow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<Color> backgroundColor = {}) const;
 
 	/**
 	 * Get the floating-point size, in texels, of the 2D image data stored in

@@ -7,14 +7,13 @@
 #include <donut/graphics/Texture.hpp>
 #include <donut/math.hpp>
 
-#include <cstddef>       // std::size_t, std::byte
-#include <string_view>   // std::string_view, std::u8string_view
-#include <unordered_map> // std::unordered_map
-#include <vector>        // std::vector
+#include <cstddef> // std::size_t, std::byte
+#include <utility> // std::pair
+#include <vector>  // std::vector
 
 namespace donut::graphics {
 
-class Renderer; // Forward declaration, to avoid a circular include of Renderer.hpp.
+class Renderer; // Forward declaration, to avoid including Renderer.hpp.
 
 /**
  * Configuration options for a Font.
@@ -37,51 +36,35 @@ struct FontOptions {
 };
 
 /**
- * Facility for shaping text, according to a loaded font file, into renderable
- * glyphs stored in an expanding texture atlas.
+ * Typeface describing an assortment of character glyphs that may be rendered
+ * on-demand into an expanding texture atlas, for use in Text rendering.
  */
 class Font {
 public:
 	/**
-	 * Information about a single glyph stored in the texture atlas.
+	 * Information about a single glyph's entry in the texture atlas.
 	 */
 	struct Glyph {
-		vec2 textureOffset; ///< Texture coordinate offset of this glyph's rectangle in the texture atlas.
-		vec2 textureScale;  ///< Texture coordinate scale of this glyph's rectangle in the texture atlas.
-		vec2 position;      ///< Position of this glyph's rectangle in the texture atlas, in texels.
-		vec2 size;          ///< Size of this glyph's rectangle in the texture atlas, in texels.
-		vec2 bearing;       ///< Baseline offset to apply to the glyph's rectangle position when rendering this glyph.
-		float advance;      ///< Horizontal offset to apply in order to advance to the next glyph position, excluding any kerning.
+		vec2 positionInAtlas; ///< Position of this glyph's rectangle in the texture atlas, in texels. Invalid if Glyph::rendered is false.
+		vec2 sizeInAtlas;     ///< Size of this glyph's rectangle in the texture atlas, in texels. Invalid if Glyph::rendered is false.
+		bool rendered;        ///< True if the glyph has been rendered and has a valid rectangle in the texture atlas, false otherwise.
 	};
 
 	/**
-	 * Information about a string of shaped glyphs that has been prepared for
-	 * rendering at any given position.
+	 * Dimensions of a single glyph in this font, for shaping text.
 	 */
-	struct ShapedText {
-		/**
-		 * Information about a single shaped glyph that has been prepered for
-		 * rendering at any given position.
-		 */
-		struct ShapedGlyph {
-			vec2 offset;        ///< Scaled offset from the starting position to draw this glyph at, in pixels.
-			vec2 size;          ///< Scaled size of this glyph's rectangle, in pixels.
-			vec2 textureOffset; ///< Texture coordinate offset of this glyph's rectangle in the texture atlas.
-			vec2 textureScale;  ///< Texture coordinate scale of this glyph's rectangle in the texture atlas.
-		};
-
-		std::vector<ShapedGlyph> shapedGlyphs; ///< Sequence of shaped glyphs making up this shaped string.
-		vec2 extentsMin;                       ///< Offset of the top left corner of the smallest rectangular area that spans all glyph rectangles of this string.
-		vec2 extentsMax;                       ///< Offset of the bottom right corner of the smallest rectangular area that spans all glyph rectangles of this string.
-		std::size_t rowCount;                  ///< Total number of lines of text in the shaped string.
+	struct GlyphMetrics {
+		vec2 size;     ///< Size of this glyph's rectangle when rendered, in pixels.
+		vec2 bearing;  ///< Offset from the baseline to apply to the glyph's rectangle position when rendering this glyph.
+		float advance; ///< Horizontal offset to apply in order to advance to the next glyph position, excluding any kerning.
 	};
 
 	/**
 	 * Vertical dimensions for shaping lines of text with this font.
 	 */
 	struct LineMetrics {
-		float ascender;  ///< Distance from the baseline to the visual top of the text.
-		float descender; ///< Distance from the baseline to the visual bottom of the text.
+		float ascender;  ///< Vertical offset from the baseline to the visual top of the text.
+		float descender; ///< Vertical offset from the baseline to the visual bottom of the text.
 		float height;    ///< Vertical offset to apply in order to advance to the next line.
 	};
 
@@ -128,101 +111,61 @@ public:
 	Font& operator=(Font&& other) noexcept = default;
 
 	/**
-	 * Look up the glyph information stored in the texture atlas for a specific
-	 * character.
+	 * Look up the information about a glyph's entry in the texture atlas for a
+	 * specific code point.
 	 *
-	 * \param characterSize character size to search for.
-	 * \param codePoint Unicode code point to search for.
+	 * \param characterSize character size of the glyph to search for.
+	 * \param codePoint Unicode code point of the glyph to search for.
 	 *
-	 * \return if found, returns a read-only non-owning pointer to the stored
-	 *         glyph information. Otherwise, returns nullptr.
+	 * \return the glyph information, see Glyph.
 	 *
-	 * \note The glyph will not be found unless it has previously been loaded
-	 *       through a call to loadGlyph() or shapeText().
-	 *
-	 * \warning The returned pointer will be invalidated on the next call to
-	 *          loadGlyph() or shapeText() that loads a new glyph. Therefore,
-	 *          the glyph information should be copied if it needs to be stored
-	 *          for any longer period of time.
-	 *
-	 * \sa loadGlyph()
-	 * \sa shapeText()
+	 * \sa renderGlyph()
 	 * \sa getAtlasTexture()
 	 */
-	[[nodiscard]] const Glyph* findGlyph(u32 characterSize, char32_t codePoint) const noexcept;
+	[[nodiscard]] Glyph findGlyph(u32 characterSize, char32_t codePoint) const noexcept;
 
 	/**
-	 * Load the glyph information for a specific character and store it in the
-	 * texture atlas, if it has not already been loaded.
+	 * Render the glyph for a specific character and store it in the texture
+	 * atlas, if it has not already been rendered.
 	 *
-	 * \param renderer renderer to use for rendering the glyph into the texture
-	 *        atlas.
+	 * \param renderer renderer to use for rendering the glyph.
 	 * \param characterSize character size to render the glyph at.
-	 * \param codePoint Unicode code point to load.
+	 * \param codePoint Unicode code point of the glyph to render.
 	 *
-	 * \return a reference to the loaded glyph information.
+	 * \return a pair where:
+	 *         - the first element contains information about the rendered
+	 *           glyph, and
+	 *         - the second element contains a bool that is true if the glyph
+	 *           was actually rendered, or false if the glyph had already been
+	 *           rendered previously.
 	 *
 	 * \throws graphics::Error on failure to render the glyph.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note If the specified glyph has already been loaded previously, no
-	 *       modification is made, and a reference to the already loaded glyph
-	 *       is returned. In this case, the function is guaranteed to not throw
-	 *       any exceptions.
-	 *
-	 * \warning The returned reference will be invalidated on the next call to
-	 *          loadGlyph() or shapeText() that loads a new glyph. Therefore,
-	 *          the glyph information should be copied if it needs to be stored
-	 *          for any longer period of time.
+	 * \note If the specified glyph has already been rendered previously, no
+	 *       modification is made, and the already rendered glyph is returned.
+	 *       In this case, the function is guaranteed to not throw any
+	 *       exceptions.
 	 *
 	 * \sa findGlyph()
-	 * \sa shapeText()
+	 * \sa getGlyphMetrics()
 	 * \sa getAtlasTexture()
 	 */
-	const Glyph& loadGlyph(Renderer& renderer, u32 characterSize, char32_t codePoint);
+	std::pair<Glyph, bool> renderGlyph(Renderer& renderer, u32 characterSize, char32_t codePoint);
 
 	/**
-	 * Use the font to shape a UTF-8 encoded text string into a sequence of
-	 * glyphs that are ready to be drawn relative to any starting position.
+	 * Get the dimensions of a single glyph in this font, for shaping text.
 	 *
-	 * \param renderer renderer to use for rendering any glyphs that were not
-	 *        already loaded into the texture atlas.
-	 * \param characterSize character size to render the glyphs at.
-	 * \param string UTF-8 encoded text string to shape.
-	 * \param scale scaling to apply to the size of the rendered glyphs. The
-	 *        result is affected by FontOptions::useLinearFiltering.
+	 * \param characterSize character size to get the glyph metrics of.
+	 * \param codePoint Unicode code point to get the glyph metrics of.
 	 *
-	 * \return information about the sequence of shaped glyphs, see ShapedText.
-	 *
-	 * \throws graphics::Error on failure to render a glyph.
-	 * \throws std::bad_alloc on allocation failure.
-	 *
-	 * \note The best visual results are usually achieved when the text is
-	 *       rendered at an appropriate character size to begin with, rather
-	 *       than relying on scaling. As such, the scale parameter should
-	 *       generally be kept at (1, 1) unless many different character sizes
-	 *       are used with this font and there is a strict requirement on the
-	 *       maximum size of the texture atlas.
-	 * \note Right-to-left text shaping is currently not supported.
-	 * \note Grapheme clusters are currently not supported, and may be rendered
-	 *       incorrectly. Only one Unicode code point is rendered at a time.
-	 *
-	 * \warning If the string contains invalid UTF-8, the invalid code points
-	 *          will generate unspecified glyphs that may have any appearance.
+	 * \return the glyph metrics of the given code point at the given character
+	 *         size, see GlyphMetrics.
 	 *
 	 * \sa findGlyph()
-	 * \sa loadGlyph()
-	 * \sa getAtlasTexture()
+	 * \sa renderGlyph()
 	 */
-	[[nodiscard]] ShapedText shapeText(Renderer& renderer, u32 characterSize, std::u8string_view string, vec2 scale = {1.0f, 1.0f});
-
-	/**
-	 * Helper overload of shapeText() that takes an arbitrary byte string and
-	 * interprets it as UTF-8.
-	 *
-	 * \sa shapeText(Renderer&, u32, std::u8string_view, vec2)
-	 */
-	[[nodiscard]] ShapedText shapeText(Renderer& renderer, u32 characterSize, std::string_view string, vec2 scale = {1.0f, 1.0f});
+	[[nodiscard]] GlyphMetrics getGlyphMetrics(u32 characterSize, char32_t codePoint) const noexcept;
 
 	/**
 	 * Get the vertical dimensions for shaping lines of text with this font.
@@ -249,6 +192,46 @@ public:
 	[[nodiscard]] vec2 getKerning(u32 characterSize, char32_t left, char32_t right) const noexcept;
 
 	/**
+	 * Enqueue a glyph for rendering on the next call to renderMarkedGlyphs() if
+	 * it has not already been rendered.
+	 *
+	 * \param characterSize character size to render the glyph at.
+	 * \param codePoint Unicode code point of the glyph to render.
+	 *
+	 * \throws graphics::Error on failure to mark the glyph.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \sa renderMarkedGlyphs()
+	 */
+	void markGlyphForRendering(u32 characterSize, char32_t codePoint);
+
+	/**
+	 * Render all glyphs marked using markGlyphForRendering() that have not
+	 * already been rendered.
+	 *
+	 * \param renderer renderer to use for rendering the glyphs.
+	 *
+	 * \return true if at least one marked glyph needed to be rendered, false if
+	 *         no rendering took place because all marked glyphs were already
+	 *         rendered.
+	 *
+	 * \throws graphics::Error on failure to render a glyph.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \sa markGlyphForRendering()
+	 * \sa containsGlyphsMarkedForRendering()
+	 */
+	bool renderMarkedGlyphs(Renderer& renderer);
+
+	/**
+	 * Check if any unrendered glyphs have been marked for rendering.
+	 *
+	 * \return true if some marked glyph might need to be rendered, false if
+	 *         certainly no unrendered glyphs have been marked.
+	 */
+	[[nodiscard]] bool containsGlyphsMarkedForRendering() const noexcept;
+
+	/**
 	 * Get the texture atlas to use when rendering glyphs from this font.
 	 *
 	 * \return a read-only reference to a square texture containing all loaded
@@ -256,7 +239,6 @@ public:
 	 *
 	 * \sa findGlyph()
 	 * \sa loadGlyph()
-	 * \sa shapeText()
 	 */
 	[[nodiscard]] const Texture& getAtlasTexture() const noexcept {
 		return atlasTexture;
@@ -267,26 +249,25 @@ private:
 		void operator()(void* handle) const noexcept;
 	};
 
-	using GlyphKey = u64;
+	struct GlyphKey {
+		u32 characterSize;
+		char32_t codePoint;
+
+		[[nodiscard]] constexpr auto operator<=>(const GlyphKey&) const = default;
+	};
 
 	static constexpr std::size_t INITIAL_RESOLUTION = 128;
 	static constexpr std::size_t PADDING = 6;
 
-	[[nodiscard]] static constexpr GlyphKey makeGlyphKey(u32 characterSize, char32_t codePoint) noexcept {
-		static_assert(sizeof(GlyphKey) >= sizeof(characterSize) + sizeof(codePoint));
-		static_assert(sizeof(codePoint) == 4);
-		return static_cast<GlyphKey>(characterSize) << 32 | static_cast<GlyphKey>(codePoint);
-	}
-
 	void prepareAtlasTexture(Renderer& renderer, bool resized);
-
-	[[nodiscard]] Glyph renderGlyph(Renderer& renderer, u32 characterSize, char32_t codePoint);
 
 	std::vector<std::byte> fontFileContents;
 	UniqueHandle<void*, FontDeleter> font;
 	AtlasPacker<INITIAL_RESOLUTION, PADDING> atlasPacker{};
 	Texture atlasTexture{};
-	std::unordered_map<GlyphKey, Glyph> glyphs{};
+	std::vector<GlyphKey> sortedGlyphKeys{};
+	std::vector<Glyph> glyphsSortedByKey{};
+	std::vector<GlyphKey> glyphKeysMarkedForRendering{};
 	FontOptions options;
 };
 

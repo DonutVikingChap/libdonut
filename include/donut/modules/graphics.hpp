@@ -19,6 +19,7 @@
 #include <donut/graphics/ShaderProgram.hpp>
 #include <donut/graphics/ShaderStage.hpp>
 #include <donut/graphics/SpriteAtlas.hpp>
+#include <donut/graphics/Text.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
 #include <donut/graphics/VertexArray.hpp>

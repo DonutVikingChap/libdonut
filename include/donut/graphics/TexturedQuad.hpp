@@ -32,10 +32,9 @@ struct TexturedQuad {
 	 *       concept.
 	 */
 	struct Instance {
-		mat4 transformation; ///< Transformation matrix.
-		vec2 textureOffset;  ///< Offset to apply to the texture coordinates before sampling the texture.
-		vec2 textureScale;   ///< Coefficients to scale the texture coordinates by before sampling the texture.
-		vec4 tintColor;      ///< Tint color to use when rendering.
+		mat3 transformation;        ///< Transformation to apply to the vertex positions.
+		vec4 textureOffsetAndScale; ///< Texture offset (xy) and texture scale (zw) to apply to the texture coordinates before sampling the texture.
+		vec4 tintColor;             ///< Tint color to use when rendering.
 	};
 
 	/** Hint regarding the intended memory access pattern of the vertex buffer. */

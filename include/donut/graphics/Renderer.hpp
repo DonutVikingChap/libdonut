@@ -3,15 +3,18 @@
 
 #include <donut/graphics/Camera.hpp>
 #include <donut/graphics/Framebuffer.hpp>
+#include <donut/graphics/Model.hpp>
 #include <donut/graphics/RenderPass.hpp>
 #include <donut/graphics/Shader2D.hpp>
 #include <donut/graphics/Shader3D.hpp>
+#include <donut/graphics/Text.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
 #include <donut/graphics/Viewport.hpp>
 #include <donut/shapes.hpp>
 
 #include <optional> // std::optional
+#include <vector>   // std::vector
 
 namespace donut::graphics {
 
@@ -112,6 +115,9 @@ public:
 
 private:
 	TexturedQuad texturedQuad{};
+	std::vector<Model::Object::Instance> modelInstances{};
+	std::vector<TexturedQuad::Instance> texturedQuadInstances{};
+	Text text{};
 };
 
 } // namespace donut::graphics

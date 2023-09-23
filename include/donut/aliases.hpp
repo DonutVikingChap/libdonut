@@ -37,6 +37,8 @@ using donut::LinearMemoryResource; // NOLINT(misc-unused-using-decls)
 
 using donut::LinearAllocator; // NOLINT(misc-unused-using-decls)
 
+using donut::LinearBuffer; // NOLINT(misc-unused-using-decls)
+
 using donut::LooseQuadtree; // NOLINT(misc-unused-using-decls)
 
 using donut::abs;
@@ -142,6 +144,8 @@ using donut::vec;
 using donut::vec2;
 using donut::vec3;
 using donut::vec4;
+
+using donut::Overloaded; // NOLINT(misc-unused-using-decls)
 
 using donut::UniqueHandle; // NOLINT(misc-unused-using-decls)
 

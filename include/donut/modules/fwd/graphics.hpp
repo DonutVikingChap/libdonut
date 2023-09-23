@@ -71,6 +71,8 @@ class Shader3D;
 
 class SpriteAtlas;
 
+class Text;
+
 enum class TextureFormat : std::int32_t;
 struct TextureOptions;
 class Texture;

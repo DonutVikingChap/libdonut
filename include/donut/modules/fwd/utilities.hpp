@@ -47,6 +47,9 @@ class LinearMemoryResource;
 template <typename T>
 class LinearAllocator;
 
+template <typename... Ts>
+class LinearBuffer;
+
 template <typename T>
 class LooseQuadtree;
 
@@ -125,6 +128,9 @@ struct Library;
 
 } // namespace mtl
 } // namespace obj
+
+template <typename... Functors>
+struct Overloaded;
 
 namespace random {
 

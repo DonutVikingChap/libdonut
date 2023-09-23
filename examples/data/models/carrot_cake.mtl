@@ -1,6 +1,7 @@
 newmtl carrot_cake
 illum 2
 map_Kd carrot_cake_diffuse.jpg
-map_Ns carrot_cake_specular.hdr
+map_Ks carrot_cake_specular.hdr
 map_bump carrot_cake_normal.hdr
 Ns 92
+Ks 4 4 4

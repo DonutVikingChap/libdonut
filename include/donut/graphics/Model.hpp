@@ -11,6 +11,8 @@
 
 namespace donut::graphics {
 
+class Renderer; // Forward declaration, to avoid a circular include of Renderer.hpp.
+
 /**
  * Container for a set of 3D triangle meshes stored on the GPU, combined with
  * associated materials.
@@ -52,9 +54,12 @@ struct Model {
 		 *       concept.
 		 */
 		struct Instance {
-			mat4 transformation; ///< Model transformation matrix.
-			mat3 normalMatrix;   ///< Transposed 3x3 basis of the model transformation matrix.
-			vec4 tintColor;      ///< Tint color to use when rendering.
+			mat4 transformation;        ///< Model transformation matrix.
+			mat3 normalMatrix;          ///< Transposed 3x3 basis of the model transformation matrix.
+			vec4 textureOffsetAndScale; ///< Texture offset (xy) and texture scale (zw) to apply to the texture coordinates before sampling the texture.
+			vec4 tintColor;             ///< Tint color to use when rendering.
+			vec3 specularFactor;        ///< Specular factor to use when rendering.
+			vec3 emissiveFactor;        ///< Emissive factor to use when rendering.
 		};
 
 		/**
@@ -112,6 +117,32 @@ struct Model {
 	};
 
 	/**
+	 * Pointer to the statically allocated storage for the built-in quad model.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying model will be present at all
+	 *          times.
+	 */
+	static const Model* const QUAD;
+
+	/**
+	 * Pointer to the statically allocated storage for the built-in cube model.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying model will be present at all
+	 *          times.
+	 */
+	static const Model* const CUBE;
+
+	/**
+	 * Construct a model from a list of meshes.
+	 *
+	 * \param objects meshes that define the model.
+	 */
+	explicit Model(std::vector<Object> objects) noexcept
+		: objects(std::move(objects)) {}
+
+	/**
 	 * Load a model from a virtual file.
 	 *
 	 * The supported file formats are:
@@ -136,6 +167,12 @@ struct Model {
 	 * List of objects defined by the loaded model.
 	 */
 	std::vector<Object> objects;
+
+private:
+	friend Renderer;
+
+	static void createSharedModels();
+	static void destroySharedModels() noexcept;
 };
 
 } // namespace donut::graphics

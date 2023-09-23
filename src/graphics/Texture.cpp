@@ -10,7 +10,7 @@
 
 #include <array>    // std::array
 #include <cassert>  // assert
-#include <cstddef>  // std::size_t, std::byte
+#include <cstddef>  // std::size_t, std::byte, std::max_align_t
 #include <memory>   // std::construct_at, std::destroy_at
 #include <optional> // std::optional
 #include <utility>  // std::move
@@ -23,69 +23,16 @@ std::size_t sharedTextureReferenceCount = 0;
 alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedTransparentTextureStorage;
 alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedBlackTextureStorage;
 alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedWhiteTextureStorage;
-alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedGrayTextureStorage;
-alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedNormalTextureStorage;
+alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedDefaultSpecularTextureStorage;
+alignas(Texture) std::array<std::byte, sizeof(Texture)> sharedDefaultNormalTextureStorage;
 
 } // namespace
 
-const Texture* const Texture::defaultTransparent = reinterpret_cast<Texture*>(sharedTransparentTextureStorage.data());
-const Texture* const Texture::defaultBlack = reinterpret_cast<Texture*>(sharedBlackTextureStorage.data());
-const Texture* const Texture::defaultWhite = reinterpret_cast<Texture*>(sharedWhiteTextureStorage.data());
-const Texture* const Texture::defaultGray = reinterpret_cast<Texture*>(sharedGrayTextureStorage.data());
-const Texture* const Texture::defaultNormal = reinterpret_cast<Texture*>(sharedNormalTextureStorage.data());
-
-void Texture::createSharedTextures() {
-	if (sharedTextureReferenceCount == 0) {
-		constexpr std::array<std::byte, 4> TRANSPARENT_PIXEL{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
-		constexpr std::array<std::byte, 4> BLACK_PIXEL{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{255}};
-		constexpr std::array<std::byte, 4> WHITE_PIXEL{std::byte{255}, std::byte{255}, std::byte{255}, std::byte{255}};
-		constexpr std::array<std::byte, 4> GRAY_PIXEL{std::byte{128}, std::byte{128}, std::byte{128}, std::byte{255}};
-		constexpr std::array<std::byte, 4> NORMAL_PIXEL{std::byte{128}, std::byte{128}, std::byte{255}, std::byte{255}};
-		constexpr TextureOptions PIXEL_TEXTURE_OPTIONS{.repeat = true, .useLinearFiltering = false, .useMipmap = false};
-		std::construct_at(defaultTransparent, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, TRANSPARENT_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
-		try {
-			std::construct_at(defaultBlack, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, BLACK_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
-		} catch (...) {
-			std::destroy_at(defaultTransparent);
-			throw;
-		}
-		try {
-			std::construct_at(defaultWhite, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, WHITE_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
-		} catch (...) {
-			std::destroy_at(defaultBlack);
-			std::destroy_at(defaultTransparent);
-			throw;
-		}
-		try {
-			std::construct_at(defaultGray, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, GRAY_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
-		} catch (...) {
-			std::destroy_at(defaultWhite);
-			std::destroy_at(defaultBlack);
-			std::destroy_at(defaultTransparent);
-			throw;
-		}
-		try {
-			std::construct_at(defaultNormal, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGB, PixelComponentType::U8, NORMAL_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
-		} catch (...) {
-			std::destroy_at(defaultGray);
-			std::destroy_at(defaultWhite);
-			std::destroy_at(defaultBlack);
-			std::destroy_at(defaultTransparent);
-			throw;
-		}
-	}
-	++sharedTextureReferenceCount;
-}
-
-void Texture::destroySharedTextures() noexcept {
-	if (sharedTextureReferenceCount-- == 1) {
-		std::destroy_at(defaultNormal);
-		std::destroy_at(defaultGray);
-		std::destroy_at(defaultWhite);
-		std::destroy_at(defaultBlack);
-		std::destroy_at(defaultTransparent);
-	}
-}
+const Texture* const Texture::TRANSPARENT = reinterpret_cast<Texture*>(sharedTransparentTextureStorage.data());
+const Texture* const Texture::BLACK = reinterpret_cast<Texture*>(sharedBlackTextureStorage.data());
+const Texture* const Texture::WHITE = reinterpret_cast<Texture*>(sharedWhiteTextureStorage.data());
+const Texture* const Texture::DEFAULT_SPECULAR = reinterpret_cast<Texture*>(sharedDefaultSpecularTextureStorage.data());
+const Texture* const Texture::DEFAULT_NORMAL = reinterpret_cast<Texture*>(sharedDefaultNormalTextureStorage.data());
 
 std::size_t Texture::getChannelCount(TextureFormat internalFormat) noexcept {
 	switch (internalFormat) {
@@ -332,7 +279,16 @@ void Texture::fill2D(Renderer& renderer, Color color) {
 void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<Color> backgroundColor) {
 	assert(newWidth >= width);
 	assert(newHeight >= height);
+	*this = copyGrow2D(renderer, newWidth, newHeight, backgroundColor);
+}
 
+Texture Texture::copy2D(Renderer& renderer) const {
+	return copyGrow2D(renderer, width, height);
+}
+
+Texture Texture::copyGrow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHeight, std::optional<Color> backgroundColor) const {
+	assert(newWidth >= width);
+	assert(newHeight >= height);
 	Texture newTexture{internalFormat, newWidth, newHeight, {.repeat = false, .useLinearFiltering = false, .useMipmap = false}};
 	{
 		Framebuffer framebuffer{};
@@ -340,23 +296,62 @@ void Texture::grow2D(Renderer& renderer, std::size_t newWidth, std::size_t newHe
 		if (backgroundColor) {
 			renderer.clearFramebufferColor(framebuffer, *backgroundColor);
 		}
-		renderer.render(framebuffer, RenderPass{}.draw(TextureInstance{.texture = this}), Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
-			Camera::createOrthographic({.offset{0.0f, 0.0f}, .size{static_cast<float>(width), static_cast<float>(height)}}));
-	}
-	newTexture.setOptions2D(options);
-	*this = std::move(newTexture);
-}
-
-Texture Texture::copy2D(Renderer& renderer) const {
-	Texture newTexture{internalFormat, width, height, {.repeat = false, .useLinearFiltering = false, .useMipmap = false}};
-	{
-		Framebuffer framebuffer{};
-		const Framebuffer::TextureAttachment attachment = framebuffer.attachTexture2D(newTexture);
-		renderer.render(framebuffer, RenderPass{}.draw(TextureInstance{.texture = this}), Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
+		alignas(std::max_align_t) std::array<std::byte, 128> renderPassStorage;
+		renderer.render(framebuffer, RenderPass{renderPassStorage}.draw(TextureInstance{.texture = this}),
+			Viewport{.position{0, 0}, .size{static_cast<GLint>(width), static_cast<GLint>(height)}},
 			Camera::createOrthographic({.offset{0.0f, 0.0f}, .size{static_cast<float>(width), static_cast<float>(height)}}));
 	}
 	newTexture.setOptions2D(options);
 	return newTexture;
+}
+
+void Texture::createSharedTextures() {
+	if (sharedTextureReferenceCount == 0) {
+		constexpr std::array<std::byte, 4> TRANSPARENT_PIXEL{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
+		constexpr std::array<std::byte, 4> BLACK_PIXEL{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{255}};
+		constexpr std::array<std::byte, 4> WHITE_PIXEL{std::byte{255}, std::byte{255}, std::byte{255}, std::byte{255}};
+		constexpr std::array<std::byte, 4> DEFAULT_SPECULAR_PIXEL{std::byte{16}, std::byte{16}, std::byte{16}, std::byte{255}};
+		constexpr std::array<std::byte, 4> DEFAULT_NORMAL_PIXEL{std::byte{128}, std::byte{128}, std::byte{255}, std::byte{255}};
+		constexpr TextureOptions PIXEL_TEXTURE_OPTIONS{.repeat = true, .useLinearFiltering = false, .useMipmap = false};
+		std::construct_at(TRANSPARENT, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, TRANSPARENT_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
+		try {
+			std::construct_at(BLACK, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, BLACK_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
+			try {
+				std::construct_at(WHITE, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, WHITE_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
+				try {
+					std::construct_at(DEFAULT_SPECULAR, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, DEFAULT_SPECULAR_PIXEL.data(),
+						PIXEL_TEXTURE_OPTIONS);
+					try {
+						std::construct_at(DEFAULT_NORMAL, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGB, PixelComponentType::U8, DEFAULT_NORMAL_PIXEL.data(),
+							PIXEL_TEXTURE_OPTIONS);
+					} catch (...) {
+						std::destroy_at(DEFAULT_SPECULAR);
+						throw;
+					}
+				} catch (...) {
+					std::destroy_at(WHITE);
+					throw;
+				}
+			} catch (...) {
+				std::destroy_at(BLACK);
+				throw;
+			}
+		} catch (...) {
+			std::destroy_at(TRANSPARENT);
+			throw;
+		}
+	}
+	++sharedTextureReferenceCount;
+}
+
+void Texture::destroySharedTextures() noexcept {
+	if (sharedTextureReferenceCount-- == 1) {
+		std::destroy_at(DEFAULT_NORMAL);
+		std::destroy_at(DEFAULT_SPECULAR);
+		std::destroy_at(WHITE);
+		std::destroy_at(BLACK);
+		std::destroy_at(TRANSPARENT);
+	}
 }
 
 void Texture::TextureDeleter::operator()(Handle handle) const noexcept {

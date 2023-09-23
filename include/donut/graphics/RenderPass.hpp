@@ -3,21 +3,20 @@
 
 #include <donut/Color.hpp>
 #include <donut/LinearAllocator.hpp>
-#include <donut/graphics/Font.hpp>
+#include <donut/LinearBuffer.hpp>
 #include <donut/graphics/Model.hpp>
 #include <donut/graphics/Shader2D.hpp>
 #include <donut/graphics/Shader3D.hpp>
 #include <donut/graphics/SpriteAtlas.hpp>
+#include <donut/graphics/Text.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
 #include <donut/math.hpp>
 
-#include <array>        // std::array
-#include <cstddef>      // std::byte, std::max_align_t
-#include <forward_list> // std::forward_list
-#include <map>          // std::map
-#include <utility>      // std::pair
-#include <vector>       // std::vector
+#include <cstddef>     // std::byte
+#include <span>        // std::span
+#include <string_view> // std::string_view, std::u8string_view
+#include <vector>      // std::vector
 
 namespace donut::graphics {
 
@@ -27,14 +26,8 @@ namespace donut::graphics {
  * Required fields:
  * - ModelInstance::model
  *
- * \note Instances of this type will be rendered **before** any 2D instances in
- *       the same RenderPass. Model instances with the same shader and model
- *       will be batched and rendered together, regardless of the order in which
- *       they are enqueued.
- * \note Instances that use different shaders will be rendered separately from
- *       each other, ordered by their Shader3DOptions::orderIndex. The built-in
- *       shader has an orderIndex of 0 by default, while custom shaders default
- *       to an orderIndex of 1.
+ * \note Consecutive 3D instances with the same shader and model will be batched
+ *       and rendered together.
  */
 struct ModelInstance {
 	/**
@@ -43,7 +36,7 @@ struct ModelInstance {
 	 * \warning The pointed-to shader must remain valid for the duration of its
 	 *          use in the RenderPass, and must not be nullptr.
 	 */
-	Shader3D* shader = Shader3D::blinnPhongShader;
+	Shader3D* shader = Shader3D::BLINN_PHONG;
 
 	/**
 	 * Non-owning pointer to the model to be drawn.
@@ -54,15 +47,151 @@ struct ModelInstance {
 	const Model* model;
 
 	/**
+	 * Non-owning pointer to the texture to use for the base color, or nullptr
+	 * to use the original textures specified by the model.
+	 *
+	 * \warning When not nullptr, the pointed-to texture must remain valid for
+	 *          the duration of its use in the RenderPass.
+	 */
+	const Texture* diffuseMapOverride = nullptr;
+
+	/**
+	 * Non-owning pointer to the texture to use for specular highlights, or
+	 * nullptr to use the original textures specified by the model.
+	 *
+	 * \warning When not nullptr, the pointed-to texture must remain valid for
+	 *          the duration of its use in the RenderPass.
+	 */
+	const Texture* specularMapOverride = nullptr;
+
+	/**
+	 * Non-owning pointer to the texture to use for normal mapping, or nullptr
+	 * to use the original textures specified by the model.
+	 *
+	 * \warning When not nullptr, the pointed-to texture must remain valid for
+	 *          the duration of its use in the RenderPass.
+	 */
+	const Texture* normalMapOverride = nullptr;
+
+	/**
+	 * Non-owning pointer to the texture to use for emissive mapping, or nullptr
+	 * to use the original textures specified by the model.
+	 *
+	 * \warning When not nullptr, the pointed-to texture must remain valid for
+	 *          the duration of its use in the RenderPass.
+	 */
+	const Texture* emissiveMapOverride = nullptr;
+
+	/**
 	 * Transformation matrix to apply to every vertex position of the model, in
 	 * world space.
 	 */
 	mat4 transformation = identity<mat4>();
 
 	/**
+	 * Offset, in texture coordinates, to apply to the texture coordinates
+	 * before sampling textures.
+	 *
+	 * \note This unscaled offset is applied after scaling the texture
+	 *       coordinates by the ModelInstance::textureScale.
+	 */
+	vec2 textureOffset{0.0f, 0.0f};
+
+	/**
+	 * Coefficients to scale the texture coordinates by before sampling
+	 * textures.
+	 *
+	 * \note The texture coordinates are scaled before applying the unscaled
+	 *       ModelInstance::textureOffset.
+	 */
+	vec2 textureScale{1.0f, 1.0f};
+
+	/**
 	 * Tint color to use in the shader.
 	 *
-	 * \note In the built-in shader, the output color is multiplied by this
+	 * \note In the default shader, the output color is multiplied by this
+	 *       value, meaning that a value of Color::WHITE, i.e. RGBA(1, 1, 1, 1)
+	 *       in linear color, represents no modification to the original texture
+	 *       color.
+	 */
+	Color tintColor = Color::WHITE;
+
+	/**
+	 * Specular factor to use in the shader.
+	 *
+	 * \note In the default shader, the specular color is multiplied by this
+	 *       value, meaning that a value of (1, 1, 1) represents no modification
+	 *       to the original specular map color.
+	 */
+	vec3 specularFactor{1.0f, 1.0f, 1.0f};
+
+	/**
+	 * Emissive factor to use in the shader.
+	 *
+	 * \note In the default shader, the emissive color is multiplied by this
+	 *       value, meaning that a value of (1, 1, 1) represents no modification
+	 *       to the original emissive map color.
+	 */
+	vec3 emissiveFactor{1.0f, 1.0f, 1.0f};
+};
+
+/**
+ * Configuration of an arbitrarily shaded/transformed 2D quad instance,
+ * optionally textured, for drawing as part of a RenderPass.
+ *
+ * \note Consecutive 2D instances with the same shader and texture will be
+ *       batched and rendered together.
+ *
+ * \sa TextureInstance
+ * \sa RectangleInstance
+ * \sa SpriteInstance
+ */
+struct QuadInstance {
+	/**
+	 * Non-owning pointer to the shader to use when rendering this quad.
+	 *
+	 * \warning The pointed-to shader must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
+	 */
+	Shader2D* shader = Shader2D::PLAIN;
+
+	/**
+	 * Non-owning pointer to a texture to apply to the quad.
+	 *
+	 * \warning The pointed-to texture must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
+	 */
+	const Texture* texture = Texture::WHITE;
+
+	/**
+	 * Transformation matrix to apply to every corner of the quad.
+	 */
+	mat3 transformation = identity<mat3>();
+
+	/**
+	 * Offset, in texture coordinates, to apply to the texture coordinates
+	 * before sampling the texture.
+	 *
+	 * \note This unscaled offset is applied after scaling the texture
+	 *       coordinates by the QuadInstance::textureScale.
+	 */
+	vec2 textureOffset{0.0f, 0.0f};
+
+	/**
+	 * Coefficients to scale the texture coordinates by before sampling the
+	 * texture.
+	 *
+	 * \note The texture coordinates are scaled before applying the unscaled
+	 *       QuadInstance::textureOffset.
+	 */
+	vec2 textureScale{1.0f, 1.0f};
+
+	/**
+	 * Tint color to use in the shader.
+	 *
+	 * When no texture is specified, this controls the base color of the quad.
+	 *
+	 * \note In the default shader, the output color is multiplied by this
 	 *       value, meaning that a value of Color::WHITE, i.e. RGBA(1, 1, 1, 1)
 	 *       in linear color, represents no modification to the original texture
 	 *       color.
@@ -77,12 +206,11 @@ struct ModelInstance {
  * Required fields:
  * - TextureInstance::texture
  *
- * \note Instances of this type will be rendered **after** any 3D instances in
- *       the same RenderPass. Consecutive quad instances with the same shader
- *       and texture will be batched and rendered together.
+ * \note Consecutive 2D instances with the same shader and texture will be
+ *       batched and rendered together.
  *
- * \sa RectangleInstance
  * \sa QuadInstance
+ * \sa RectangleInstance
  * \sa SpriteInstance
  */
 struct TextureInstance {
@@ -92,7 +220,7 @@ struct TextureInstance {
 	 * \warning The pointed-to shader must remain valid for the duration of its
 	 *          use in the RenderPass, and must not be nullptr.
 	 */
-	Shader2D* shader = Shader2D::plainShader;
+	Shader2D* shader = Shader2D::PLAIN;
 
 	/**
 	 * Non-owning pointer to the texture to be drawn.
@@ -150,7 +278,7 @@ struct TextureInstance {
 	/**
 	 * Tint color to use in the shader.
 	 *
-	 * \note In the built-in shader, the output color is multiplied by this
+	 * \note In the default shader, the output color is multiplied by this
 	 *       value, meaning that a value of Color::WHITE, i.e. RGBA(1, 1, 1, 1)
 	 *       in linear color, represents no modification to the original texture
 	 *       color.
@@ -162,12 +290,11 @@ struct TextureInstance {
  * Configuration of a 2D rectangle instance, optionally textured, for drawing as
  * part of a RenderPass.
  *
- * \note Instances of this type will be rendered **after** any 3D instances in
- *       the same RenderPass. Consecutive quad instances with the same shader
- *       and texture will be batched and rendered together.
+ * \note Consecutive 2D instances with the same shader and texture will be
+ *       batched and rendered together.
  *
- * \sa TextureInstance
  * \sa QuadInstance
+ * \sa TextureInstance
  * \sa SpriteInstance
  */
 struct RectangleInstance {
@@ -177,7 +304,7 @@ struct RectangleInstance {
 	 * \warning The pointed-to shader must remain valid for the duration of its
 	 *          use in the RenderPass, and must not be nullptr.
 	 */
-	Shader2D* shader = Shader2D::plainShader;
+	Shader2D* shader = Shader2D::PLAIN;
 
 	/**
 	 * Non-owning pointer to a texture to apply to the rectangle.
@@ -185,7 +312,7 @@ struct RectangleInstance {
 	 * \warning The pointed-to texture must remain valid for the duration of its
 	 *          use in the RenderPass, and must not be nullptr.
 	 */
-	const Texture* texture = Texture::defaultWhite;
+	const Texture* texture = Texture::WHITE;
 
 	/**
 	 * Position, in world coordinates, to render the rectangle at, with respect
@@ -235,73 +362,7 @@ struct RectangleInstance {
 	 * When no texture is specified, this controls the base color of the
 	 * rectangle.
 	 *
-	 * \note In the built-in shader, the output color is multiplied by this
-	 *       value, meaning that a value of Color::WHITE, i.e. RGBA(1, 1, 1, 1)
-	 *       in linear color, represents no modification to the original texture
-	 *       color.
-	 */
-	Color tintColor = Color::WHITE;
-};
-
-/**
- * Configuration of an arbitrarily shaded/transformed 2D quad instance,
- * optionally textured, for drawing as part of a RenderPass.
- *
- * \note Instances of this type will be rendered **after** any 3D instances in
- *       the same RenderPass. Consecutive quad instances with the same shader
- *       and texture will be batched and rendered together.
- *
- * \sa TextureInstance
- * \sa RectangleInstance
- * \sa SpriteInstance
- */
-struct QuadInstance {
-	/**
-	 * Non-owning pointer to the shader to use when rendering this quad.
-	 *
-	 * \warning The pointed-to shader must remain valid for the duration of its
-	 *          use in the RenderPass, and must not be nullptr.
-	 */
-	Shader2D* shader = Shader2D::plainShader;
-
-	/**
-	 * Non-owning pointer to a texture to apply to the quad.
-	 *
-	 * \warning The pointed-to texture must remain valid for the duration of its
-	 *          use in the RenderPass, and must not be nullptr.
-	 */
-	const Texture* texture = Texture::defaultWhite;
-
-	/**
-	 * Transformation matrix to apply to every corner of the quad, in world
-	 * space.
-	 */
-	mat4 transformation = identity<mat4>();
-
-	/**
-	 * Offset, in texture coordinates, to apply to the texture coordinates
-	 * before sampling the texture.
-	 *
-	 * \note This unscaled offset is applied after scaling the texture
-	 *       coordinates by the QuadInstance::textureScale.
-	 */
-	vec2 textureOffset{0.0f, 0.0f};
-
-	/**
-	 * Coefficients to scale the texture coordinates by before sampling the
-	 * texture.
-	 *
-	 * \note The texture coordinates are scaled before applying the unscaled
-	 *       QuadInstance::textureOffset.
-	 */
-	vec2 textureScale{1.0f, 1.0f};
-
-	/**
-	 * Tint color to use in the shader.
-	 *
-	 * When no texture is specified, this controls the base color of the quad.
-	 *
-	 * \note In the built-in shader, the output color is multiplied by this
+	 * \note In the default shader, the output color is multiplied by this
 	 *       value, meaning that a value of Color::WHITE, i.e. RGBA(1, 1, 1, 1)
 	 *       in linear color, represents no modification to the original texture
 	 *       color.
@@ -317,13 +378,12 @@ struct QuadInstance {
  * - SpriteInstance::atlas
  * - SpriteInstance::id
  *
- * \note Instances of this type will be rendered **after** any 3D instances in
- *       the same RenderPass. Consecutive quad instances with the same shader
- *       and texture will be batched and rendered together.
+ * \note Consecutive sprite instances with the same shader and atlas will be
+ *       batched and rendered together.
  *
+ * \sa QuadInstance
  * \sa TextureInstance
  * \sa RectangleInstance
- * \sa QuadInstance
  */
 struct SpriteInstance {
 	/**
@@ -332,7 +392,7 @@ struct SpriteInstance {
 	 * \warning The pointed-to shader must remain valid for the duration of its
 	 *          use in the RenderPass, and must not be nullptr.
 	 */
-	Shader2D* shader = Shader2D::plainShader;
+	Shader2D* shader = Shader2D::PLAIN;
 
 	/**
 	 * Non-owning pointer to the texture atlas in which the sprite resides.
@@ -381,7 +441,7 @@ struct SpriteInstance {
 	/**
 	 * Tint color to use in the shader.
 	 *
-	 * \note In the built-in shader, the output color is multiplied by this
+	 * \note In the default shader, the output color is multiplied by this
 	 *       value, meaning that a value of Color::WHITE, i.e. RGBA(1, 1, 1, 1)
 	 *       in linear color, represents no modification to the original texture
 	 *       color.
@@ -390,16 +450,17 @@ struct SpriteInstance {
 };
 
 /**
- * Configuration of a 2D instance of Font::ShapedText shaped from a Font, for
- * drawing as part of a RenderPass.
+ * Configuration of a 2D instance of Text shaped from a Font, for drawing as
+ * part of a RenderPass.
  *
  * Required fields:
- * - TextInstance::font
  * - TextInstance::text
  *
- * \note Instances of this type will be rendered **after** any 3D instances in
- *       the same RenderPass. Consecutive text instances with the same font will
- *       be batched and rendered together.
+ * \note Consecutive text instances with the same shader and font will be
+ *       batched and rendered together.
+ *
+ * \sa TextUTF8StringInstance
+ * \sa TextStringInstance
  */
 struct TextInstance {
 	/**
@@ -409,21 +470,16 @@ struct TextInstance {
 	 * \warning The pointed-to shader must remain valid for the duration of its
 	 *          use in the RenderPass, and must not be nullptr.
 	 */
-	Shader2D* shader = Shader2D::alphaShader;
+	Shader2D* shader = Shader2D::ALPHA;
 
 	/**
-	 * Non-owning pointer to the font from which the text was shaped.
+	 * Non-owning read-only pointer to the shaped text to draw.
 	 *
-	 * \warning The pointed-to font must remain valid for the duration of its
-	 *          use in the RenderPass, and must not be nullptr.
+	 * \warning The pointed-to text, as well as all of the fonts used by it,
+	 *          must remain valid for the duration of its use in the RenderPass,
+	 *          and must not be nullptr.
 	 */
-	const Font* font;
-
-	/**
-	 * Shaped text to be drawn, which should have been obtained from the font
-	 * pointed to by TextInstance::font.
-	 */
-	Font::ShapedText text;
+	const Text* text;
 
 	/**
 	 * Starting position, in world coordinates, to render the text at. This will
@@ -438,10 +494,179 @@ struct TextInstance {
 };
 
 /**
+ * Configuration of a 2D instance of a UTF-8 string of text with a Font, for
+ * drawing as part of a RenderPass.
+ *
+ * Required fields:
+ * - TextUTF8StringInstance::font
+ * - TextUTF8StringInstance::characterSize
+ * - TextUTF8StringInstance::string
+ *
+ * \note Consecutive text instances with the same shader and font will be
+ *       batched and rendered together.
+ *
+ * \sa TextInstance
+ * \sa TextStringInstance
+ */
+struct TextUTF8StringInstance {
+	/**
+	 * Non-owning pointer to the shader to use when rendering the glyphs of this
+	 * text.
+	 *
+	 * \warning The pointed-to shader must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
+	 */
+	Shader2D* shader = Shader2D::ALPHA;
+
+	/**
+	 * Non-owning pointer to the font from which to shape the text.
+	 *
+	 * \warning The pointed-to font must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
+	 */
+	Font* font;
+
+	/**
+	 * Character size to shape the glyphs at.
+	 */
+	u32 characterSize;
+
+	/**
+	 * Starting position, in world coordinates, to render the text at. This will
+	 * be the first position on the baseline for the first line of text.
+	 */
+	vec2 position{0.0f, 0.0f};
+
+	/**
+	 * Scaling to apply to the size of the shaped glyphs. The result is affected
+	 * by FontOptions::useLinearFiltering.
+	 *
+	 * \remark The best visual results are usually achieved when the text is
+	 *         shaped at an appropriate character size to begin with, rather
+	 *         than relying on this scale parameter. As such, the scale should
+	 *         generally be kept at (1, 1) unless many different character sizes
+	 *         are used with this font and there is a strict requirement on the
+	 *         maximum size of the texture atlas.
+	 */
+	vec2 scale{1.0f, 1.0f};
+
+	/**
+	 * Base text color.
+	 */
+	Color color = Color::WHITE;
+
+	/**
+	 * UTF8-encoded string to shape the text from.
+	 *
+	 * \note Right-to-left text shaping is currently not supported.
+	 * \note Grapheme clusters are currently not supported, and may be rendered
+	 *       incorrectly. Only one Unicode code point is rendered at a time.
+	 *
+	 * \warning If the string contains invalid UTF-8, the invalid code points
+	 *          will generate unspecified glyphs that may have any appearance.
+	 */
+	std::u8string_view string;
+};
+
+/**
+ * Configuration of a 2D instance of a string of text with a Font, for drawing
+ * as part of a RenderPass.
+ *
+ * Required fields:
+ * - TextStringInstance::font
+ * - TextStringInstance::characterSize
+ * - TextStringInstance::string
+ *
+ * \note Consecutive text instances with the same shader and font will be
+ *       batched and rendered together.
+ *
+ * \sa TextInstance
+ * \sa TextUTF8StringInstance
+ */
+struct TextStringInstance {
+	/**
+	 * Non-owning pointer to the shader to use when rendering the glyphs of this
+	 * text.
+	 *
+	 * \warning The pointed-to shader must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
+	 */
+	Shader2D* shader = Shader2D::ALPHA;
+
+	/**
+	 * Non-owning pointer to the font from which to shape the text.
+	 *
+	 * \warning The pointed-to font must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
+	 */
+	Font* font;
+
+	/**
+	 * Character size to shape the glyphs at.
+	 */
+	u32 characterSize;
+
+	/**
+	 * Starting position, in world coordinates, to render the text at. This will
+	 * be the first position on the baseline for the first line of text.
+	 */
+	vec2 position{0.0f, 0.0f};
+
+	/**
+	 * Scaling to apply to the size of the shaped glyphs. The result is affected
+	 * by FontOptions::useLinearFiltering.
+	 *
+	 * \remark The best visual results are usually achieved when the text is
+	 *         shaped at an appropriate character size to begin with, rather
+	 *         than relying on this scale parameter. As such, the scale should
+	 *         generally be kept at (1, 1) unless many different character sizes
+	 *         are used with this font and there is a strict requirement on the
+	 *         maximum size of the texture atlas.
+	 */
+	vec2 scale{1.0f, 1.0f};
+
+	/**
+	 * Base text color.
+	 */
+	Color color = Color::WHITE;
+
+	/**
+	 * String to shape the text from.
+	 *
+	 * The string will be interpreted as containing UTF-8-encoded text.
+	 *
+	 * \note Right-to-left text shaping is currently not supported.
+	 * \note Grapheme clusters are currently not supported, and may be rendered
+	 *       incorrectly. Only one Unicode code point is rendered at a time.
+	 *
+	 * \warning If the string contains invalid UTF-8, the invalid code points
+	 *          will generate unspecified glyphs that may have any appearance.
+	 */
+	std::string_view string;
+};
+
+/**
  * Graphics drawing queue for batch rendering using a Renderer.
  */
 class RenderPass {
 public:
+	/**
+	 * Construct an empty RenderPass.
+	 */
+	RenderPass() noexcept = default;
+
+	/**
+	 * Construct an empty RenderPass with some initial storage pre-allocated.
+	 *
+	 * \param initialMemory non-owning view over a contiguous chunk of available
+	 *        memory that the RenderPass may use as temporary storage.
+	 *
+	 * \warning The pointed-to memory must remain valid until the RenderPass has
+	 *          been destroyed.
+	 */
+	RenderPass(std::span<std::byte> initialMemory) noexcept
+		: memoryResource(initialMemory) {}
+
 	/**
 	 * Enqueue a ModelInstance to be drawn when the render pass is rendered.
 	 *
@@ -452,6 +677,17 @@ public:
 	 * \sa ModelInstance
 	 */
 	RenderPass& draw(const ModelInstance& model);
+
+	/**
+	 * Enqueue a QuadInstance to be drawn when the render pass is rendered.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \sa QuadInstance
+	 */
+	RenderPass& draw(const QuadInstance& quad);
 
 	/**
 	 * Enqueue a TextureInstance to be drawn when the render pass is rendered.
@@ -476,17 +712,6 @@ public:
 	RenderPass& draw(const RectangleInstance& rectangle);
 
 	/**
-	 * Enqueue a QuadInstance to be drawn when the render pass is rendered.
-	 *
-	 * \return `*this`, for chaining.
-	 *
-	 * \throws std::bad_alloc on allocation failure.
-	 *
-	 * \sa QuadInstance
-	 */
-	RenderPass& draw(const QuadInstance& quad);
-
-	/**
 	 * Enqueue a SpriteInstance to be drawn when the render pass is rendered.
 	 *
 	 * \return `*this`, for chaining.
@@ -508,47 +733,148 @@ public:
 	 */
 	RenderPass& draw(const TextInstance& text);
 
+	/**
+	 * Enqueue a TextUTF8StringInstance to be drawn when the render pass is
+	 * rendered.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \sa TextUTF8StringInstance
+	 */
+	RenderPass& draw(const TextUTF8StringInstance& text);
+
+	/**
+	 * Enqueue a TextStringInstance to be drawn when the render pass is
+	 * rendered.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \sa TextStringInstance
+	 */
+	RenderPass& draw(const TextStringInstance& text);
+
 private:
 	friend Renderer;
 
-	struct ModelInstances {
-		struct Key {
-			struct Compare {
-				[[nodiscard]] constexpr bool operator()(const Key& a, const Key& b) const noexcept {
-					return (a.shader->options.orderIndex != b.shader->options.orderIndex) ? a.shader->options.orderIndex < b.shader->options.orderIndex : a.model < b.model;
-				}
-			};
-
-			Shader3D* shader;
-			const Model* model;
-		};
-
-		using allocator_type = LinearAllocator<Model::Object::Instance>;
-
-		std::vector<Model::Object::Instance, allocator_type> instances;
-
-		explicit ModelInstances(const allocator_type& alloc)
-			: instances(alloc) {}
+	struct CommandUseShader3D {
+		Shader3D* shader;
 	};
 
-	struct TexturedQuadInstances {
-		using allocator_type = LinearAllocator<TexturedQuad::Instance>;
-
+	struct CommandUseShader2D {
 		Shader2D* shader;
-		const Texture* texture;
-		std::vector<TexturedQuad::Instance, allocator_type> instances;
-
-		TexturedQuadInstances(Shader2D* shader, const Texture* texture, const allocator_type& alloc)
-			: shader(shader)
-			, texture(texture)
-			, instances(alloc) {}
 	};
 
-	alignas(std::max_align_t) std::array<std::byte, 1024> initialMemory;
-	LinearMemoryResource memoryResource{initialMemory};
-	std::map<ModelInstances::Key, ModelInstances, ModelInstances::Key::Compare, LinearAllocator<std::pair<const ModelInstances::Key, ModelInstances>>> models{&memoryResource};
-	std::forward_list<TexturedQuadInstances, LinearAllocator<TexturedQuadInstances>> quads{&memoryResource};
-	decltype(quads)::iterator last_quad = quads.before_begin();
+	struct CommandUseModel {
+		const Model* model;
+		const Texture* diffuseMapOverride;
+		const Texture* specularMapOverride;
+		const Texture* normalMapOverride;
+		const Texture* emissiveMapOverride;
+	};
+
+	struct CommandUseTexture {
+		const Texture* texture;
+	};
+
+	struct CommandUseSpriteAtlas {
+		const SpriteAtlas* atlas;
+	};
+
+	struct CommandUseFont {
+		Font* font;
+	};
+
+	struct CommandDrawModelInstance {
+		mat4 transformation;
+		Color tintColor;
+		vec2 textureOffset;
+		vec2 textureScale;
+		vec3 specularFactor;
+		vec3 emissiveFactor;
+	};
+
+	struct CommandDrawQuadInstance {
+		mat3 transformation;
+		Color tintColor;
+		vec2 textureOffset;
+		vec2 textureScale;
+	};
+
+	struct CommandDrawTextureInstance {
+		Color tintColor;
+		vec2 position;
+		vec2 scale;
+		vec2 origin;
+		vec2 textureOffset;
+		vec2 textureScale;
+		float angle;
+	};
+
+	struct CommandDrawRectangleInstance {
+		Color tintColor;
+		vec2 position;
+		vec2 size;
+		vec2 origin;
+		vec2 textureOffset;
+		vec2 textureScale;
+		float angle;
+	};
+
+	struct CommandDrawSpriteInstance {
+		Color tintColor;
+		vec2 position;
+		vec2 scale;
+		vec2 origin;
+		float angle;
+		SpriteAtlas::SpriteId id;
+	};
+
+	struct CommandDrawTextInstance {
+		Color color;
+		const Text* text;
+		vec2 position;
+	};
+
+	struct CommandDrawTextStringInstance {
+		Color color;
+		std::string_view string;
+		vec2 position;
+		vec2 scale;
+		u32 characterSize;
+	};
+
+	LinearMemoryResource memoryResource{};
+	LinearBuffer<                      //
+		CommandUseShader3D,            //
+		CommandUseShader2D,            //
+		CommandUseModel,               //
+		CommandUseTexture,             //
+		CommandUseSpriteAtlas,         //
+		CommandUseFont,                //
+		CommandDrawModelInstance,      //
+		CommandDrawQuadInstance,       //
+		CommandDrawTextureInstance,    //
+		CommandDrawRectangleInstance,  //
+		CommandDrawSpriteInstance,     //
+		CommandDrawTextInstance,       //
+		CommandDrawTextStringInstance, //
+		char[]>
+		commandBuffer2D{&memoryResource, memoryResource.getRemainingCapacity()};
+	std::vector<Font*, LinearAllocator<Font*>> fonts{&memoryResource};
+	Shader3D* previousShader3D = nullptr;
+	Shader2D* previousShader2D = nullptr;
+	const Model* previousModel = nullptr;
+	const Texture* previousDiffuseMapOverride = nullptr;
+	const Texture* previousSpecularMapOverride = nullptr;
+	const Texture* previousNormalMapOverride = nullptr;
+	const Texture* previousEmissiveMapOverride = nullptr;
+	const Texture* previousTexture = nullptr;
+	const SpriteAtlas* previousSpriteAtlas = nullptr;
+	Font* previousFont = nullptr;
 };
 
 } // namespace donut::graphics

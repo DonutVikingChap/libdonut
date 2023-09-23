@@ -6,7 +6,9 @@
 #include <donut/File.hpp>
 #include <donut/Filesystem.hpp>
 #include <donut/LinearAllocator.hpp>
+#include <donut/LinearBuffer.hpp>
 #include <donut/LooseQuadtree.hpp>
+#include <donut/Overloaded.hpp>
 #include <donut/Time.hpp>
 #include <donut/UniqueHandle.hpp>
 #include <donut/Variant.hpp>

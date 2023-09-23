@@ -14,15 +14,6 @@ class Renderer; // Forward declaration, to avoid a circular include of Renderer.
  */
 struct Shader3DOptions {
 	/**
-	 * Order of this shader relative to other shaders in the same RenderPass.
-	 *
-	 * Lower indices are ordered before higher indices. The index of the
-	 * built-in shader is 0. Indices may have any value, including negative, and
-	 * are not required to be consecutive.
-	 */
-	int orderIndex = 1;
-
-	/**
 	 * Shader configuration options, see ShaderConfiguration.
 	 */
 	ShaderConfiguration configuration{};
@@ -37,7 +28,18 @@ public:
 	 * Pointer to a statically allocated string containing the GLSL source code
 	 * for a plain vertex shader.
 	 */
-	static const char* const vertexShaderSourceCodeInstancedModel;
+	static const char* const VERTEX_SHADER_SOURCE_CODE_INSTANCED_MODEL;
+
+	/**
+	 * Pointer to a statically allocated string containing the GLSL source code
+	 * for a fragment shader that uses a fullbright shading model with no
+	 * lights.
+	 *
+	 * \note This shader uses only the diffuse texture and renders it at 100%
+	 *       brightness without taking details such as specular highlights,
+	 *       normal mapping or emissive color into account.
+	 */
+	static const char* const FRAGMENT_SHADER_SOURCE_CODE_UNLIT;
 
 	/**
 	 * Pointer to a statically allocated string containing the GLSL source code
@@ -49,7 +51,17 @@ public:
 	 *       applications should typically use a custom fragment shader that
 	 *       receives the light positions and colors as uniform data instead.
 	 */
-	static const char* const fragmentShaderSourceCodeModelBlinnPhong;
+	static const char* const FRAGMENT_SHADER_SOURCE_CODE_BLINN_PHONG;
+
+	/**
+	 * Pointer to the statically allocated storage for the built-in unlit
+	 * shader.
+	 *
+	 * \warning This pointer must not be dereferenced in application code. It is
+	 *          not guaranteed that the underlying shader will be present at all
+	 *          times.
+	 */
+	static Shader3D* const UNLIT;
 
 	/**
 	 * Pointer to the statically allocated storage for the built-in blinn-phong
@@ -59,7 +71,7 @@ public:
 	 *          not guaranteed that the underlying shader will be present at all
 	 *          times.
 	 */
-	static Shader3D* const blinnPhongShader;
+	static Shader3D* const BLINN_PHONG;
 
 	/**
 	 * Shader configuration that was supplied in the constructor.

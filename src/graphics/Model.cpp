@@ -9,7 +9,8 @@
 #include <donut/obj.hpp>
 
 #include <algorithm>     // std::find_if
-#include <cstddef>       // std::size_t
+#include <array>         // std::array
+#include <cstddef>       // std::size_t, std::byte
 #include <exception>     // std::exception
 #include <fmt/format.h>  // fmt::format
 #include <functional>    // std::hash
@@ -183,7 +184,7 @@ void loadObjScene(Model& output, const Filesystem& filesystem, const char* filep
 				.diffuseColor{1.0f, 1.0f, 1.0f},
 				.specularColor{1.0f, 1.0f, 1.0f},
 				.normalScale{1.0f, 1.0f, 1.0f},
-				.emissiveColor{1.0f, 1.0f, 1.0f},
+				.emissiveColor{0.0f, 0.0f, 0.0f},
 				.specularExponent = 1.0f,
 				.dissolveFactor = 0.0f,
 				.occlusionFactor = 1.0f,
@@ -226,7 +227,14 @@ void loadObjScene(Model& output, const Filesystem& filesystem, const char* filep
 	}
 }
 
+std::size_t sharedModelReferenceCount = 0;
+alignas(Model) std::array<std::byte, sizeof(Model)> sharedQuadModelStorage;
+alignas(Model) std::array<std::byte, sizeof(Model)> sharedCubeModelStorage;
+
 } // namespace
+
+const Model* const Model::QUAD = reinterpret_cast<Model*>(sharedQuadModelStorage.data());
+const Model* const Model::CUBE = reinterpret_cast<Model*>(sharedCubeModelStorage.data());
 
 Model::Model(const Filesystem& filesystem, const char* filepath) {
 	try {
@@ -237,6 +245,110 @@ Model::Model(const Filesystem& filesystem, const char* filepath) {
 		throw Error{fmt::format("Failed to load model \"{}\": {}", filepath, e.what())};
 	} catch (...) {
 		throw Error{fmt::format("Failed to load model \"{}\".", filepath)};
+	}
+}
+
+void Model::createSharedModels() {
+	if (sharedModelReferenceCount == 0) {
+		// clang-format off
+		constexpr std::array QUAD_VERTICES{
+			Object::Vertex{.position{-1.0f, -1.0f, -0.0f}, .normal{-0.0f, -0.0f, 1.0f}, .tangent{1.0f, 0.0f, 0.0f}, .bitangent{-0.0f, 1.0f, 0.0f}, .textureCoordinates{0.0f, 0.0f}},
+			Object::Vertex{.position{1.0f, -1.0f, -0.0f}, .normal{-0.0f, -0.0f, 1.0f}, .tangent{1.0f, 0.0f, 0.0f}, .bitangent{-0.0f, 1.0f, 0.0f}, .textureCoordinates{1.0f, 0.0f}},
+			Object::Vertex{.position{-1.0f, 1.0f, 0.0f}, .normal{-0.0f, -0.0f, 1.0f}, .tangent{1.0f, 0.0f, 0.0f}, .bitangent{-0.0f, 1.0f, 0.0f}, .textureCoordinates{0.0f, 1.0f}},
+			Object::Vertex{.position{1.0f, 1.0f, 0.0f}, .normal{-0.0f, -0.0f, 1.0f}, .tangent{1.0f, 0.0f, 0.0f}, .bitangent{-0.0f, 1.0f, 0.0f}, .textureCoordinates{1.0f, 1.0f}},
+		};
+		constexpr std::array QUAD_INDICES{
+			Object::Index{1}, Object::Index{2}, Object::Index{0}, Object::Index{1}, Object::Index{3}, Object::Index{2},
+		};
+		constexpr std::array CUBE_VERTICES{
+			Object::Vertex{.position{-1.0f, -1.0f, 1.0f},  .normal{-0.0f, -1.0f, -0.0f}, .tangent{1.0f,  0.0f, 0.0f}, .bitangent{0.0f,  0.0f,  1.0f},  .textureCoordinates{0.125f, 0.75f}},
+			Object::Vertex{.position{-1.0f, 1.0f,  1.0f},  .normal{-0.0f, 1.0f,  -0.0f}, .tangent{-1.0f, 0.0f, 0.0f}, .bitangent{0.0f,  0.0f,  1.0f},  .textureCoordinates{0.875f, 0.75f}},
+			Object::Vertex{.position{-1.0f, -1.0f, -1.0f}, .normal{-0.0f, -1.0f, -0.0f}, .tangent{1.0f,  0.0f, 0.0f}, .bitangent{0.0f,  0.0f,  1.0f},  .textureCoordinates{0.125f, 0.5f}},
+			Object::Vertex{.position{-1.0f, 1.0f,  -1.0f}, .normal{-0.0f, 1.0f,  -0.0f}, .tangent{-1.0f, 0.0f, 0.0f}, .bitangent{0.0f,  0.0f,  1.0f},  .textureCoordinates{0.875f, 0.5f}},
+			Object::Vertex{.position{1.0f,  -1.0f, 1.0f},  .normal{-0.0f, -1.0f, -0.0f}, .tangent{1.0f,  0.0f, 0.0f}, .bitangent{0.0f,  0.0f,  1.0f},  .textureCoordinates{0.375f, 0.75f}},
+			Object::Vertex{.position{1.0f,  1.0f,  1.0f},  .normal{-0.0f, 1.0f,  -0.0f}, .tangent{-1.0f, 0.0f, 0.0f}, .bitangent{0.0f,  0.0f,  1.0f},  .textureCoordinates{0.625f, 0.75f}},
+			Object::Vertex{.position{1.0f,  -1.0f, -1.0f}, .normal{-0.0f, -1.0f, -0.0f}, .tangent{1.0f,  0.0f, 0.0f}, .bitangent{0.0f,  0.0f,  1.0f},  .textureCoordinates{0.375f, 0.5f}},
+			Object::Vertex{.position{1.0f,  1.0f,  -1.0f}, .normal{-0.0f, 1.0f,  -0.0f}, .tangent{-1.0f, 0.0f, 0.0f}, .bitangent{0.0f,  0.0f,  1.0f},  .textureCoordinates{0.625f, 0.5f}},
+			Object::Vertex{.position{-1.0f, -1.0f, -1.0f}, .normal{-1.0f, -0.0f, -0.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{0.0f,  0.0f,  -1.0f}, .textureCoordinates{0.375f, 0.25f}},
+			Object::Vertex{.position{-1.0f, -1.0f, -1.0f}, .normal{-0.0f, -0.0f, -1.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{1.0f,  0.0f,  0.0f},  .textureCoordinates{0.375f, 0.25f}},
+			Object::Vertex{.position{-1.0f, -1.0f, 1.0f},  .normal{-1.0f, -0.0f, -0.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{0.0f,  0.0f,  -1.0f}, .textureCoordinates{0.375f, 0.0f}},
+			Object::Vertex{.position{-1.0f, -1.0f, 1.0f},  .normal{-0.0f, -0.0f, 1.0f},  .tangent{0.0f,  1.0f, 0.0f}, .bitangent{-1.0f, 0.0f,  0.0f},  .textureCoordinates{0.375f, 1.0f}},
+			Object::Vertex{.position{-1.0f, 1.0f,  1.0f},  .normal{-1.0f, -0.0f, -0.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{0.0f,  0.0f,  -1.0f}, .textureCoordinates{0.625f, 0.0f}},
+			Object::Vertex{.position{-1.0f, 1.0f,  1.0f},  .normal{-0.0f, -0.0f, 1.0f},  .tangent{0.0f,  1.0f, 0.0f}, .bitangent{-1.0f, 0.0f,  0.0f},  .textureCoordinates{0.625f, 1.0f}},
+			Object::Vertex{.position{-1.0f, 1.0f,  -1.0f}, .normal{-1.0f, -0.0f, -0.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{0.0f,  0.0f,  -1.0f}, .textureCoordinates{0.625f, 0.25f}},
+			Object::Vertex{.position{-1.0f, 1.0f,  -1.0f}, .normal{-0.0f, -0.0f, -1.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{1.0f,  0.0f,  0.0f},  .textureCoordinates{0.625f, 0.25f}},
+			Object::Vertex{.position{1.0f,  -1.0f, -1.0f}, .normal{-0.0f, -0.0f, -1.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{1.0f,  0.0f,  0.0f},  .textureCoordinates{0.375f, 0.5f}},
+			Object::Vertex{.position{1.0f,  -1.0f, -1.0f}, .normal{1.0f,  -0.0f, -0.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{0.0f,  -0.0f, 1.0f},  .textureCoordinates{0.375f, 0.5f}},
+			Object::Vertex{.position{1.0f,  1.0f,  -1.0f}, .normal{-0.0f, -0.0f, -1.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{1.0f,  0.0f,  0.0f},  .textureCoordinates{0.625f, 0.5f}},
+			Object::Vertex{.position{1.0f,  1.0f,  -1.0f}, .normal{1.0f,  -0.0f, -0.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{0.0f,  -0.0f, 1.0f},  .textureCoordinates{0.625f, 0.5f}},
+			Object::Vertex{.position{1.0f,  -1.0f, 1.0f},  .normal{1.0f,  -0.0f, -0.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{0.0f,  -0.0f, 1.0f},  .textureCoordinates{0.375f, 0.75f}},
+			Object::Vertex{.position{1.0f,  -1.0f, 1.0f},  .normal{-0.0f, -0.0f, 1.0f},  .tangent{0.0f,  1.0f, 0.0f}, .bitangent{-1.0f, 0.0f,  0.0f},  .textureCoordinates{0.375f, 0.75f}},
+			Object::Vertex{.position{1.0f,  1.0f,  1.0f},  .normal{1.0f,  -0.0f, -0.0f}, .tangent{0.0f,  1.0f, 0.0f}, .bitangent{0.0f,  -0.0f, 1.0f},  .textureCoordinates{0.625f, 0.75f}},
+			Object::Vertex{.position{1.0f,  1.0f,  1.0f},  .normal{-0.0f, -0.0f, 1.0f},  .tangent{0.0f,  1.0f, 0.0f}, .bitangent{-1.0f, 0.0f,  0.0f},  .textureCoordinates{0.625f, 0.75f}},
+		};
+		constexpr std::array CUBE_INDICES{
+			Object::Index{12}, Object::Index{8},  Object::Index{10}, Object::Index{15}, Object::Index{16}, Object::Index{9},
+			Object::Index{19}, Object::Index{20}, Object::Index{17}, Object::Index{23}, Object::Index{11}, Object::Index{21},
+			Object::Index{6},  Object::Index{0},  Object::Index{2},  Object::Index{3},  Object::Index{5},  Object::Index{7},
+			Object::Index{12}, Object::Index{14}, Object::Index{8},  Object::Index{15}, Object::Index{18}, Object::Index{16},
+			Object::Index{19}, Object::Index{22}, Object::Index{20}, Object::Index{23}, Object::Index{13}, Object::Index{11},
+			Object::Index{6},  Object::Index{4},  Object::Index{0},  Object::Index{3},  Object::Index{1},  Object::Index{5},
+		};
+		// clang-format on
+
+		std::vector<Object> quadObjects{};
+		quadObjects.push_back(Object{
+			.mesh{Object::VERTICES_USAGE, Object::INDICES_USAGE, Object::INSTANCES_USAGE, QUAD_VERTICES, QUAD_INDICES, {}},
+			.material{
+				.diffuseMap{},
+				.specularMap{},
+				.normalMap{},
+				.emissiveMap{},
+				.diffuseColor{1.0f, 1.0f, 1.0f},
+				.specularColor{1.0f, 1.0f, 1.0f},
+				.normalScale{1.0f, 1.0f, 1.0f},
+				.emissiveColor{0.0f, 0.0f, 0.0f},
+				.specularExponent = 1.0f,
+				.dissolveFactor = 0.0f,
+				.occlusionFactor = 1.0f,
+			},
+			.indexCount = QUAD_INDICES.size(),
+		});
+
+		std::vector<Object> cubeObjects{};
+		cubeObjects.push_back(Object{
+			.mesh{Object::VERTICES_USAGE, Object::INDICES_USAGE, Object::INSTANCES_USAGE, CUBE_VERTICES, CUBE_INDICES, {}},
+			.material{
+				.diffuseMap{},
+				.specularMap{},
+				.normalMap{},
+				.emissiveMap{},
+				.diffuseColor{1.0f, 1.0f, 1.0f},
+				.specularColor{1.0f, 1.0f, 1.0f},
+				.normalScale{1.0f, 1.0f, 1.0f},
+				.emissiveColor{0.0f, 0.0f, 0.0f},
+				.specularExponent = 1.0f,
+				.dissolveFactor = 0.0f,
+				.occlusionFactor = 1.0f,
+			},
+			.indexCount = CUBE_INDICES.size(),
+		});
+
+		std::construct_at(QUAD, std::move(quadObjects));
+		try {
+			std::construct_at(CUBE, std::move(cubeObjects));
+		} catch (...) {
+			std::destroy_at(QUAD);
+			throw;
+		}
+	}
+	++sharedModelReferenceCount;
+}
+
+void Model::destroySharedModels() noexcept {
+	if (sharedModelReferenceCount-- == 1) {
+		std::destroy_at(CUBE);
+		std::destroy_at(QUAD);
 	}
 }
 

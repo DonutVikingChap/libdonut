@@ -24,32 +24,32 @@ bool File::eof() const noexcept {
 
 size_t File::size() const noexcept {
 	const PHYSFS_sint64 length = PHYSFS_fileLength(static_cast<PHYSFS_File*>(file.get()));
-	return (length < 0) ? NPOS : static_cast<size_t>(length);
+	return (length < 0) ? NPOS : static_cast<std::size_t>(length);
 }
 
 size_t File::tellg() const noexcept {
 	const PHYSFS_sint64 position = PHYSFS_tell(static_cast<PHYSFS_File*>(file.get()));
-	return (position < 0) ? NPOS : static_cast<size_t>(position);
+	return (position < 0) ? NPOS : static_cast<std::size_t>(position);
 }
 
 size_t File::tellp() const noexcept {
 	const PHYSFS_sint64 position = PHYSFS_tell(static_cast<PHYSFS_File*>(file.get()));
-	return (position < 0) ? NPOS : static_cast<size_t>(position);
+	return (position < 0) ? NPOS : static_cast<std::size_t>(position);
 }
 
-void File::seekg(size_t position) {
+void File::seekg(std::size_t position) {
 	if (PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position)) == 0) {
 		throw Error{fmt::format("Failed to seek in resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 }
 
-void File::seekp(size_t position) {
+void File::seekp(std::size_t position) {
 	if (PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position)) == 0) {
 		throw Error{fmt::format("Failed to seek in resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
 }
 
-void File::skipg(ptrdiff_t offset) {
+void File::skipg(std::ptrdiff_t offset) {
 	if (const PHYSFS_sint64 position = PHYSFS_tell(static_cast<PHYSFS_File*>(file.get())); position > 0) {
 		if (PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position + offset)) == 0) {
 			throw Error{fmt::format("Failed to seek in resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
@@ -59,7 +59,7 @@ void File::skipg(ptrdiff_t offset) {
 	}
 }
 
-void File::skipp(ptrdiff_t offset) {
+void File::skipp(std::ptrdiff_t offset) {
 	if (const PHYSFS_sint64 position = PHYSFS_tell(static_cast<PHYSFS_File*>(file.get())); position > 0) {
 		if (PHYSFS_seek(static_cast<PHYSFS_File*>(file.get()), static_cast<PHYSFS_uint64>(position + offset)) == 0) {
 			throw Error{fmt::format("Failed to seek in resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
@@ -94,7 +94,7 @@ std::size_t File::read(std::span<std::byte> data) {
 	if (bytesRead < 0) {
 		throw Error{fmt::format("Failed to read from resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
-	return static_cast<size_t>(bytesRead);
+	return static_cast<std::size_t>(bytesRead);
 }
 
 size_t File::write(std::span<const std::byte> data) {
@@ -102,7 +102,7 @@ size_t File::write(std::span<const std::byte> data) {
 	if (bytesWritten < 0) {
 		throw Error{fmt::format("Failed to write to resource file:\n{}", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()))};
 	}
-	return static_cast<size_t>(bytesWritten);
+	return static_cast<std::size_t>(bytesWritten);
 }
 
 void File::flush() {

@@ -22,7 +22,7 @@
 #include <charconv>      // std::from_chars_result, std::from_chars
 #include <chrono>        // std::chrono_literals
 #include <concepts>      // std::integral
-#include <cstddef>       // std::size_t
+#include <cstddef>       // std::size_t, std::byte, std::max_align_t
 #include <cstdio>        // stderr, std::sscanf, std::fprintf
 #include <cstdlib>       // EXIT_SUCCESS, EXIT_FAILURE
 #include <exception>     // std::exception
@@ -135,26 +135,22 @@ protected:
 
 		renderer.clearFramebufferColorAndDepth(framebuffer, Color::PURPLE * 0.25f);
 
-		{
-			gfx::RenderPass renderPass{};
-			drawBackground(renderPass, frameInfo);
-			renderer.render(framebuffer, renderPass, worldViewport, worldCamera);
-		}
+		alignas(std::max_align_t) std::array<std::byte, 1024> renderPassStorage;
 
 		{
-			gfx::RenderPass renderPass{};
+			gfx::RenderPass renderPass{renderPassStorage};
 			drawWorld3D(renderPass, frameInfo);
 			renderer.render(framebuffer, renderPass, worldViewport, worldCamera);
 		}
 
 		{
-			gfx::RenderPass renderPass{};
+			gfx::RenderPass renderPass{renderPassStorage};
 			drawWorld2D(renderPass, frameInfo);
 			renderer.render(framebuffer, renderPass, screenViewport, screenCamera, worldScissor);
 		}
 
 		{
-			gfx::RenderPass renderPass{};
+			gfx::RenderPass renderPass{renderPassStorage};
 			drawUserInterface(renderPass, frameInfo);
 			drawFrameRateCounter(renderPass);
 			renderer.render(framebuffer, renderPass, screenViewport, screenCamera);
@@ -198,7 +194,7 @@ private:
 
 		ExampleShader2D()
 			: gfx::Shader2D({
-				  .vertexShaderSourceCode = gfx::Shader2D::vertexShaderSourceCodeInstancedTexturedQuad,
+				  .vertexShaderSourceCode = gfx::Shader2D::VERTEX_SHADER_SOURCE_CODE_INSTANCED_TEXTURED_QUAD,
 				  .fragmentShaderSourceCode = FRAGMENT_SHADER_SOURCE_CODE,
 			  }) {}
 
@@ -262,6 +258,8 @@ private:
 			in vec3 fragmentBitangent;
 			in vec2 fragmentTextureCoordinates;
 			in vec4 fragmentTintColor;
+			in vec3 fragmentSpecularFactor;
+			in vec3 fragmentEmissiveFactor;
 
 			out vec4 outputColor;
 
@@ -313,9 +311,9 @@ private:
 			void main() {
 				vec4 sampledDiffuse = texture(diffuseMap, fragmentTextureCoordinates);
 				vec4 diffuse = fragmentTintColor * vec4(diffuseColor, 1.0 - dissolveFactor) * vec4(pow(sampledDiffuse.rgb, vec3(GAMMA)), sampledDiffuse.a);
-				vec3 specular = specularColor * texture(specularMap, fragmentTextureCoordinates).rgb;
-				vec3 emissive = emissiveColor * texture(emissiveMap, fragmentTextureCoordinates).rgb;
-				
+				vec3 specular = fragmentSpecularFactor * specularColor * texture(specularMap, fragmentTextureCoordinates).rgb;
+				vec3 emissive = fragmentEmissiveFactor * emissiveColor * texture(emissiveMap, fragmentTextureCoordinates).rgb;
+
 				mat3 TBN = mat3(normalize(fragmentTangent), normalize(fragmentBitangent), normalize(fragmentNormal));
 				vec3 surfaceNormal = normalScale * (texture(normalMap, fragmentTextureCoordinates).xyz * 2.0 - vec3(1.0));
 				vec3 normal = normalize(TBN * surfaceNormal);
@@ -336,7 +334,7 @@ private:
 		ExampleShader3D()
 			: gfx::Shader3D({
 				  .definitions = fmt::format("#define POINT_LIGHT_COUNT {}", POINT_LIGHT_COUNT).c_str(),
-				  .vertexShaderSourceCode = gfx::Shader3D::vertexShaderSourceCodeInstancedModel,
+				  .vertexShaderSourceCode = gfx::Shader3D::VERTEX_SHADER_SOURCE_CODE_INSTANCED_MODEL,
 				  .fragmentShaderSourceCode = FRAGMENT_SHADER_SOURCE_CODE,
 			  }) {}
 
@@ -524,30 +522,21 @@ private:
 		exampleShader3D.setTintTexture(&testTexture);
 	}
 
-	void drawBackground(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
+	void drawWorld3D(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
 		constexpr vec3 BACKGROUND_OFFSET{0.0f, 3.5f, -10.0f};
-		constexpr vec2 BACKGROUND_SCALE{18.0f, 18.0f};
+		constexpr vec2 BACKGROUND_SCALE{9.0f, 9.0f};
 		constexpr float BACKGROUND_ANGLE = -30.0f;
 		constexpr float BACKGROUND_SPEED = 2.0f;
 
-		renderPass.draw(gfx::QuadInstance{
-			.texture = &testTexture,
+		renderPass.draw(gfx::ModelInstance{
+			.shader = &exampleShader3D,
+			.model = gfx::Model::QUAD,
+			.diffuseMapOverride = &testTexture,
 			.transformation = translate(BACKGROUND_OFFSET) *                            //
 		                      orientate4(vec3{radians(BACKGROUND_ANGLE), 0.0f, 0.0f}) * //
-		                      scale(vec3{BACKGROUND_SCALE, 1.0f}) *                     //
-		                      translate(vec3{-0.5f, -0.5f, 0.0f}),
+		                      scale(vec3{BACKGROUND_SCALE, 1.0f}),
 			.textureOffset{0.0f, frameInfo.elapsedTime * BACKGROUND_SPEED},
 			.textureScale = 1000.0f * BACKGROUND_SCALE / testTexture.getSize2D(),
-		});
-	}
-
-	void drawWorld3D(gfx::RenderPass& renderPass, const app::FrameInfo& frameInfo) {
-		renderPass.draw(gfx::ModelInstance{
-			.model = &carrotCakeModel,
-			.transformation = translate(vec3{0.6f, 0.7f, -3.0f} + carrotCakeDisplayPosition) *                     //
-		                      scale(vec3{5.0f * carrotCakeScale.x, 5.0f * carrotCakeScale.y, 5.0f}) *              //
-		                      orientate4(vec3{0.0f, frameInfo.elapsedTime * 1.5f, frameInfo.elapsedTime * 2.0f}) * //
-		                      translate(vec3{0.0f, -0.05f, 0.0f}),
 		});
 
 		renderPass.draw(gfx::ModelInstance{
@@ -555,6 +544,31 @@ private:
 			.model = &carrotCakeModel,
 			.transformation = translate(vec3{-0.6f, 0.2f, -3.0f}) *                                                //
 		                      scale(vec3{5.0f, 5.0f, 5.0f}) *                                                      //
+		                      orientate4(vec3{0.0f, frameInfo.elapsedTime * 1.5f, frameInfo.elapsedTime * 2.0f}) * //
+		                      translate(vec3{0.0f, -0.05f, 0.0f}),
+		});
+
+		renderPass.draw(gfx::ModelInstance{
+			.shader = &exampleShader3D,
+			.model = &carrotCakeModel,
+			.transformation = translate(vec3{-0.5f, -2.0f, -5.0f}) *                                               //
+		                      scale(vec3{5.0f, 5.0f, 5.0f}) *                                                      //
+		                      orientate4(vec3{frameInfo.elapsedTime * 2.0f, frameInfo.elapsedTime * 1.5f, 0.0f}) * //
+		                      translate(vec3{0.0f, -0.05f, 0.0f}),
+		});
+
+		renderPass.draw(gfx::ModelInstance{
+			.model = gfx::Model::CUBE,
+			.transformation = translate(vec3{1.0f, -1.0f, -5.0f}) * //
+		                      scale(vec3{0.5f, 0.5, 0.5f}) *        //
+		                      orientate4(vec3{frameInfo.elapsedTime * 2.0f, frameInfo.elapsedTime * 1.5f, 0.0f}),
+			.tintColor = Color::RED,
+		});
+
+		renderPass.draw(gfx::ModelInstance{
+			.model = &carrotCakeModel,
+			.transformation = translate(vec3{0.6f, 0.7f, -3.0f} + carrotCakeDisplayPosition) *                     //
+		                      scale(vec3{5.0f * carrotCakeScale.x, 5.0f * carrotCakeScale.y, 5.0f}) *              //
 		                      orientate4(vec3{0.0f, frameInfo.elapsedTime * 1.5f, frameInfo.elapsedTime * 2.0f}) * //
 		                      translate(vec3{0.0f, -0.05f, 0.0f}),
 		});
@@ -615,60 +629,51 @@ private:
 		});
 
 		renderPass.draw(gfx::TextInstance{
-			.font = &mainFont,
-			.text = mainFont.shapeText(renderer, 8,
-				u8"The quick brown fox\n"
-				"jumps over the lazy dog\n"
-				"\n"
-				"FLYGANDE BÄCKASINER SÖKA\n"
-				"HWILA PÅ MJUKA TUVOR QXZ\n"
-				"0123456789\n"
-				"\n"
-				"+!\"#%&/()=?`@${[]}\\\n"
-				"~\'<>|,.-;:_"),
+			.text = &longTestText,
 			.position{410.0f, 416.0f},
 			.color = Color::LIME,
 		});
 
-		renderPass.draw(gfx::TextInstance{
+		renderPass.draw(gfx::TextStringInstance{
 			.font = &mainFont,
-			.text = mainFont.shapeText(renderer, 8,
-				fmt::format("Position:\n({:.2f}, {:.2f}, {:.2f})\n\nScale:\n({:.2f}, {:.2f})", carrotCakeDisplayPosition.x, carrotCakeDisplayPosition.y,
-					carrotCakeDisplayPosition.z, carrotCakeScale.x, carrotCakeScale.y)),
+			.characterSize = 8,
 			.position{410.0f, 310.0f},
+			.string = fmt::format("Position:\n({:.2f}, {:.2f}, {:.2f})\n\nScale:\n({:.2f}, {:.2f})", carrotCakeDisplayPosition.x, carrotCakeDisplayPosition.y,
+				carrotCakeDisplayPosition.z, carrotCakeScale.x, carrotCakeScale.y),
 		});
 
 		if (inputManager.isPressed(Action::MOVE_UP) || inputManager.justPressed(Action::MOVE_UP)) {
-			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "^"), .position{590.0f, 320.0f}});
+			renderPass.draw(gfx::TextInstance{.text = &upArrowText, .position{590.0f, 320.0f}});
 		}
 		if (inputManager.isPressed(Action::MOVE_DOWN) || inputManager.justPressed(Action::MOVE_DOWN)) {
-			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "v"), .position{590.0f, 300.0f}});
+			renderPass.draw(gfx::TextInstance{.text = &downArrowText, .position{590.0f, 300.0f}});
 		}
 		if (inputManager.isPressed(Action::MOVE_LEFT) || inputManager.justPressed(Action::MOVE_LEFT)) {
-			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "<"), .position{580.0f, 310.0f}});
+			renderPass.draw(gfx::TextInstance{.text = &leftArrowText, .position{580.0f, 310.0f}});
 		}
 		if (inputManager.isPressed(Action::MOVE_RIGHT) || inputManager.justPressed(Action::MOVE_RIGHT)) {
-			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, ">"), .position{600.0f, 310.0f}});
+			renderPass.draw(gfx::TextInstance{.text = &rightArrowText, .position{600.0f, 310.0f}});
 		}
 
 		if (inputManager.isPressed(Action::AIM_UP) || inputManager.justPressed(Action::AIM_UP)) {
-			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "^"), .position{590.0f, 280.0f}});
+			renderPass.draw(gfx::TextInstance{.text = &upArrowText, .position{590.0f, 280.0f}});
 		}
 		if (inputManager.isPressed(Action::AIM_DOWN) || inputManager.justPressed(Action::AIM_DOWN)) {
-			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "v"), .position{590.0f, 260.0f}});
+			renderPass.draw(gfx::TextInstance{.text = &downArrowText, .position{590.0f, 260.0f}});
 		}
 		if (inputManager.isPressed(Action::AIM_LEFT) || inputManager.justPressed(Action::AIM_LEFT)) {
-			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, "<"), .position{580.0f, 270.0f}});
+			renderPass.draw(gfx::TextInstance{.text = &leftArrowText, .position{580.0f, 270.0f}});
 		}
 		if (inputManager.isPressed(Action::AIM_RIGHT) || inputManager.justPressed(Action::AIM_RIGHT)) {
-			renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = mainFont.shapeText(renderer, 8, ">"), .position{600.0f, 270.0f}});
+			renderPass.draw(gfx::TextInstance{.text = &rightArrowText, .position{600.0f, 270.0f}});
 		}
 
-		renderPass.draw(gfx::TextInstance{
+		renderPass.draw(gfx::TextStringInstance{
 			.font = &mainFont,
-			.text = mainFont.shapeText(renderer, 8,
-				fmt::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", static_cast<float>(timerA), counterA, static_cast<float>(timerB), counterB)),
+			.characterSize = 8,
 			.position{410.0f, 240.0f},
+			.string =
+				fmt::format("Timer   A: {:.2f}\nCounter A: {}\n\nTimer   B: {:.2f}\nCounter B: {}", static_cast<float>(timerA), counterA, static_cast<float>(timerB), counterB),
 		});
 
 		if (inputManager.isPressed(events::Input::KEY_SPACE)) {
@@ -755,11 +760,12 @@ private:
 					return intersects(movingCircleAabb, looseBounds);
 				});
 
-			renderPass.draw(gfx::TextInstance{
+			renderPass.draw(gfx::TextStringInstance{
 				.font = &mainFont,
-				.text = mainFont.shapeText(renderer, 8, fmt::format("AABB tests: {}\nCircle tests: {}", aabbTestCount, circleTestCount)),
+				.characterSize = 8,
 				.position{410.0f, 450.0f},
 				.color = Color::BURLY_WOOD,
+				.string = fmt::format("AABB tests: {}\nCircle tests: {}", aabbTestCount, circleTestCount),
 			});
 		}
 
@@ -770,11 +776,11 @@ private:
 
 	void drawFrameRateCounter(gfx::RenderPass& renderPass) {
 		const unsigned fps = getLastSecondFrameCount();
-		const gfx::Font::ShapedText fpsText = mainFont.shapeText(renderer, 16, fmt::format("FPS: {}", fps));
+		frameRateCounterText.reshape(mainFont, 8, fmt::format("FPS: {}", fps), {0.0f, 0.0f}, {2.0f, 2.0f});
 		const vec2 fpsPosition{15.0f + 2.0f, 480.0f - 15.0f - 20.0f};
 		const Color fpsColor = (fps < 60) ? Color::RED : (fps < 120) ? Color::YELLOW : (fps < 240) ? Color::GRAY : Color::LIME;
-		renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = fpsText, .position = fpsPosition + vec2{1.0f, -1.0f}, .color = Color::BLACK});
-		renderPass.draw(gfx::TextInstance{.font = &mainFont, .text = fpsText, .position = fpsPosition, .color = fpsColor});
+		renderPass.draw(gfx::TextInstance{.text = &frameRateCounterText, .position = fpsPosition + vec2{1.0f, -1.0f}, .color = Color::BLACK});
+		renderPass.draw(gfx::TextInstance{.text = &frameRateCounterText, .position = fpsPosition, .color = fpsColor});
 	}
 
 	events::EventPump eventPump{};
@@ -793,6 +799,21 @@ private:
 	gfx::SpriteAtlas::SpriteId testSprite;
 	gfx::SpriteAtlas::SpriteId testSubSprite;
 	gfx::Font mainFont;
+	gfx::Text longTestText{mainFont, 8,
+		"The quick brown fox\n"
+		"jumps over the lazy dog\n"
+		"\n"
+		"FLYGANDE BÄCKASINER SÖKA\n"
+		"HWILA PÅ MJUKA TUVOR QXZ\n"
+		"0123456789\n"
+		"\n"
+		"+!\"#%&/()=?`@${[]}\\\n"
+		"~\'<>|,.-;:_"};
+	gfx::Text upArrowText{mainFont, 8, "^"};
+	gfx::Text downArrowText{mainFont, 8, "v"};
+	gfx::Text leftArrowText{mainFont, 8, "<"};
+	gfx::Text rightArrowText{mainFont, 8, ">"};
+	gfx::Text frameRateCounterText{};
 	ExampleShader2D exampleShader2D{};
 	ExampleShader3D exampleShader3D{};
 	events::InputManager inputManager{};

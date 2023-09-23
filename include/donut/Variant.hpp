@@ -57,7 +57,7 @@ template <typename... Ts>
 union UnionStorage {
 	UnionStorage() = default;
 
-	template <size_t Index, typename... Args>
+	template <std::size_t Index, typename... Args>
 	UnionStorage(std::in_place_index_t<Index>, Args&&...) = delete; // NOLINT(cppcoreguidelines-missing-std-forward)
 };
 
@@ -143,7 +143,7 @@ struct Matcher {
 
 	template <typename... Functors>
 	constexpr decltype(auto) operator()(Functors&&... functors) const {
-		return visit(Overloaded{std::forward<Functors>(functors)...}, variant);
+		return visit(detail::Overloaded{std::forward<Functors>(functors)...}, variant);
 	}
 };
 
@@ -178,10 +178,18 @@ struct variant_index;
 
 template <typename T, typename... Ts>
 struct variant_index<T, Variant<Ts...>> : detail::VariantIndexImpl<T, 0, Ts...> {};
+/// \endcond
 
+/**
+ * Get the index of the variant alternative with a given type in a variant type.
+ *
+ * \tparam T type of the variant alternative to get the index of.
+ * \tparam V variant type.
+ */
 template <typename T, typename V>
 inline constexpr std::size_t variant_index_v = variant_index<T, V>::value;
 
+/// \cond
 template <std::size_t Index, typename V>
 struct variant_alternative;
 
@@ -525,7 +533,7 @@ public:
 	 */
 	template <typename U>
 	constexpr Variant& operator=(U&& value) noexcept(
-		std::is_nothrow_assignable_v<decltype(F(std::forward<U>(value)))&, U> && std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value))), U>)
+		std::is_nothrow_assignable_v<decltype(F(std::forward<U>(value)))&, U>&& std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value))), U>)
 		requires(!std::is_same_v<std::remove_cvref_t<U>, Variant> && variant_has_alternative_v<decltype(F(std::forward<U>(value))), Variant> &&
 				 std::is_assignable_v<decltype(F(std::forward<U>(value))), U>) {
 		using T = decltype(F(std::forward<U>(value)));

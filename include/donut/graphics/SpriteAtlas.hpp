@@ -53,10 +53,9 @@ public:
 	 * Information about a specific image in the spritesheet.
 	 */
 	struct Sprite {
-		vec2 textureOffset{}; ///< Texture coordinate offset of the image in the texture atlas.
-		vec2 textureScale{};  ///< Texture coordinate scale of the image in the texture atlas.
-		vec2 position{};      ///< Position of the image in the texture atlas, in texels.
-		vec2 size{};          ///< Size of the image in the texture atlas, in texels.
+		vec2 position{};     ///< Position of the image in the texture atlas, in texels.
+		vec2 size{};         ///< Size of the image in the texture atlas, in texels.
+		Flip flip = NO_FLIP; ///< Flags that describe how the sprite should be flipped when rendered.
 	};
 
 	/**
@@ -83,32 +82,11 @@ public:
 
 		atlasTexture.pasteImage2D(image, x, y);
 
-		const vec2 textureSize = atlasTexture.getSize2D();
 		const vec2 position{static_cast<float>(x), static_cast<float>(y)};
 		const vec2 size{static_cast<float>(image.getWidth()), static_cast<float>(image.getHeight())};
-		vec2 textureOffset{};
-		vec2 textureScale{};
-		if ((flip & FLIP_HORIZONTALLY) != 0) {
-			textureOffset.x = (position.x + size.x) / textureSize.x;
-			textureScale.x = -size.x / textureSize.x;
-		} else {
-			textureOffset.x = position.x / textureSize.x;
-			textureScale.x = size.x / textureSize.x;
-		}
-		if ((flip & FLIP_VERTICALLY) != 0) {
-			textureOffset.y = (position.y + size.y) / textureSize.y;
-			textureScale.y = -size.y / textureSize.y;
-		} else {
-			textureOffset.y = position.y / textureSize.y;
-			textureScale.y = size.y / textureSize.y;
-		}
+
 		const std::size_t index = sprites.size();
-		sprites.push_back(Sprite{
-			.textureOffset = textureOffset,
-			.textureScale = textureScale,
-			.position = position,
-			.size = size,
-		});
+		sprites.push_back(Sprite{.position = position, .size = size, .flip = flip});
 		return SpriteId{index};
 	}
 
@@ -149,32 +127,11 @@ public:
 		assert(static_cast<float>(width) <= baseSprite.size.x - static_cast<float>(offsetX));
 		assert(static_cast<float>(height) <= baseSprite.size.y - static_cast<float>(offsetY));
 
-		const vec2 textureSize = atlasTexture.getSize2D();
 		const vec2 position = baseSprite.position + vec2{static_cast<float>(offsetX), static_cast<float>(offsetY)};
 		const vec2 size{static_cast<float>(width), static_cast<float>(height)};
-		vec2 textureOffset{};
-		vec2 textureScale{};
-		if ((flip & FLIP_HORIZONTALLY) != 0) {
-			textureOffset.x = (position.x + size.x) / textureSize.x;
-			textureScale.x = -size.x / textureSize.x;
-		} else {
-			textureOffset.x = position.x / textureSize.x;
-			textureScale.x = size.x / textureSize.x;
-		}
-		if ((flip & FLIP_VERTICALLY) != 0) {
-			textureOffset.y = (position.y + size.y) / textureSize.y;
-			textureScale.y = -size.y / textureSize.y;
-		} else {
-			textureOffset.y = position.y / textureSize.y;
-			textureScale.y = size.y / textureSize.y;
-		}
+
 		const std::size_t index = sprites.size();
-		sprites.push_back(Sprite{
-			.textureOffset = textureOffset,
-			.textureScale = textureScale,
-			.position = position,
-			.size = size,
-		});
+		sprites.push_back(Sprite{.position = position, .size = size, .flip = flip});
 		return SpriteId{index};
 	}
 
@@ -214,23 +171,6 @@ private:
 		if (atlasTexture) {
 			if (resized) {
 				atlasTexture.grow2D(renderer, atlasPacker.getResolution(), atlasPacker.getResolution(), Color::INVISIBLE);
-				const vec2 textureSize = atlasTexture.getSize2D();
-				for (Sprite& sprite : sprites) {
-					if (sprite.textureScale.x < 0.0f) {
-						sprite.textureOffset.x = (sprite.position.x + sprite.size.x) / textureSize.x;
-						sprite.textureScale.x = -sprite.size.x / textureSize.x;
-					} else {
-						sprite.textureOffset.x = sprite.position.x / textureSize.x;
-						sprite.textureScale.x = sprite.size.x / textureSize.x;
-					}
-					if (sprite.textureScale.y < 0.0f) {
-						sprite.textureOffset.y = (sprite.position.y + sprite.size.y) / textureSize.y;
-						sprite.textureScale.y = -sprite.size.y / textureSize.y;
-					} else {
-						sprite.textureOffset.y = sprite.position.y / textureSize.y;
-						sprite.textureScale.y = sprite.size.y / textureSize.y;
-					}
-				}
 			}
 		} else {
 			atlasTexture = {

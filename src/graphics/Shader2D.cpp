@@ -14,12 +14,11 @@ alignas(Shader2D) std::array<std::byte, sizeof(Shader2D)> sharedAlphaShaderStora
 
 } // namespace
 
-const char* const Shader2D::vertexShaderSourceCodeInstancedTexturedQuad = R"GLSL(
+const char* const Shader2D::VERTEX_SHADER_SOURCE_CODE_INSTANCED_TEXTURED_QUAD = R"GLSL(
     layout(location = 0) in vec2 vertexCoordinates;
-    layout(location = 1) in mat4 instanceTransformation;
-    layout(location = 5) in vec2 instanceTextureOffset;
-    layout(location = 6) in vec2 instanceTextureScale;
-    layout(location = 7) in vec4 instanceTintColor;
+    layout(location = 1) in mat3 instanceTransformation;
+    layout(location = 4) in vec4 instanceTextureOffsetAndScale;
+    layout(location = 5) in vec4 instanceTintColor;
 
     out vec2 fragmentTextureCoordinates;
     out vec4 fragmentTintColor;
@@ -29,13 +28,13 @@ const char* const Shader2D::vertexShaderSourceCodeInstancedTexturedQuad = R"GLSL
     uniform mat4 viewProjectionMatrix;
 
     void main() {
-        fragmentTextureCoordinates = instanceTextureOffset + vertexCoordinates * instanceTextureScale;
+        fragmentTextureCoordinates = instanceTextureOffsetAndScale.xy + vertexCoordinates * instanceTextureOffsetAndScale.zw;
         fragmentTintColor = instanceTintColor;
-        gl_Position = viewProjectionMatrix * instanceTransformation * vec4(vertexCoordinates, 0.0, 1.0);
+        gl_Position = viewProjectionMatrix * vec4(instanceTransformation * vec3(vertexCoordinates, 1.0), 1.0);
     }
 )GLSL";
 
-const char* const Shader2D::fragmentShaderSourceCodeTexturedQuadPlain = R"GLSL(
+const char* const Shader2D::FRAGMENT_SHADER_SOURCE_CODE_PLAIN = R"GLSL(
     in vec2 fragmentTextureCoordinates;
     in vec4 fragmentTintColor;
 
@@ -48,7 +47,7 @@ const char* const Shader2D::fragmentShaderSourceCodeTexturedQuadPlain = R"GLSL(
     }
 )GLSL";
 
-const char* const Shader2D::fragmentShaderSourceCodeTexturedQuadAlpha = R"GLSL(
+const char* const Shader2D::FRAGMENT_SHADER_SOURCE_CODE_ALPHA = R"GLSL(
     in vec2 fragmentTextureCoordinates;
     in vec4 fragmentTintColor;
 
@@ -61,26 +60,26 @@ const char* const Shader2D::fragmentShaderSourceCodeTexturedQuadAlpha = R"GLSL(
     }
 )GLSL";
 
-Shader2D* const Shader2D::plainShader = reinterpret_cast<Shader2D*>(sharedPlainShaderStorage.data());
-Shader2D* const Shader2D::alphaShader = reinterpret_cast<Shader2D*>(sharedAlphaShaderStorage.data());
+Shader2D* const Shader2D::PLAIN = reinterpret_cast<Shader2D*>(sharedPlainShaderStorage.data());
+Shader2D* const Shader2D::ALPHA = reinterpret_cast<Shader2D*>(sharedAlphaShaderStorage.data());
 
 void Shader2D::createSharedShaders() {
 	if (sharedShaderReferenceCount == 0) {
-		std::construct_at(plainShader,
+		std::construct_at(PLAIN,
 			ShaderProgramOptions{
-				.vertexShaderSourceCode = vertexShaderSourceCodeInstancedTexturedQuad,
-				.fragmentShaderSourceCode = fragmentShaderSourceCodeTexturedQuadPlain,
+				.vertexShaderSourceCode = VERTEX_SHADER_SOURCE_CODE_INSTANCED_TEXTURED_QUAD,
+				.fragmentShaderSourceCode = FRAGMENT_SHADER_SOURCE_CODE_PLAIN,
 			},
 			Shader2DOptions{});
 		try {
-			std::construct_at(alphaShader,
+			std::construct_at(ALPHA,
 				ShaderProgramOptions{
-					.vertexShaderSourceCode = vertexShaderSourceCodeInstancedTexturedQuad,
-					.fragmentShaderSourceCode = fragmentShaderSourceCodeTexturedQuadAlpha,
+					.vertexShaderSourceCode = VERTEX_SHADER_SOURCE_CODE_INSTANCED_TEXTURED_QUAD,
+					.fragmentShaderSourceCode = FRAGMENT_SHADER_SOURCE_CODE_ALPHA,
 				},
 				Shader2DOptions{});
 		} catch (...) {
-			std::destroy_at(plainShader);
+			std::destroy_at(PLAIN);
 			throw;
 		}
 	}
@@ -89,8 +88,8 @@ void Shader2D::createSharedShaders() {
 
 void Shader2D::destroySharedShaders() noexcept {
 	if (sharedShaderReferenceCount-- == 1) {
-		std::destroy_at(alphaShader);
-		std::destroy_at(plainShader);
+		std::destroy_at(ALPHA);
+		std::destroy_at(PLAIN);
 	}
 }
 

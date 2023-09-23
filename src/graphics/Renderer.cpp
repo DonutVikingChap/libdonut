@@ -1,26 +1,56 @@
+#include <donut/Overloaded.hpp>
 #include <donut/Variant.hpp>
+#include <donut/graphics/Font.hpp>
 #include <donut/graphics/Framebuffer.hpp>
+#include <donut/graphics/Handle.hpp>
 #include <donut/graphics/Model.hpp>
+#include <donut/graphics/RenderPass.hpp>
 #include <donut/graphics/Renderer.hpp>
 #include <donut/graphics/Shader2D.hpp>
 #include <donut/graphics/Shader3D.hpp>
 #include <donut/graphics/ShaderConfiguration.hpp>
 #include <donut/graphics/ShaderProgram.hpp>
 #include <donut/graphics/SpriteAtlas.hpp>
+#include <donut/graphics/Text.hpp>
 #include <donut/graphics/Texture.hpp>
 #include <donut/graphics/TexturedQuad.hpp>
 #include <donut/graphics/Viewport.hpp>
 #include <donut/graphics/opengl.hpp>
 #include <donut/math.hpp>
 
-#include <cassert> // assert
-#include <cstddef> // std::size_t
-#include <span>    // std::span
-#include <vector>  // std::vector
+#include <cassert>     // assert
+#include <cstddef>     // std::size_t
+#include <span>        // std::span
+#include <string_view> // std::string_view
+#include <utility>     // std::move
 
 namespace donut::graphics {
 
 namespace {
+
+void useFramebuffer(Framebuffer& framebuffer) {
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+}
+
+void useViewport(const Viewport& viewport) {
+	glViewport(viewport.position.x, viewport.position.y, viewport.size.x, viewport.size.y);
+}
+
+void useScissor(std::optional<Rectangle<int>> scissor) {
+	if (scissor) {
+		glEnable(GL_SCISSOR_TEST);
+		glScissor(scissor->position.x, scissor->position.y, scissor->size.x, scissor->size.y);
+	} else {
+		glDisable(GL_SCISSOR_TEST);
+	}
+}
+
+void useTexturedQuad(const TexturedQuad& texturedQuad) {
+	glBindVertexArray(texturedQuad.mesh.get());
+	glBindBuffer(GL_ARRAY_BUFFER, texturedQuad.mesh.getInstanceBuffer());
+
+	glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + TexturedQuad::TEXTURE_UNIT));
+}
 
 void applyShaderConfiguration(const ShaderConfiguration& configuration) {
 	switch (configuration.depthBufferMode) {
@@ -128,22 +158,47 @@ void uploadCameraToShader(auto& shader, const Camera& camera) {
 	glUniformMatrix4fv(shader.viewProjectionMatrix.getLocation(), 1, GL_FALSE, value_ptr(camera.getProjectionMatrix() * camera.getViewMatrix()));
 }
 
-void renderModelInstances(Shader3D& shader, std::span<const Model::Object> objects, std::span<const Model::Object::Instance> instances) {
+void useTexture(const Texture& texture) {
+	glBindTexture(GL_TEXTURE_2D, texture.get());
+}
+
+void renderModelInstances(Shader3D& shader, const Texture* diffuseMapOverride, const Texture* specularMapOverride, const Texture* normalMapOverride,
+	const Texture* emissiveMapOverride, std::span<const Model::Object> objects, std::span<const Model::Object::Instance> instances) {
 	for (const Model::Object& object : objects) {
+		const Handle diffuseMapTextureHandle =
+			(diffuseMapOverride)           ? diffuseMapOverride->get()
+			: (object.material.diffuseMap) ? object.material.diffuseMap.get()
+										   : Texture::WHITE->get();
+
+		const Handle specularMapTextureHandle =
+			(specularMapOverride)           ? specularMapOverride->get()
+			: (object.material.specularMap) ? object.material.specularMap.get()
+											: Texture::DEFAULT_SPECULAR->get();
+
+		const Handle normalMapTextureHandle =
+			(normalMapOverride)           ? normalMapOverride->get()
+			: (object.material.normalMap) ? object.material.normalMap.get()
+										  : Texture::DEFAULT_NORMAL->get();
+
+		const Handle emissiveMapTextureHandle =
+			(emissiveMapOverride)           ? emissiveMapOverride->get()
+			: (object.material.emissiveMap) ? object.material.emissiveMap.get()
+											: Texture::WHITE->get();
+
 		glBindVertexArray(object.mesh.get());
 		glBindBuffer(GL_ARRAY_BUFFER, object.mesh.getInstanceBuffer());
 
 		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_DIFFUSE));
-		glBindTexture(GL_TEXTURE_2D, (object.material.diffuseMap) ? object.material.diffuseMap.get() : Texture::defaultWhite->get());
+		glBindTexture(GL_TEXTURE_2D, diffuseMapTextureHandle);
 
 		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_SPECULAR));
-		glBindTexture(GL_TEXTURE_2D, (object.material.specularMap) ? object.material.specularMap.get() : Texture::defaultGray->get());
+		glBindTexture(GL_TEXTURE_2D, specularMapTextureHandle);
 
 		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_NORMAL));
-		glBindTexture(GL_TEXTURE_2D, (object.material.normalMap) ? object.material.normalMap.get() : Texture::defaultNormal->get());
+		glBindTexture(GL_TEXTURE_2D, normalMapTextureHandle);
 
 		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + Model::Object::TEXTURE_UNIT_EMISSIVE));
-		glBindTexture(GL_TEXTURE_2D, (object.material.emissiveMap) ? object.material.emissiveMap.get() : Texture::defaultTransparent->get());
+		glBindTexture(GL_TEXTURE_2D, emissiveMapTextureHandle);
 
 		glUniform3fv(shader.diffuseColor.getLocation(), 1, value_ptr(object.material.diffuseColor));
 		glUniform3fv(shader.specularColor.getLocation(), 1, value_ptr(object.material.specularColor));
@@ -171,97 +226,257 @@ Renderer::Renderer(const RendererOptions& /*options*/) {
 	Shader2D::createSharedShaders();
 	try {
 		Shader3D::createSharedShaders();
+		try {
+			Texture::createSharedTextures();
+			try {
+				Model::createSharedModels();
+			} catch (...) {
+				Texture::destroySharedTextures();
+				throw;
+			}
+		} catch (...) {
+			Shader3D::destroySharedShaders();
+			throw;
+		}
 	} catch (...) {
-		Shader2D::destroySharedShaders();
-		throw;
-	}
-	try {
-		Texture::createSharedTextures();
-	} catch (...) {
-		Shader3D::destroySharedShaders();
 		Shader2D::destroySharedShaders();
 		throw;
 	}
 }
 
 Renderer::~Renderer() {
+	Model::destroySharedModels();
 	Texture::destroySharedTextures();
 	Shader3D::destroySharedShaders();
 	Shader2D::destroySharedShaders();
 }
 
 void Renderer::clearFramebufferDepth(Framebuffer& framebuffer) {
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	useFramebuffer(framebuffer);
 	glClear(GL_DEPTH_BUFFER_BIT);
 }
 
 void Renderer::clearFramebufferColor(Framebuffer& framebuffer, Color color) {
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	useFramebuffer(framebuffer);
 	glClearColor(color.getRedComponent(), color.getGreenComponent(), color.getBlueComponent(), color.getAlphaComponent());
 	glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void Renderer::clearFramebufferColorAndDepth(Framebuffer& framebuffer, Color color) {
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
+	useFramebuffer(framebuffer);
 	glClearColor(color.getRedComponent(), color.getGreenComponent(), color.getBlueComponent(), color.getAlphaComponent());
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer::render( // NOLINT(readability-make-member-function-const)
-	Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const Camera& camera, std::optional<Rectangle<int>> scissor) {
-	// Bind framebuffer.
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.get());
-
-	// Setup viewport.
-	glViewport(viewport.position.x, viewport.position.y, viewport.size.x, viewport.size.y);
-
-	// Setup scissor.
-	if (scissor) {
-		glEnable(GL_SCISSOR_TEST);
-		glScissor(scissor->position.x, scissor->position.y, scissor->size.x, scissor->size.y);
-	} else {
-		glDisable(GL_SCISSOR_TEST);
+void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, const Viewport& viewport, const Camera& camera, std::optional<Rectangle<int>> scissor) {
+	for (Font* const font : renderPass.fonts) {
+		font->renderMarkedGlyphs(*this);
 	}
 
-	// Render 3D objects.
+	useFramebuffer(framebuffer);
+	useViewport(viewport);
+	useScissor(scissor);
+
 	{
-		// Render models.
-		Shader3D* shader = nullptr;
-		for (const auto& [key, model] : renderPass.models) {
-			if (shader != key.shader) {
-				shader = key.shader;
-				useShader(*shader);
-				uploadCameraToShader(*shader, camera);
+		Shader3D* boundShader3D = nullptr;
+		Shader2D* boundShader2D = nullptr;
+		const Model* boundModel = nullptr;
+		const Texture* boundDiffuseMapOverride = nullptr;
+		const Texture* boundSpecularMapOverride = nullptr;
+		const Texture* boundNormalMapOverride = nullptr;
+		const Texture* boundEmissiveMapOverride = nullptr;
+		const Texture* boundTexture = nullptr;
+		const SpriteAtlas* boundSpriteAtlas = nullptr;
+		Font* boundFont = nullptr;
+
+		const auto pushModelInstance = [&](const mat4& transformation, vec2 textureOffset, vec2 textureScale, Color tintColor, vec3 specularFactor, vec3 emissiveFactor) -> void {
+			modelInstances.push_back(Model::Object::Instance{
+				.transformation = transformation,
+				.normalMatrix = inverseTranspose(mat3{transformation}),
+				.textureOffsetAndScale{textureOffset.x, textureOffset.y, textureScale.x, textureScale.y},
+				.tintColor = tintColor,
+				.specularFactor = specularFactor,
+				.emissiveFactor = emissiveFactor,
+			});
+		};
+
+		const auto pushTexturedQuadInstance = [&](const mat3& transformation, vec2 textureOffset, vec2 textureScale, Color tintColor) -> void {
+			assert(boundShader2D);
+			assert(boundTexture);
+			texturedQuadInstances.push_back(TexturedQuad::Instance{
+				.transformation = transformation,
+				.textureOffsetAndScale{textureOffset.x, textureOffset.y, textureScale.x, textureScale.y},
+				.tintColor = tintColor,
+			});
+		};
+
+		const auto pushRectangleInstance = [&](vec2 position, float angle, vec2 size, vec2 origin, vec2 textureOffset, vec2 textureScale, Color tintColor) -> void {
+			assert(boundShader2D);
+			assert(boundTexture);
+			const mat3 translation{vec3{1.0f, 0.0f, 0.0f}, vec3{0.0f, 1.0f, 0.0f}, vec3{position, 1.0f}};
+			const mat3 rotation = orientate2(angle);
+			const mat3 scale{vec3{size.x, 0.0f, 0.0f}, vec3{0.0f, size.y, 0.0f}, vec3{0.0f, 0.0f, 1.0f}};
+			const mat3 originTranslation{vec3{1.0f, 0.0f, 0.0f}, vec3{0.0f, 1.0f, 0.0f}, vec3{-origin, 1.0f}};
+			const mat3 transformation = translation * rotation * scale * originTranslation;
+			pushTexturedQuadInstance(transformation, textureOffset, textureScale, tintColor);
+		};
+
+		const auto pushGlyphInstance = [&](vec2 position, const Text::ShapedGlyph& shapedGlyph, vec2 textureSize, Color color) -> void {
+			assert(boundShader2D);
+			assert(boundTexture);
+			assert(boundFont);
+			const Font::Glyph glyph = boundFont->findGlyph(shapedGlyph.characterSize, shapedGlyph.codePoint);
+			assert(glyph.rendered);
+			const mat3 translation{vec3{1.0f, 0.0f, 0.0f}, vec3{0.0f, 1.0f, 0.0f}, vec3{position + shapedGlyph.shapedOffset, 1.0f}};
+			const mat3 scale{vec3{shapedGlyph.shapedSize.x, 0.0f, 0.0f}, vec3{0.0f, shapedGlyph.shapedSize.y, 0.0f}, vec3{0.0f, 0.0f, 1.0f}};
+			const mat3 transformation = translation * scale;
+			pushTexturedQuadInstance(transformation, glyph.positionInAtlas / textureSize, glyph.sizeInAtlas / textureSize, color);
+		};
+
+		const auto render3DInstances = [&]() -> void {
+			if (!modelInstances.empty()) {
+				renderModelInstances(*boundShader3D, boundDiffuseMapOverride, boundSpecularMapOverride, boundNormalMapOverride, boundEmissiveMapOverride, boundModel->objects,
+					modelInstances);
+				modelInstances.clear();
 			}
+		};
 
-			renderModelInstances(*shader, key.model->objects, model.instances);
-		}
-	}
-
-	// Render 2D objects.
-	{
-		glBindVertexArray(texturedQuad.mesh.get());
-		glBindBuffer(GL_ARRAY_BUFFER, texturedQuad.mesh.getInstanceBuffer());
-
-		glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + TexturedQuad::TEXTURE_UNIT));
-
-		// Render quads.
-		Shader2D* shader = nullptr;
-		const Texture* texture = nullptr;
-		for (const RenderPass::TexturedQuadInstances& quad : renderPass.quads) {
-			if (shader != quad.shader) {
-				shader = quad.shader;
-				useShader(*shader);
-				uploadCameraToShader(*shader, camera);
+		const auto render2DInstances = [&]() -> void {
+			if (!texturedQuadInstances.empty()) {
+				renderTexturedQuadInstances(texturedQuadInstances);
+				texturedQuadInstances.clear();
 			}
+		};
 
-			if (texture != quad.texture) {
-				texture = quad.texture;
-				glBindTexture(GL_TEXTURE_2D, texture->get());
-			}
+		modelInstances.clear();
+		texturedQuadInstances.clear();
 
-			renderTexturedQuadInstances(quad.instances);
-		}
+		renderPass.commandBuffer2D.visit(Overloaded{
+			[&](const RenderPass::CommandUseShader3D& command) -> void {
+				assert(command.shader);
+				render3DInstances();
+				render2DInstances();
+				boundShader2D = nullptr;
+				boundTexture = nullptr;
+				boundShader3D = command.shader;
+				useShader(*boundShader3D);
+				uploadCameraToShader(*boundShader3D, camera);
+			},
+			[&](const RenderPass::CommandUseShader2D& command) -> void {
+				assert(command.shader);
+				render3DInstances();
+				render2DInstances();
+				if (!boundShader2D) {
+					useTexturedQuad(texturedQuad);
+				}
+				boundShader3D = nullptr;
+				boundShader2D = command.shader;
+				useShader(*boundShader2D);
+				uploadCameraToShader(*boundShader2D, camera);
+			},
+			[&](const RenderPass::CommandUseModel& command) -> void {
+				assert(command.model);
+				render3DInstances();
+				boundModel = command.model;
+				boundDiffuseMapOverride = command.diffuseMapOverride;
+				boundSpecularMapOverride = command.specularMapOverride;
+				boundNormalMapOverride = command.normalMapOverride;
+				boundEmissiveMapOverride = command.emissiveMapOverride;
+			},
+			[&](const RenderPass::CommandUseTexture& command) -> void {
+				assert(command.texture);
+				render2DInstances();
+				boundTexture = command.texture;
+				useTexture(*boundTexture);
+			},
+			[&](const RenderPass::CommandUseSpriteAtlas& command) -> void {
+				assert(command.atlas);
+				render2DInstances();
+				boundSpriteAtlas = command.atlas;
+				boundTexture = &boundSpriteAtlas->getAtlasTexture();
+				useTexture(*boundTexture);
+			},
+			[&](const RenderPass::CommandUseFont& command) -> void {
+				assert(command.font);
+				render2DInstances();
+				boundFont = command.font;
+				boundTexture = &boundFont->getAtlasTexture();
+				useTexture(*boundTexture);
+			},
+			[&](const RenderPass::CommandDrawModelInstance& command) -> void {
+				assert(boundShader3D);
+				assert(boundModel);
+				pushModelInstance(command.transformation, command.textureOffset, command.textureScale, command.tintColor, command.specularFactor, command.emissiveFactor);
+			},
+			[&](const RenderPass::CommandDrawQuadInstance& command) -> void {
+				assert(boundShader2D);
+				assert(boundTexture);
+				pushTexturedQuadInstance(command.transformation, command.textureOffset, command.textureScale, command.tintColor);
+			},
+			[&](const RenderPass::CommandDrawTextureInstance& command) -> void {
+				assert(boundShader2D);
+				assert(boundTexture);
+				pushRectangleInstance(command.position, command.angle, boundTexture->getSize2D() * command.scale, command.origin, command.textureOffset, command.textureScale,
+					command.tintColor);
+			},
+			[&](const RenderPass::CommandDrawRectangleInstance& command) -> void {
+				assert(boundShader2D);
+				assert(boundTexture);
+				pushRectangleInstance(command.position, command.angle, command.size, command.origin, command.textureOffset, command.textureScale, command.tintColor);
+			},
+			[&](const RenderPass::CommandDrawSpriteInstance& command) -> void {
+				assert(boundShader2D);
+				assert(boundTexture);
+				assert(boundSpriteAtlas);
+				const SpriteAtlas::Sprite& sprite = boundSpriteAtlas->getSprite(command.id);
+				vec2 positionInAtlas{};
+				vec2 sizeInAtlas{};
+				if ((sprite.flip & SpriteAtlas::FLIP_HORIZONTALLY) != 0) {
+					positionInAtlas.x = sprite.position.x + sprite.size.x;
+					sizeInAtlas.x = -sprite.size.x;
+				} else {
+					positionInAtlas.x = sprite.position.x;
+					sizeInAtlas.x = sprite.size.x;
+				}
+				if ((sprite.flip & SpriteAtlas::FLIP_VERTICALLY) != 0) {
+					positionInAtlas.y = sprite.position.y + sprite.size.y;
+					sizeInAtlas.y = -sprite.size.y;
+				} else {
+					positionInAtlas.y = sprite.position.y;
+					sizeInAtlas.y = sprite.size.y;
+				}
+				const vec2 textureSize = boundTexture->getSize2D();
+				pushRectangleInstance(command.position, command.angle, sprite.size * command.scale, command.origin, positionInAtlas / textureSize, sizeInAtlas / textureSize,
+					command.tintColor);
+			},
+			[&](const RenderPass::CommandDrawTextInstance& command) -> void {
+				assert(boundShader2D);
+				assert(command.text);
+				for (const Text::ShapedGlyph& shapedGlyph : command.text->getShapedGlyphs()) {
+					assert(shapedGlyph.font);
+					const Texture* const texture = &shapedGlyph.font->getAtlasTexture();
+					if (boundTexture != texture) {
+						render2DInstances();
+						boundTexture = texture;
+						boundFont = shapedGlyph.font;
+						useTexture(*boundTexture);
+					}
+					pushGlyphInstance(command.position, shapedGlyph, texture->getSize2D(), command.color);
+				}
+			},
+			[&](const RenderPass::CommandDrawTextStringInstance& command) -> void {
+				assert(boundShader2D);
+				assert(boundTexture);
+				assert(boundFont);
+				text.reshape(*boundFont, command.characterSize, command.string, command.position, command.scale);
+				for (const Text::ShapedGlyph& shapedGlyph : text.getShapedGlyphs()) {
+					pushGlyphInstance(vec2{0.0f, 0.0f}, shapedGlyph, boundTexture->getSize2D(), command.color);
+				}
+			},
+			[&](std::span<const char>) -> void {},
+		});
+		render3DInstances();
+		render2DInstances();
 	}
 }
 

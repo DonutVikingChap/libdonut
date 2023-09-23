@@ -34,7 +34,7 @@ Libdonut is an application framework for cross-platform game development in C++2
             - 3D Model rendering that supports custom shaders through [Shader3D](include/donut/graphics/Shader3D.hpp) or basic built-in Blinn-Phong lighting for prototyping.
             - 2D Textured quad rendering with built-in shaders or custom shaders through [Shader2D](include/donut/graphics/Shader2D.hpp).
             - Sprite rendering with automatic [SpriteAtlas](include/donut/graphics/SpriteAtlas.hpp) packing.
-            - Text rendering and [Font](include/donut/graphics/Font.hpp) loading using [libschrift](https://github.com/tomolt/libschrift).
+            - [Text](include/donut/graphics/Text.hpp) rendering and [Font](include/donut/graphics/Font.hpp) loading using [libschrift](https://github.com/tomolt/libschrift).
         - Supports arbitrary [Framebuffer](include/donut/graphics/Framebuffer.hpp) targets, [Camera](include/donut/graphics/Camera.hpp) positions and [Viewport](include/donut/graphics/Viewport.hpp) areas.
         - Viewports can be restricted to integer scaling for pixel-perfect fixed-resolution 2D rendering regardless of window size.
     - [Model](include/donut/graphics/Model.hpp) loading from OBJ files.
