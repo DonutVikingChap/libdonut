@@ -212,6 +212,28 @@ public:
 	}
 
 	/**
+	 * Get the additive identity of a time value.
+	 *
+	 * \param a time value.
+	 *
+	 * \return plus a.
+	 */
+	friend constexpr Time operator+(Time a) noexcept {
+		return Time{+a.duration};
+	}
+
+	/**
+	 * Get the additive inverse of a time value.
+	 *
+	 * \param a time value.
+	 *
+	 * \return minus a.
+	 */
+	friend constexpr Time operator-(Time a) noexcept {
+		return Time{-a.duration};
+	}
+
+	/**
 	 * Add two time values.
 	 *
 	 * \param a first time value.
