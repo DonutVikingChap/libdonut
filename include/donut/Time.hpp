@@ -454,18 +454,18 @@ private:
 	Duration duration{};
 };
 
-template <length_t L, typename T, typename Period>
+template <typename T, typename Period>
 [[nodiscard]] constexpr Time<T, Period> operator*(Time<T, Period> a, T b) noexcept {
 	return static_cast<typename Time<T, Period>::Duration>(a) * b;
 }
 
-template <length_t L, typename T, typename Period>
+template <typename T, typename Period>
 [[nodiscard]] constexpr Time<T, Period> operator*(T a, Time<T, Period> b) noexcept {
 	return a * static_cast<typename Time<T, Period>::Duration>(b);
 }
 
-template <length_t L, typename T, typename Period>
-[[nodiscard]] constexpr T operator/(Time<T, Period> a, T b) noexcept {
+template <typename T, typename Period>
+[[nodiscard]] constexpr Time<T, Period> operator/(Time<T, Period> a, T b) noexcept {
 	return static_cast<typename Time<T, Period>::Duration>(a) / b;
 }
 
