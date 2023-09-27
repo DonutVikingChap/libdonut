@@ -88,7 +88,7 @@ The following programs need to be installed in order to build an application usi
 - [CMake](https://cmake.org/) (version 3.21+).
 - A C++20-compatible compiler, such as:
     - [GCC](https://gcc.gnu.org/) (version 12+), or
-    - [Clang](https://clang.llvm.org/) (version 17+), or
+    - [Clang](https://clang.llvm.org/) (version 16+), or
     - [MSVC](https://visualstudio.microsoft.com/) (VS 2022 version 17+).
 
 ## Project setup
