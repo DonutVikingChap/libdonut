@@ -218,6 +218,46 @@ RenderPass& RenderPass::draw(const TextInstance& text) {
 	return *this;
 }
 
+RenderPass& RenderPass::draw(const TextCopyInstance& text) {
+	assert(text.shader);
+	assert(text.text);
+
+	if (previousShader3D || previousShader2D != text.shader) {
+		previousShader3D = nullptr;
+		previousModel = nullptr;
+		previousDiffuseMapOverride = nullptr;
+		previousSpecularMapOverride = nullptr;
+		previousNormalMapOverride = nullptr;
+		previousEmissiveMapOverride = nullptr;
+		previousShader2D = text.shader;
+		commandBuffer2D.push_back(CommandUseShader2D{.shader = text.shader});
+	}
+
+	for (const Text::ShapedGlyph& shapedGlyph : text.text->getShapedGlyphs()) {
+		assert(shapedGlyph.font);
+		shapedGlyph.font->markGlyphForRendering(shapedGlyph.characterSize, shapedGlyph.codePoint);
+		if (shapedGlyph.font->containsGlyphsMarkedForRendering()) {
+			[[unlikely]];
+			if (std::find(fonts.begin(), fonts.end(), shapedGlyph.font) == fonts.end()) {
+				fonts.push_back(shapedGlyph.font);
+			}
+		}
+		const Texture* const texture = &shapedGlyph.font->getAtlasTexture();
+		if (previousTexture != texture || previousFont != shapedGlyph.font) {
+			previousFont = shapedGlyph.font;
+			previousTexture = texture;
+		}
+	}
+
+	const std::span<const Text::ShapedGlyph> shapedGlyphsData = commandBuffer2D.append(std::span<const Text::ShapedGlyph>{text.text->getShapedGlyphs()});
+	commandBuffer2D.push_back(CommandDrawTextCopyInstance{
+		.color = text.color,
+		.shapedGlyphs = shapedGlyphsData,
+		.position = text.position,
+	});
+	return *this;
+}
+
 RenderPass& RenderPass::draw(const TextUTF8StringInstance& text) {
 	assert(text.shader);
 	assert(text.font);

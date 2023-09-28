@@ -459,6 +459,7 @@ struct SpriteInstance {
  * \note Consecutive text instances with the same shader and font will be
  *       batched and rendered together.
  *
+ * \sa TextCopyInstance
  * \sa TextUTF8StringInstance
  * \sa TextStringInstance
  */
@@ -478,6 +479,54 @@ struct TextInstance {
 	 * \warning The pointed-to text, as well as all of the fonts used by it,
 	 *          must remain valid for the duration of its use in the RenderPass,
 	 *          and must not be nullptr.
+	 */
+	const Text* text;
+
+	/**
+	 * Starting position, in world coordinates, to render the text at. This will
+	 * be the first position on the baseline for the first line of text.
+	 */
+	vec2 position{0.0f, 0.0f};
+
+	/**
+	 * Base text color.
+	 */
+	Color color = Color::WHITE;
+};
+
+/**
+ * Configuration of a copied 2D instance of Text shaped from a Font, for drawing
+ * as part of a RenderPass.
+ *
+ * Required fields:
+ * - TextInstance::text
+ *
+ * \note Consecutive text instances with the same shader and font will be
+ *       batched and rendered together.
+ * \note Unlike TextInstance, this instance type does not require the given text
+ *       to remain valid for the duration of its use in the RenderPass, since
+ *       the RenderPass stores a copy of the text when it is drawn.
+ *
+ * \sa TextInstance
+ * \sa TextUTF8StringInstance
+ * \sa TextStringInstance
+ */
+struct TextCopyInstance {
+	/**
+	 * Non-owning pointer to the shader to use when rendering the glyphs of this
+	 * text.
+	 *
+	 * \warning The pointed-to shader must remain valid for the duration of its
+	 *          use in the RenderPass, and must not be nullptr.
+	 */
+	Shader2D* shader = Shader2D::ALPHA;
+
+	/**
+	 * Non-owning read-only pointer to the shaped text to copy, and later draw.
+	 *
+	 * \warning All of the fonts used by the text must remain valid for the
+	 *          duration of their use in the RenderPass.
+	 * \warning Must not be nullptr.
 	 */
 	const Text* text;
 
@@ -734,6 +783,17 @@ public:
 	RenderPass& draw(const TextInstance& text);
 
 	/**
+	 * Enqueue a TextCopyInstance to be drawn when the render pass is rendered.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \sa TextCopyInstance
+	 */
+	RenderPass& draw(const TextCopyInstance& text);
+
+	/**
 	 * Enqueue a TextUTF8StringInstance to be drawn when the render pass is
 	 * rendered.
 	 *
@@ -839,6 +899,12 @@ private:
 		vec2 position;
 	};
 
+	struct CommandDrawTextCopyInstance {
+		Color color;
+		std::span<const Text::ShapedGlyph> shapedGlyphs;
+		vec2 position;
+	};
+
 	struct CommandDrawTextStringInstance {
 		Color color;
 		std::string_view string;
@@ -861,7 +927,9 @@ private:
 		CommandDrawRectangleInstance,  //
 		CommandDrawSpriteInstance,     //
 		CommandDrawTextInstance,       //
+		CommandDrawTextCopyInstance,   //
 		CommandDrawTextStringInstance, //
+		Text::ShapedGlyph[],           //
 		char[]>
 		commandBuffer2D{&memoryResource, memoryResource.getRemainingCapacity()};
 	std::vector<Font*, LinearAllocator<Font*>> fonts{&memoryResource};

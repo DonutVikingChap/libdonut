@@ -464,6 +464,21 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 					pushGlyphInstance(command.position, shapedGlyph, texture->getSize2D(), command.color);
 				}
 			},
+			[&](const RenderPass::CommandDrawTextCopyInstance& command) -> void {
+				assert(boundShader2D);
+				assert(command.text);
+				for (const Text::ShapedGlyph& shapedGlyph : command.shapedGlyphs) {
+					assert(shapedGlyph.font);
+					const Texture* const texture = &shapedGlyph.font->getAtlasTexture();
+					if (boundTexture != texture) {
+						render2DInstances();
+						boundTexture = texture;
+						boundFont = shapedGlyph.font;
+						useTexture(*boundTexture);
+					}
+					pushGlyphInstance(command.position, shapedGlyph, texture->getSize2D(), command.color);
+				}
+			},
 			[&](const RenderPass::CommandDrawTextStringInstance& command) -> void {
 				assert(boundShader2D);
 				assert(boundTexture);
@@ -473,6 +488,7 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 					pushGlyphInstance(vec2{0.0f, 0.0f}, shapedGlyph, boundTexture->getSize2D(), command.color);
 				}
 			},
+			[&](std::span<const Text::ShapedGlyph>) -> void {},
 			[&](std::span<const char>) -> void {},
 		});
 		render3DInstances();

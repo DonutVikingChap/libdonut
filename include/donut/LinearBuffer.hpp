@@ -208,11 +208,11 @@ public:
 					pointer += sizeof(std::size_t);
 					if constexpr (alignof(T) > 1) {
 						if (count > 0) {
-							void* alignedPointer = pointer;
+							void* alignedPointer = const_cast<void*>(static_cast<const void*>(pointer));
 							std::size_t remainingMemorySize = end - pointer;
 							[[maybe_unused]] void* const aligned = std::align(alignof(T), count * sizeof(T), alignedPointer, remainingMemorySize);
 							assert(aligned);
-							pointer = static_cast<std::byte*>(alignedPointer);
+							pointer = static_cast<const std::byte*>(alignedPointer);
 						}
 					}
 					const std::span<const T> values{reinterpret_cast<const T*>(pointer), count};

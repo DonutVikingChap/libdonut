@@ -634,12 +634,13 @@ private:
 			.color = Color::LIME,
 		});
 
-		renderPass.draw(gfx::TextStringInstance{
-			.font = &mainFont,
-			.characterSize = 8,
+		temporaryText.reshape(mainFont, 8,
+			fmt::format("Position:\n({:.2f}, {:.2f}, {:.2f})\n\nScale:\n({:.2f}, {:.2f})", carrotCakeDisplayPosition.x, carrotCakeDisplayPosition.y, carrotCakeDisplayPosition.z,
+				carrotCakeScale.x, carrotCakeScale.y));
+
+		renderPass.draw(gfx::TextCopyInstance{
+			.text = &temporaryText,
 			.position{410.0f, 310.0f},
-			.string = fmt::format("Position:\n({:.2f}, {:.2f}, {:.2f})\n\nScale:\n({:.2f}, {:.2f})", carrotCakeDisplayPosition.x, carrotCakeDisplayPosition.y,
-				carrotCakeDisplayPosition.z, carrotCakeScale.x, carrotCakeScale.y),
 		});
 
 		if (inputManager.isPressed(Action::MOVE_UP) || inputManager.justPressed(Action::MOVE_UP)) {
@@ -776,11 +777,11 @@ private:
 
 	void drawFrameRateCounter(gfx::RenderPass& renderPass) {
 		const unsigned fps = getLastSecondFrameCount();
-		frameRateCounterText.reshape(mainFont, 8, fmt::format("FPS: {}", fps), {0.0f, 0.0f}, {2.0f, 2.0f});
+		temporaryText.reshape(mainFont, 8, fmt::format("FPS: {}", fps), {0.0f, 0.0f}, {2.0f, 2.0f});
 		const vec2 fpsPosition{15.0f + 2.0f, 480.0f - 15.0f - 20.0f};
 		const Color fpsColor = (fps < 60) ? Color::RED : (fps < 120) ? Color::YELLOW : (fps < 240) ? Color::GRAY : Color::LIME;
-		renderPass.draw(gfx::TextInstance{.text = &frameRateCounterText, .position = fpsPosition + vec2{1.0f, -1.0f}, .color = Color::BLACK});
-		renderPass.draw(gfx::TextInstance{.text = &frameRateCounterText, .position = fpsPosition, .color = fpsColor});
+		renderPass.draw(gfx::TextCopyInstance{.text = &temporaryText, .position = fpsPosition + vec2{1.0f, -1.0f}, .color = Color::BLACK});
+		renderPass.draw(gfx::TextCopyInstance{.text = &temporaryText, .position = fpsPosition, .color = fpsColor});
 	}
 
 	events::EventPump eventPump{};
@@ -813,7 +814,7 @@ private:
 	gfx::Text downArrowText{mainFont, 8, "v"};
 	gfx::Text leftArrowText{mainFont, 8, "<"};
 	gfx::Text rightArrowText{mainFont, 8, ">"};
-	gfx::Text frameRateCounterText{};
+	gfx::Text temporaryText{};
 	ExampleShader2D exampleShader2D{};
 	ExampleShader3D exampleShader3D{};
 	events::InputManager inputManager{};
