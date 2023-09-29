@@ -270,7 +270,7 @@ public:
 	 * \sa emplace()
 	 * \sa operator[]()
 	 */
-	iterator insert(const Box<2, float>& elementBoundingBox, const T& value) {
+	std::pair<iterator, bool> insert(const Box<2, float>& elementBoundingBox, const T& value) {
 		return emplace(elementBoundingBox, value);
 	}
 
@@ -298,7 +298,7 @@ public:
 	 * \sa emplace()
 	 * \sa operator[]()
 	 */
-	iterator insert(const Box<2, float>& elementBoundingBox, T&& value) {
+	std::pair<iterator, bool> insert(const Box<2, float>& elementBoundingBox, T&& value) {
 		return emplace(elementBoundingBox, std::move(value));
 	}
 
