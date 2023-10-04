@@ -466,7 +466,6 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 			},
 			[&](const RenderPass::CommandDrawTextCopyInstance& command) -> void {
 				assert(boundShader2D);
-				assert(command.text);
 				for (const Text::ShapedGlyph& shapedGlyph : command.shapedGlyphs) {
 					assert(shapedGlyph.font);
 					const Texture* const texture = &shapedGlyph.font->getAtlasTexture();
