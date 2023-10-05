@@ -227,7 +227,7 @@ public:
 	 * \note The file format is determined entirely from the file contents; the
 	 *       filename extension is not taken into account.
 	 */
-	explicit Sound(const Filesystem& filesystem, const char* filepath, const SoundOptions& options = {});
+	Sound(const Filesystem& filesystem, const char* filepath, const SoundOptions& options = {});
 
 	/**
 	 * Get an opaque handle to the internal representation of the sound.
