@@ -162,8 +162,9 @@ public:
 		constexpr std::size_t HEADER_SIZE = sizeof(index_type) + sizeof(std::size_t);
 		const std::size_t remainingMemorySize = static_cast<std::size_t>(remainingMemoryEnd - remainingMemoryBegin);
 		void* alignedPointer = remainingMemoryBegin + HEADER_SIZE;
-		std::size_t space = remainingMemorySize - HEADER_SIZE;
-		if (remainingMemorySize < HEADER_SIZE || (!values.empty() && !std::align(alignof(T), values.size_bytes(), alignedPointer, space))) {
+		const std::size_t minRequiredSize = HEADER_SIZE + sizeof(index_type) + sizeof(std::byte*);
+		std::size_t space = remainingMemorySize - minRequiredSize;
+		if (remainingMemorySize < minRequiredSize || (!values.empty() && !std::align(alignof(T), values.size_bytes(), alignedPointer, space))) {
 			[[unlikely]];
 			const std::size_t requiredSize = HEADER_SIZE + alignof(T) - 1 + values.size_bytes() + sizeof(index_type) + sizeof(std::byte*);
 			const std::size_t newChunkSize = std::max(requiredSize, nextChunkSize);
@@ -178,7 +179,7 @@ public:
 				head = allocateChunk(newChunkSize);
 			}
 			alignedPointer = remainingMemoryBegin + HEADER_SIZE;
-			space = static_cast<std::size_t>(remainingMemoryEnd - remainingMemoryBegin) - HEADER_SIZE;
+			space = static_cast<std::size_t>(remainingMemoryEnd - remainingMemoryBegin) - minRequiredSize;
 			[[maybe_unused]] void* const aligned = std::align(alignof(T), values.size_bytes(), alignedPointer, space);
 			assert(aligned);
 		}
