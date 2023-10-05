@@ -17,6 +17,17 @@ namespace donut::graphics {
 class Renderer; // Forward declaration, to avoid including Renderer.hpp.
 
 /**
+ * Configuration options for a SpriteAtlas.
+ */
+struct SpriteAtlasOptions {
+	/**
+	 * Use bilinear filtering rather than nearest-neighbor interpolation when
+	 * rendering sprites from this sprite atlas at a non-1:1 scale.
+	 */
+	bool useLinearFiltering = false;
+};
+
+/**
  * Expandable texture atlas for packing 2D images into a spritesheet to
  * enable batch rendering.
  */
@@ -57,6 +68,19 @@ public:
 		vec2 size{};         ///< Size of the image in the texture atlas, in texels.
 		Flip flip = NO_FLIP; ///< Flags that describe how the sprite should be flipped when rendered.
 	};
+
+	/**
+	 * Construct an empty sprite atlas.
+	 */
+	SpriteAtlas() = default;
+
+	/**
+	 * Construct an empty sprite atlas.
+	 *
+	 * \param options sprite atlas options, see SpriteAtlasOptions.
+	 */
+	explicit SpriteAtlas(const SpriteAtlasOptions& options)
+		: options(options) {}
 
 	/**
 	 * Add a new image to the spritesheet, possibly expanding the texture atlas
@@ -177,7 +201,7 @@ private:
 				TextureFormat::R8G8B8A8_UNORM,
 				atlasPacker.getResolution(),
 				atlasPacker.getResolution(),
-				{.repeat = false, .useLinearFiltering = false, .useMipmap = false},
+				{.repeat = false, .useLinearFiltering = options.useLinearFiltering, .useMipmap = false},
 			};
 			atlasTexture.fill2D(renderer, Color::INVISIBLE);
 		}
@@ -186,6 +210,7 @@ private:
 	AtlasPacker<INITIAL_RESOLUTION, PADDING> atlasPacker{};
 	Texture atlasTexture{};
 	std::vector<Sprite> sprites{};
+	SpriteAtlasOptions options{};
 };
 
 } // namespace donut::graphics
