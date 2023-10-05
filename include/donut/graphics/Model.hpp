@@ -161,7 +161,7 @@ struct Model {
 	 *       model are also loaded as needed. See the documentation of Image for
 	 *       a description of the supported image file formats.
 	 */
-	explicit Model(const Filesystem& filesystem, const char* filepath);
+	Model(const Filesystem& filesystem, const char* filepath);
 
 	/**
 	 * List of objects defined by the loaded model.
