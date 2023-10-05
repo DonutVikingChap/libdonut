@@ -87,7 +87,7 @@ public:
 	 * \note Only TrueType fonts are fully supported. OpenType extensions that
 	 *       are not a part of TrueType may not work.
 	 */
-	explicit Font(const Filesystem& filesystem, const char* filepath, const FontOptions& options = {});
+	Font(const Filesystem& filesystem, const char* filepath, const FontOptions& options = {});
 
 	/** Destructor. */
 	~Font() = default;
