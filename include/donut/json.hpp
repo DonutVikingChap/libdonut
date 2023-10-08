@@ -2188,7 +2188,7 @@ public:
 	 * \param stream output stream to write to.
 	 * \param options output options, see SerializationOptions.
 	 */
-	Writer(std::ostream& stream, const SerializationOptions& options = {})
+	explicit Writer(std::ostream& stream, const SerializationOptions& options = {})
 		: stream(stream)
 		, options(options) {}
 
@@ -2633,7 +2633,7 @@ public:
 	 * \param stream input stream to write to.
 	 * \param options input options, see DeserializationOptions.
 	 */
-	Reader(std::istream& stream, const DeserializationOptions& options)
+	explicit Reader(std::istream& stream, const DeserializationOptions& options = {})
 		: parser(stream)
 		, options(options) {}
 
