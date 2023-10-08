@@ -297,6 +297,7 @@ RenderPass& RenderPass::draw(const TextUTF8StringInstance& text) {
 		.string{stringData.data(), stringData.size()},
 		.position = text.position,
 		.scale = text.scale,
+		.origin = text.origin,
 		.characterSize = text.characterSize,
 	});
 	return *this;
@@ -339,6 +340,7 @@ RenderPass& RenderPass::draw(const TextStringInstance& text) {
 		.string{stringData.data(), stringData.size()},
 		.position = text.position,
 		.scale = text.scale,
+		.origin = text.origin,
 		.characterSize = text.characterSize,
 	});
 	return *this;

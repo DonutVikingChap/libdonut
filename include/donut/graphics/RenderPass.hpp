@@ -484,7 +484,7 @@ struct TextInstance {
 
 	/**
 	 * Starting position, in world coordinates, to render the text at. This will
-	 * be the first position on the baseline for the first line of text.
+	 * be the first position on the baseline of the first line of text.
 	 */
 	vec2 position{0.0f, 0.0f};
 
@@ -532,7 +532,7 @@ struct TextCopyInstance {
 
 	/**
 	 * Starting position, in world coordinates, to render the text at. This will
-	 * be the first position on the baseline for the first line of text.
+	 * be the first position on the baseline of the first line of text.
 	 */
 	vec2 position{0.0f, 0.0f};
 
@@ -582,7 +582,7 @@ struct TextUTF8StringInstance {
 
 	/**
 	 * Starting position, in world coordinates, to render the text at. This will
-	 * be the first position on the baseline for the first line of text.
+	 * be the first position on the baseline of the first line of text.
 	 */
 	vec2 position{0.0f, 0.0f};
 
@@ -598,6 +598,15 @@ struct TextUTF8StringInstance {
 	 *         maximum size of the texture atlas.
 	 */
 	vec2 scale{1.0f, 1.0f};
+
+	/**
+	 * Offset, in normalized coordinates, specifying the origin relative to the
+	 * baseline of the first line of text. For example, a value of (0.5, 0.5)
+	 * would represent the middle of the first line of text.
+	 *
+	 * \remark A value of (0.5, 0.0) can be used to center text on the X axis.
+	 */
+	vec2 origin{0.0f, 0.0f};
 
 	/**
 	 * Base text color.
@@ -657,7 +666,7 @@ struct TextStringInstance {
 
 	/**
 	 * Starting position, in world coordinates, to render the text at. This will
-	 * be the first position on the baseline for the first line of text.
+	 * be the first position on the baseline of the first line of text.
 	 */
 	vec2 position{0.0f, 0.0f};
 
@@ -673,6 +682,15 @@ struct TextStringInstance {
 	 *         maximum size of the texture atlas.
 	 */
 	vec2 scale{1.0f, 1.0f};
+
+	/**
+	 * Offset, in normalized coordinates, specifying the origin relative to the
+	 * baseline of the first line of text. For example, a value of (0.5, 0.5)
+	 * would represent the middle of the first line of text.
+	 *
+	 * \remark A value of (0.5, 0.0) can be used to center text on the X axis.
+	 */
+	vec2 origin{0.0f, 0.0f};
 
 	/**
 	 * Base text color.
@@ -910,6 +928,7 @@ private:
 		std::string_view string;
 		vec2 position;
 		vec2 scale;
+		vec2 origin;
 		u32 characterSize;
 	};
 

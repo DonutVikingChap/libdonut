@@ -483,8 +483,12 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 				assert(boundTexture);
 				assert(boundFont);
 				text.reshape(*boundFont, command.characterSize, command.string, command.position, command.scale);
+				const vec2 position{
+					round((text.getMinExtent().x - text.getMaxExtent().x) * command.origin.x),
+					round(boundFont->getLineMetrics(command.characterSize).ascender * command.scale.y * command.origin.y),
+				};
 				for (const Text::ShapedGlyph& shapedGlyph : text.getShapedGlyphs()) {
-					pushGlyphInstance(vec2{0.0f, 0.0f}, shapedGlyph, boundTexture->getSize2D(), command.color);
+					pushGlyphInstance(position, shapedGlyph, boundTexture->getSize2D(), command.color);
 				}
 			},
 			[&](std::span<const Text::ShapedGlyph>) -> void {},
