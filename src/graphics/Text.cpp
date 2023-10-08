@@ -16,10 +16,12 @@ Text::ShapeResult Text::shape(Font& font, u32 characterSize, std::u8string_view 
 	try {
 		const vec2 baseOffset = offset;
 		const Font::LineMetrics lineMetrics = font.getLineMetrics(characterSize);
+		const float lineAscender = lineMetrics.ascender * scale.y;
+		const float lineDescender = lineMetrics.descender * scale.y;
 		const float lineHeight = round(lineMetrics.height * scale.y);
 
 		minExtent = min(minExtent, offset);
-		maxExtent = max(maxExtent, vec2{offset.x, offset.y + lineMetrics.ascender});
+		maxExtent = max(maxExtent, vec2{offset.x, offset.y + lineAscender});
 
 		shapedLinesInfo.push_back(Text::ShapedLineInfo{
 			.shapedOffset = offset,
@@ -67,7 +69,7 @@ Text::ShapeResult Text::shape(Font& font, u32 characterSize, std::u8string_view 
 
 		shapedLinesInfo.back().shapedSize.x = floor(offset.x - baseOffset.x);
 		maxExtent.x = max(maxExtent.x, offset.x);
-		minExtent.y = min(minExtent.y, offset.y + lineMetrics.descender);
+		minExtent.y = min(minExtent.y, offset.y + lineDescender);
 	} catch (...) {
 		shapedGlyphs.resize(baseShapedGlyphOffset);
 		shapedGlyphsInfo.resize(baseShapedGlyphOffset);
