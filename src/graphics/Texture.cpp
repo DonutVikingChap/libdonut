@@ -322,7 +322,7 @@ void Texture::createSharedTextures() {
 					std::construct_at(DEFAULT_SPECULAR, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, DEFAULT_SPECULAR_PIXEL.data(),
 						PIXEL_TEXTURE_OPTIONS);
 					try {
-						std::construct_at(DEFAULT_NORMAL, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGB, PixelComponentType::U8, DEFAULT_NORMAL_PIXEL.data(),
+						std::construct_at(DEFAULT_NORMAL, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, DEFAULT_NORMAL_PIXEL.data(),
 							PIXEL_TEXTURE_OPTIONS);
 					} catch (...) {
 						std::destroy_at(DEFAULT_SPECULAR);
