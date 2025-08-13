@@ -229,7 +229,7 @@ void Texture::setOptions2DArray(const TextureOptions& newOptions) {
 	glBindTexture(GL_TEXTURE_2D_ARRAY, static_cast<GLuint>(oldTextureBinding2DArray));
 }
 
-void Texture::pasteImage2D(std::size_t width, std::size_t height, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels, std::size_t x,
+void Texture::pasteImage2D(std::size_t imageWidth, std::size_t imageHeight, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels, std::size_t x,
 	std::size_t y) {
 	GLint oldUnpackAlignment = 0;
 	GLint oldTextureBinding2D = 0;
@@ -238,8 +238,8 @@ void Texture::pasteImage2D(std::size_t width, std::size_t height, PixelFormat pi
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D, texture.get());
-	glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(x), static_cast<GLint>(y), static_cast<GLsizei>(width), static_cast<GLsizei>(height), static_cast<GLenum>(pixelFormat),
-		static_cast<GLenum>(pixelComponentType), pixels);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(x), static_cast<GLint>(y), static_cast<GLsizei>(imageWidth), static_cast<GLsizei>(imageHeight),
+		static_cast<GLenum>(pixelFormat), static_cast<GLenum>(pixelComponentType), pixels);
 
 	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(oldTextureBinding2D));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
@@ -249,8 +249,8 @@ void Texture::pasteImage2D(const ImageView& image, std::size_t x, std::size_t y)
 	pasteImage2D(image.getWidth(), image.getHeight(), image.getPixelFormat(), image.getPixelComponentType(), image.getPixels(), x, y);
 }
 
-void Texture::pasteImage2DArray(std::size_t width, std::size_t height, std::size_t depth, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels,
-	std::size_t x, std::size_t y, std::size_t z) {
+void Texture::pasteImage2DArray(std::size_t imageWidth, std::size_t imageHeight, std::size_t arrayDepth, PixelFormat pixelFormat, PixelComponentType pixelComponentType,
+	const void* pixels, std::size_t x, std::size_t y, std::size_t z) {
 	GLint oldUnpackAlignment = 0;
 	GLint oldTextureBinding2DArray = 0;
 	glGetIntegerv(GL_UNPACK_ALIGNMENT, &oldUnpackAlignment);
@@ -258,8 +258,8 @@ void Texture::pasteImage2DArray(std::size_t width, std::size_t height, std::size
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, texture.get());
-	glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, static_cast<GLint>(x), static_cast<GLint>(y), static_cast<GLint>(z), static_cast<GLsizei>(width), static_cast<GLsizei>(height),
-		static_cast<GLsizei>(depth), static_cast<GLenum>(pixelFormat), static_cast<GLenum>(pixelComponentType), pixels);
+	glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, static_cast<GLint>(x), static_cast<GLint>(y), static_cast<GLint>(z), static_cast<GLsizei>(imageWidth),
+		static_cast<GLsizei>(imageHeight), static_cast<GLsizei>(arrayDepth), static_cast<GLenum>(pixelFormat), static_cast<GLenum>(pixelComponentType), pixels);
 
 	glBindTexture(GL_TEXTURE_2D_ARRAY, static_cast<GLuint>(oldTextureBinding2DArray));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);

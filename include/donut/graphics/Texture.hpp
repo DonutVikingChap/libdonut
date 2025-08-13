@@ -319,8 +319,8 @@ public:
 	/**
 	 * Copy 2D image data into the 2D texture at a specific position.
 	 *
-	 * \param width width of the 2D image data to copy, in pixels.
-	 * \param height height of the 2D image data to copy, in pixels.
+	 * \param imageWidth width of the 2D image data to copy, in pixels.
+	 * \param imageHeight height of the 2D image data to copy, in pixels.
 	 * \param pixelFormat pixel format of the input image.
 	 * \param pixelComponentType pixel component type of the input image.
 	 * \param pixels non-owning read-only pointer to the pixel data of the input
@@ -336,12 +336,13 @@ public:
 	 * \warning This function must only be called on textures that are set up to
 	 *          store 2D image data.
 	 * \warning The pixel data pointed to by the pixels parameter must be of the
-	 *          shape and format described by the width, height, pixelFormat and
-	 *          pixelComponentType parameters.
+	 *          shape and format described by the imageWidth, imageHeight,
+	 *          pixelFormat and pixelComponentType parameters.
 	 * \warning Enough space must be allocated in the texture for the full image
 	 *          to fit at the given position.
 	 */
-	void pasteImage2D(std::size_t width, std::size_t height, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels, std::size_t x, std::size_t y);
+	void pasteImage2D(std::size_t imageWidth, std::size_t imageHeight, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels, std::size_t x,
+		std::size_t y);
 
 	/**
 	 * Copy a 2D image into the 2D texture at a specific position.
@@ -366,9 +367,9 @@ public:
 	 * Copy an array of layers of 2D image data into the 2D array texture at a
 	 * specific position.
 	 *
-	 * \param width width of the 2D image data to copy, in pixels.
-	 * \param height height of the 2D image data to copy, in pixels.
-	 * \param depth number of 2D image layers in the array to copy.
+	 * \param imageWidth width of the 2D image data to copy, in pixels.
+	 * \param imageHeight height of the 2D image data to copy, in pixels.
+	 * \param arrayDepth number of 2D image layers in the array to copy.
 	 * \param pixelFormat pixel format of the input image.
 	 * \param pixelComponentType pixel component type of the input image.
 	 * \param pixels non-owning read-only pointer to the pixel data of the input
@@ -387,13 +388,13 @@ public:
 	 * \warning This function must only be called on textures that are set up to
 	 *          store arrays of layers of 2D image data.
 	 * \warning The pixel data pointed to by the pixels parameter must be of the
-	 *          shape and format described by the width, height, depth,
-	 *          pixelFormat and pixelComponentType parameters.
+	 *          shape and format described by the imageWidth, imageHeight,
+	 *          arrayDepth, pixelFormat and pixelComponentType parameters.
 	 * \warning Enough space must be allocated in the texture for the full image
 	 *          array to fit at the given position.
 	 */
-	void pasteImage2DArray(std::size_t width, std::size_t height, std::size_t depth, PixelFormat pixelFormat, PixelComponentType pixelComponentType, const void* pixels,
-		std::size_t x, std::size_t y, std::size_t z);
+	void pasteImage2DArray(std::size_t imageWidth, std::size_t imageHeight, std::size_t arrayDepth, PixelFormat pixelFormat, PixelComponentType pixelComponentType,
+		const void* pixels, std::size_t x, std::size_t y, std::size_t z);
 
 	/**
 	 * Copy a 2D image into the 2D array texture at a specific position.
