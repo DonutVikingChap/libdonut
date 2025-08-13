@@ -3,15 +3,14 @@
 
 //
 #ifdef __EMSCRIPTEN__
+#include <cstdio>       // stderr, std::fprintf
 #include <emscripten.h> // emscripten_...
+#include <exception>    // std::exception
 #endif
 //
 
 #include <algorithm> // std::min
 #include <chrono>    // std::chrono::...
-#include <cstdio>    // stderr, std::fprintf
-#include <exception> // std::exception
-#include <string>    // std::string
 #include <thread>    // std::this_thread::...
 
 namespace donut::application {
@@ -75,9 +74,11 @@ void Application::setFrameRateParameters(float tickRate, float minFrameRate, flo
 	tickInfo.tickInterval = duration_cast<decltype(tickInfo.tickInterval)::Duration>(tickInterval);
 	minFrameInterval = (maxFrameRate == 0.0f) ? Clock::duration{} : ceil<Clock::duration>(Time<float>::Duration{1.0f / maxFrameRate});
 	maxTicksPerFrame =
-		(tickRate <= 0.0f) ? Clock::rep{0}
+		(tickRate <= 0.0f)                                   ? Clock::rep{0}
 		: (minFrameRate <= 0.0f || tickRate <= minFrameRate) ? Clock::rep{1}
-		: (maxFrameRate <= 0.0f || minFrameRate <= maxFrameRate) ? static_cast<Clock::rep>(tickRate / minFrameRate) : static_cast<Clock::rep>(tickRate / maxFrameRate);
+		: (maxFrameRate <= 0.0f || minFrameRate <= maxFrameRate)
+			? static_cast<Clock::rep>(tickRate / minFrameRate)
+			: static_cast<Clock::rep>(tickRate / maxFrameRate);
 	latestTickProcessingEndTime = Clock::now();
 }
 

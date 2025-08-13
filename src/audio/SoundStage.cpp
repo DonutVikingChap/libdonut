@@ -143,7 +143,7 @@ void SoundStage::setSpeedOfSound(float speedOfSound) {
 
 void SoundStage::setMaxSimultaneousSounds(unsigned maxSimultaneousSounds) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	soloud.setMaxActiveVoiceCount(static_cast<unsigned>(maxSimultaneousSounds));
+	soloud.setMaxActiveVoiceCount(maxSimultaneousSounds);
 }
 
 void SoundStage::EngineDeleter::operator()(void* handle) const noexcept {

@@ -19,10 +19,8 @@
 #include <donut/math.hpp>
 
 #include <cassert>     // assert
-#include <cstddef>     // std::size_t
 #include <span>        // std::span
 #include <string_view> // std::string_view
-#include <utility>     // std::move
 
 namespace donut::graphics {
 
@@ -351,7 +349,7 @@ void Renderer::render(Framebuffer& framebuffer, const RenderPass& renderPass, co
 		modelInstances.clear();
 		texturedQuadInstances.clear();
 
-		renderPass.commandBuffer2D.visit(Overloaded{
+		renderPass.commandBuffer.visit(Overloaded{
 			[&](const RenderPass::CommandUseShader3D& command) -> void {
 				assert(command.shader);
 				render3DInstances();

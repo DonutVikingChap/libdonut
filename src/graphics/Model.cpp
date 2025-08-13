@@ -148,8 +148,8 @@ void loadObjScene(Model& output, const Filesystem& filesystem, const char* filep
 
 			for (const obj::Face& face : group.faces) {
 				if (face.vertices.size() >= 3) {
-					for (std::size_t faceVertexIndex = 1; faceVertexIndex + 1 < face.vertices.size(); ++faceVertexIndex) {
-						for (const std::size_t faceVertexIndex : {std::size_t{0}, faceVertexIndex, faceVertexIndex + 1}) {
+					for (std::size_t i = 1; i + 1 < face.vertices.size(); ++i) {
+						for (const std::size_t faceVertexIndex : {std::size_t{0}, i, i + 1}) {
 							const obj::FaceVertex& faceVertex = face.vertices[faceVertexIndex];
 							std::size_t vertexIndex = vertices.size();
 							if (const auto [it, inserted] = vertexMap.emplace(faceVertex, vertexIndex); inserted) {
@@ -334,9 +334,9 @@ void Model::createSharedModels() {
 			.indexCount = CUBE_INDICES.size(),
 		});
 
-		std::construct_at(QUAD, std::move(quadObjects));
+		std::construct_at(const_cast<Model*>(QUAD), std::move(quadObjects));
 		try {
-			std::construct_at(CUBE, std::move(cubeObjects));
+			std::construct_at(const_cast<Model*>(CUBE), std::move(cubeObjects));
 		} catch (...) {
 			std::destroy_at(QUAD);
 			throw;

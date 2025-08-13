@@ -6,8 +6,6 @@
 #include <donut/unicode.hpp>
 
 #include <algorithm> // std::find
-#include <cstdint>   // std::uint32_t
-#include <cstring>   // std::memcpy
 #include <span>      // std::span
 
 namespace donut::graphics {
@@ -22,7 +20,7 @@ RenderPass& RenderPass::draw(const ModelInstance& model) {
 		previousSpriteAtlas = nullptr;
 		previousFont = nullptr;
 		previousShader3D = model.shader;
-		commandBuffer2D.push_back(CommandUseShader3D{.shader = model.shader});
+		commandBuffer.push_back(CommandUseShader3D{.shader = model.shader});
 	}
 
 	if (previousModel != model.model || previousDiffuseMapOverride != model.diffuseMapOverride || previousSpecularMapOverride != model.specularMapOverride ||
@@ -32,7 +30,7 @@ RenderPass& RenderPass::draw(const ModelInstance& model) {
 		previousSpecularMapOverride = model.specularMapOverride;
 		previousNormalMapOverride = model.normalMapOverride;
 		previousEmissiveMapOverride = model.emissiveMapOverride;
-		commandBuffer2D.push_back(CommandUseModel{
+		commandBuffer.push_back(CommandUseModel{
 			.model = model.model,
 			.diffuseMapOverride = model.diffuseMapOverride,
 			.specularMapOverride = model.specularMapOverride,
@@ -41,7 +39,7 @@ RenderPass& RenderPass::draw(const ModelInstance& model) {
 		});
 	}
 
-	commandBuffer2D.push_back(CommandDrawModelInstance{
+	commandBuffer.push_back(CommandDrawModelInstance{
 		.transformation = model.transformation,
 		.tintColor = model.tintColor,
 		.textureOffset = model.textureOffset,
@@ -64,15 +62,15 @@ RenderPass& RenderPass::draw(const QuadInstance& quad) {
 		previousNormalMapOverride = nullptr;
 		previousEmissiveMapOverride = nullptr;
 		previousShader2D = quad.shader;
-		commandBuffer2D.push_back(CommandUseShader2D{.shader = quad.shader});
+		commandBuffer.push_back(CommandUseShader2D{.shader = quad.shader});
 	}
 
 	if (previousTexture != quad.texture) {
 		previousTexture = quad.texture;
-		commandBuffer2D.push_back(CommandUseTexture{.texture = quad.texture});
+		commandBuffer.push_back(CommandUseTexture{.texture = quad.texture});
 	}
 
-	commandBuffer2D.push_back(CommandDrawQuadInstance{
+	commandBuffer.push_back(CommandDrawQuadInstance{
 		.transformation = quad.transformation,
 		.tintColor = quad.tintColor,
 		.textureOffset = quad.textureOffset,
@@ -93,15 +91,15 @@ RenderPass& RenderPass::draw(const TextureInstance& texture) {
 		previousNormalMapOverride = nullptr;
 		previousEmissiveMapOverride = nullptr;
 		previousShader2D = texture.shader;
-		commandBuffer2D.push_back(CommandUseShader2D{.shader = texture.shader});
+		commandBuffer.push_back(CommandUseShader2D{.shader = texture.shader});
 	}
 
 	if (previousTexture != texture.texture) {
 		previousTexture = texture.texture;
-		commandBuffer2D.push_back(CommandUseTexture{.texture = texture.texture});
+		commandBuffer.push_back(CommandUseTexture{.texture = texture.texture});
 	}
 
-	commandBuffer2D.push_back(CommandDrawTextureInstance{
+	commandBuffer.push_back(CommandDrawTextureInstance{
 		.tintColor = texture.tintColor,
 		.position = texture.position,
 		.scale = texture.scale,
@@ -125,15 +123,15 @@ RenderPass& RenderPass::draw(const RectangleInstance& rectangle) {
 		previousNormalMapOverride = nullptr;
 		previousEmissiveMapOverride = nullptr;
 		previousShader2D = rectangle.shader;
-		commandBuffer2D.push_back(CommandUseShader2D{.shader = rectangle.shader});
+		commandBuffer.push_back(CommandUseShader2D{.shader = rectangle.shader});
 	}
 
 	if (previousTexture != rectangle.texture) {
 		previousTexture = rectangle.texture;
-		commandBuffer2D.push_back(CommandUseTexture{.texture = rectangle.texture});
+		commandBuffer.push_back(CommandUseTexture{.texture = rectangle.texture});
 	}
 
-	commandBuffer2D.push_back(CommandDrawRectangleInstance{
+	commandBuffer.push_back(CommandDrawRectangleInstance{
 		.tintColor = rectangle.tintColor,
 		.position = rectangle.position,
 		.size = rectangle.size,
@@ -157,7 +155,7 @@ RenderPass& RenderPass::draw(const SpriteInstance& sprite) {
 		previousNormalMapOverride = nullptr;
 		previousEmissiveMapOverride = nullptr;
 		previousShader2D = sprite.shader;
-		commandBuffer2D.push_back(CommandUseShader2D{.shader = sprite.shader});
+		commandBuffer.push_back(CommandUseShader2D{.shader = sprite.shader});
 	}
 
 	const Texture* const texture = &sprite.atlas->getAtlasTexture();
@@ -165,10 +163,10 @@ RenderPass& RenderPass::draw(const SpriteInstance& sprite) {
 	if (previousTexture != texture || previousSpriteAtlas != sprite.atlas) {
 		previousTexture = texture;
 		previousSpriteAtlas = sprite.atlas;
-		commandBuffer2D.push_back(CommandUseSpriteAtlas{.atlas = sprite.atlas});
+		commandBuffer.push_back(CommandUseSpriteAtlas{.atlas = sprite.atlas});
 	}
 
-	commandBuffer2D.push_back(CommandDrawSpriteInstance{
+	commandBuffer.push_back(CommandDrawSpriteInstance{
 		.tintColor = sprite.tintColor,
 		.position = sprite.position,
 		.scale = sprite.scale,
@@ -191,7 +189,7 @@ RenderPass& RenderPass::draw(const TextInstance& text) {
 		previousNormalMapOverride = nullptr;
 		previousEmissiveMapOverride = nullptr;
 		previousShader2D = text.shader;
-		commandBuffer2D.push_back(CommandUseShader2D{.shader = text.shader});
+		commandBuffer.push_back(CommandUseShader2D{.shader = text.shader});
 	}
 
 	for (const Text::ShapedGlyph& shapedGlyph : text.text->getShapedGlyphs()) {
@@ -210,7 +208,7 @@ RenderPass& RenderPass::draw(const TextInstance& text) {
 		}
 	}
 
-	commandBuffer2D.push_back(CommandDrawTextInstance{
+	commandBuffer.push_back(CommandDrawTextInstance{
 		.color = text.color,
 		.text = text.text,
 		.position = text.position,
@@ -230,7 +228,7 @@ RenderPass& RenderPass::draw(const TextCopyInstance& text) {
 		previousNormalMapOverride = nullptr;
 		previousEmissiveMapOverride = nullptr;
 		previousShader2D = text.shader;
-		commandBuffer2D.push_back(CommandUseShader2D{.shader = text.shader});
+		commandBuffer.push_back(CommandUseShader2D{.shader = text.shader});
 	}
 
 	for (const Text::ShapedGlyph& shapedGlyph : text.text->getShapedGlyphs()) {
@@ -249,8 +247,8 @@ RenderPass& RenderPass::draw(const TextCopyInstance& text) {
 		}
 	}
 
-	const std::span<const Text::ShapedGlyph> shapedGlyphsData = commandBuffer2D.append(std::span<const Text::ShapedGlyph>{text.text->getShapedGlyphs()});
-	commandBuffer2D.push_back(CommandDrawTextCopyInstance{
+	const std::span<const Text::ShapedGlyph> shapedGlyphsData = commandBuffer.append(std::span<const Text::ShapedGlyph>{text.text->getShapedGlyphs()});
+	commandBuffer.push_back(CommandDrawTextCopyInstance{
 		.color = text.color,
 		.shapedGlyphs = shapedGlyphsData,
 		.position = text.position,
@@ -270,7 +268,7 @@ RenderPass& RenderPass::draw(const TextUTF8StringInstance& text) {
 		previousNormalMapOverride = nullptr;
 		previousEmissiveMapOverride = nullptr;
 		previousShader2D = text.shader;
-		commandBuffer2D.push_back(CommandUseShader2D{.shader = text.shader});
+		commandBuffer.push_back(CommandUseShader2D{.shader = text.shader});
 	}
 
 	for (const char32_t codePoint : unicode::UTF8View{text.string}) {
@@ -286,13 +284,13 @@ RenderPass& RenderPass::draw(const TextUTF8StringInstance& text) {
 	if (previousTexture != texture || previousFont != text.font) {
 		previousTexture = texture;
 		previousFont = text.font;
-		commandBuffer2D.push_back(CommandUseFont{.font = text.font});
+		commandBuffer.push_back(CommandUseFont{.font = text.font});
 	}
 
 	static_assert(sizeof(char) == sizeof(char8_t));
 	static_assert(alignof(char) == alignof(char8_t));
-	const std::span<const char> stringData = commandBuffer2D.append(std::span<const char>{reinterpret_cast<const char*>(text.string.data()), text.string.size()});
-	commandBuffer2D.push_back(CommandDrawTextStringInstance{
+	const std::span<const char> stringData = commandBuffer.append(std::span<const char>{reinterpret_cast<const char*>(text.string.data()), text.string.size()});
+	commandBuffer.push_back(CommandDrawTextStringInstance{
 		.color = text.color,
 		.string{stringData.data(), stringData.size()},
 		.position = text.position,
@@ -315,7 +313,7 @@ RenderPass& RenderPass::draw(const TextStringInstance& text) {
 		previousNormalMapOverride = nullptr;
 		previousEmissiveMapOverride = nullptr;
 		previousShader2D = text.shader;
-		commandBuffer2D.push_back(CommandUseShader2D{.shader = text.shader});
+		commandBuffer.push_back(CommandUseShader2D{.shader = text.shader});
 	}
 
 	for (const char32_t codePoint : unicode::UTF8View{text.string}) {
@@ -331,11 +329,11 @@ RenderPass& RenderPass::draw(const TextStringInstance& text) {
 	if (previousTexture != texture || previousFont != text.font) {
 		previousTexture = texture;
 		previousFont = text.font;
-		commandBuffer2D.push_back(CommandUseFont{.font = text.font});
+		commandBuffer.push_back(CommandUseFont{.font = text.font});
 	}
 
-	const std::span<const char> stringData = commandBuffer2D.append(std::span<const char>{text.string.data(), text.string.size()});
-	commandBuffer2D.push_back(CommandDrawTextStringInstance{
+	const std::span<const char> stringData = commandBuffer.append(std::span<const char>{text.string.data(), text.string.size()});
+	commandBuffer.push_back(CommandDrawTextStringInstance{
 		.color = text.color,
 		.string{stringData.data(), stringData.size()},
 		.position = text.position,

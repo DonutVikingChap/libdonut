@@ -8,7 +8,6 @@
 #include <cstddef>  // std::size_t
 #include <cstdint>  // std::uint32_t
 #include <optional> // std::optional
-#include <utility>  // std::move
 
 namespace donut::graphics {
 

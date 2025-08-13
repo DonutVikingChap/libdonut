@@ -950,7 +950,7 @@ private:
 		CommandDrawTextStringInstance, //
 		Text::ShapedGlyph[],           //
 		char[]>
-		commandBuffer2D{&memoryResource, memoryResource.getRemainingCapacity()};
+		commandBuffer{&memoryResource, memoryResource.getRemainingCapacity()};
 	std::vector<Font*, LinearAllocator<Font*>> fonts{&memoryResource};
 	Shader3D* previousShader3D = nullptr;
 	Shader2D* previousShader2D = nullptr;

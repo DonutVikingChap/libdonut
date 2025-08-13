@@ -15,7 +15,6 @@
 #include <span>        // std::span
 #include <type_traits> // std::is_..._v, std::remove_..._t, std::false_type, std::true_type, std::integral_constant, std::common_type_t
 #include <utility>     // std::forward, std::declval, std::...index_sequence, std::in_place_index...
-#include <vector>      // std::vector
 
 namespace donut {
 
@@ -204,13 +203,13 @@ public:
 				using RawType = linear_buffer_alternative_t<Index, LinearBuffer>;
 				if constexpr (std::is_unbounded_array_v<RawType>) {
 					using T = std::remove_extent_t<RawType>;
-					std::size_t count;
+					std::size_t count{};
 					std::memcpy(&count, pointer, sizeof(std::size_t));
 					pointer += sizeof(std::size_t);
 					if constexpr (alignof(T) > 1) {
 						if (count > 0) {
 							void* alignedPointer = const_cast<void*>(static_cast<const void*>(pointer));
-							std::size_t remainingMemorySize = end - pointer;
+							std::size_t remainingMemorySize = static_cast<std::size_t>(end - pointer);
 							[[maybe_unused]] void* const aligned = std::align(alignof(T), count * sizeof(T), alignedPointer, remainingMemorySize);
 							assert(aligned);
 							pointer = static_cast<const std::byte*>(alignedPointer);

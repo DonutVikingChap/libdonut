@@ -9,7 +9,6 @@
 #include <functional>       // std::hash, std::invoke
 #include <initializer_list> // std::initializer_list
 #include <memory>           // std::construct_at, std::destroy_at
-#include <new>              // std::launder
 #include <optional>         // std::optional
 #include <type_traits>      // std::is_..._v, std::false_type, std::true_type, std::integral_constant, std::remove_..._t, std::common_type_t
 #include <utility>          // std::move, std::forward, std::swap, std::in_place_..., std::...index_sequence
@@ -293,14 +292,14 @@ private:
 	static constexpr bool HAS_DEFAULT_CONSTRUCTOR = std::is_default_constructible_v<variant_alternative_t<0, Variant>>;
 	static constexpr bool HAS_COPY_CONSTRUCTOR = (std::is_copy_constructible_v<Ts> && ...);
 	static constexpr bool HAS_MOVE_CONSTRUCTOR = (std::is_move_constructible_v<Ts> && ...);
-	static constexpr bool HAS_COPY_ASSIGNMENT = ((std::is_copy_constructible_v<Ts> && std::is_copy_assignable_v<Ts>)&&...);
-	static constexpr bool HAS_MOVE_ASSIGNMENT = ((std::is_move_constructible_v<Ts> && std::is_move_assignable_v<Ts>)&&...);
+	static constexpr bool HAS_COPY_ASSIGNMENT = ((std::is_copy_constructible_v<Ts> && std::is_copy_assignable_v<Ts>) && ...);
+	static constexpr bool HAS_MOVE_ASSIGNMENT = ((std::is_move_constructible_v<Ts> && std::is_move_assignable_v<Ts>) && ...);
 	static constexpr bool HAS_TRIVIAL_COPY_CONSTRUCTOR = (std::is_trivially_copy_constructible_v<Ts> && ...);
 	static constexpr bool HAS_TRIVIAL_MOVE_CONSTRUCTOR = (std::is_trivially_move_constructible_v<Ts> && ...);
 	static constexpr bool HAS_TRIVIAL_COPY_ASSIGNMENT =
-		((std::is_trivially_copy_constructible_v<Ts> && std::is_trivially_copy_assignable_v<Ts> && std::is_trivially_destructible_v<Ts>)&&...);
+		((std::is_trivially_copy_constructible_v<Ts> && std::is_trivially_copy_assignable_v<Ts> && std::is_trivially_destructible_v<Ts>) && ...);
 	static constexpr bool HAS_TRIVIAL_MOVE_ASSIGNMENT =
-		((std::is_trivially_move_constructible_v<Ts> && std::is_trivially_move_assignable_v<Ts> && std::is_trivially_destructible_v<Ts>)&&...);
+		((std::is_trivially_move_constructible_v<Ts> && std::is_trivially_move_assignable_v<Ts> && std::is_trivially_destructible_v<Ts>) && ...);
 	static constexpr bool HAS_TRIVIAL_DESTRUCTOR = (std::is_trivially_destructible_v<Ts> && ...);
 
 	template <typename T>
@@ -499,7 +498,8 @@ public:
 	 */
 	constexpr Variant& operator=(Variant&& other) noexcept(
 		((std::is_nothrow_move_constructible_v<Ts> && // NOLINT(performance-noexcept-move-constructor, cppcoreguidelines-noexcept-move-operations)
-			std::is_nothrow_move_assignable_v<Ts>)&&...)) requires(HAS_MOVE_ASSIGNMENT && !HAS_TRIVIAL_MOVE_ASSIGNMENT) {
+			 std::is_nothrow_move_assignable_v<Ts>) &&
+			...)) requires(HAS_MOVE_ASSIGNMENT && !HAS_TRIVIAL_MOVE_ASSIGNMENT) {
 		if (activeTypeIndex == other.activeTypeIndex) {
 			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
 				(void)(((is<Indices>()) ? ((as<Indices>() = std::move(other.template as<Indices>())), true) : false) || ...);
@@ -533,7 +533,7 @@ public:
 	 */
 	template <typename U>
 	constexpr Variant& operator=(U&& value) noexcept(
-		std::is_nothrow_assignable_v<decltype(F(std::forward<U>(value)))&, U>&& std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value))), U>)
+		std::is_nothrow_assignable_v<decltype(F(std::forward<U>(value)))&, U> && std::is_nothrow_constructible_v<decltype(F(std::forward<U>(value))), U>)
 		requires(!std::is_same_v<std::remove_cvref_t<U>, Variant> && variant_has_alternative_v<decltype(F(std::forward<U>(value))), Variant> &&
 				 std::is_assignable_v<decltype(F(std::forward<U>(value))), U>) {
 		using T = decltype(F(std::forward<U>(value)));
@@ -656,7 +656,7 @@ public:
 	 *       variant ends up in the valueless by exception state.
 	 */
 	constexpr void swap(Variant& other) noexcept(
-		((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_swappable_v<Ts>)&&...)) { // NOLINT(performance-noexcept-swap, cppcoreguidelines-noexcept-swap)
+		((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_swappable_v<Ts>) && ...)) { // NOLINT(performance-noexcept-swap, cppcoreguidelines-noexcept-swap)
 		if (activeTypeIndex == other.activeTypeIndex) {
 			using std::swap;
 			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
@@ -995,15 +995,14 @@ public:
 	 * \sa get_if()
 	 */
 	template <typename T>
-		[[nodiscard]] constexpr T& get() &
-		requires(variant_has_alternative_v<T, Variant>) {
-			if (!is<T>()) {
-				throw BadVariantAccess{};
-			}
-			return as<T>();
+	[[nodiscard]] constexpr T& get() & requires(variant_has_alternative_v<T, Variant>) {
+		if (!is<T>()) {
+			throw BadVariantAccess{};
 		}
+		return as<T>();
+	}
 
-		/**
+	/**
 	 * Access the underlying value with the given type.
 	 *
 	 * \tparam T type of the currently active value to get. Must be one of the
@@ -1017,8 +1016,8 @@ public:
 	 * \sa as()
 	 * \sa get_if()
 	 */
-		template <typename T>
-		[[nodiscard]] constexpr const T& get() const& requires(variant_has_alternative_v<T, Variant>) {
+	template <typename T>
+	[[nodiscard]] constexpr const T& get() const& requires(variant_has_alternative_v<T, Variant>) {
 		if (!is<T>()) {
 			throw BadVariantAccess{};
 		}

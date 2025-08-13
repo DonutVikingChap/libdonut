@@ -1,24 +1,31 @@
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 project("libdonut-examples")
 
+include(GNUInstallDirs)
+
 add_library(donut-example-base INTERFACE)
-
 target_compile_features(donut-example-base INTERFACE cxx_std_20)
-
 target_compile_options(donut-example-base INTERFACE
 	$<$<CXX_COMPILER_ID:GNU>:   -std=c++20  -Wall -Wextra   -Wconversion    -Wpedantic      -Werror                 $<$<CONFIG:Debug>:-g3>  $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g3>>
 	$<$<CXX_COMPILER_ID:Clang>: -std=c++20  -Wall -Wextra   -Wconversion    -Wpedantic      -Werror                 $<$<CONFIG:Debug>:-g3>  $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g3>>
 	$<$<CXX_COMPILER_ID:MSVC>:  /std:c++20  /W4                             /permissive-    /WX     /wd4996 /utf-8  $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>    $<$<CONFIG:MinSizeRel>:/Os> $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
-
 target_link_libraries(donut-example-base INTERFACE donut::donut)
 
 add_executable(donut-example-game "example_game.cpp")
 target_link_libraries(donut-example-game PRIVATE donut-example-base)
-add_test(NAME donut-example-game COMMAND donut-example-game)
+set_target_properties(donut-example-game PROPERTIES
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
+	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_INSTALL_BINDIR}"
+	VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_executable(donut-example-rectangle "example_rectangle.cpp")
 target_link_libraries(donut-example-rectangle PRIVATE donut-example-base)
-add_test(NAME donut-example-rectangle COMMAND donut-example-rectangle)
+set_target_properties(donut-example-rectangle PROPERTIES
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
+	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_INSTALL_BINDIR}"
+	VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
 if(BUILD_SHARED_LIBS)
 	target_link_libraries(donut-example-game PRIVATE ${CMAKE_DL_LIBS})

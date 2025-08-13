@@ -6,9 +6,9 @@ project("libdonut"
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(DONUT_ENABLE_LIBRARY "Enable building the library" ON)
-option(DONUT_ENABLE_DOCUMENTATION "Enable generation of documentation using Doxygen" ON)
-option(DONUT_ENABLE_EXAMPLES "Enable building examples" OFF)
-option(DONUT_ENABLE_TESTING "Enable test suite" OFF)
+option(DONUT_ENABLE_DOCUMENTATION "Enable generation of documentation using Doxygen" ${PROJECT_IS_TOP_LEVEL})
+option(DONUT_ENABLE_EXAMPLES "Enable building examples" ${PROJECT_IS_TOP_LEVEL})
+option(DONUT_ENABLE_TESTING "Enable test suite" ${PROJECT_IS_TOP_LEVEL})
 
 if(DONUT_ENABLE_LIBRARY)
 	add_subdirectory(dependencies)

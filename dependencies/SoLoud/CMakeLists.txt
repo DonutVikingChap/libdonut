@@ -37,9 +37,9 @@ target_include_directories(SoLoud PUBLIC "${soloud_SOURCE_DIR}/include")
 target_compile_definitions(SoLoud PRIVATE WITH_SDL2_STATIC)
 target_compile_features(SoLoud PRIVATE c_std_99 cxx_std_20)
 target_compile_options(SoLoud PRIVATE
-	$<$<OR:$<C_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:GNU>>:        $<$<COMPILE_LANGUAGE:C>:-std=c17>   $<$<COMPILE_LANGUAGE:CXX>:-std=c++20>           $<$<CONFIG:Debug>:-g3>  $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g3>>
-	$<$<OR:$<C_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:Clang>>:    $<$<COMPILE_LANGUAGE:C>:-std=c17>   $<$<COMPILE_LANGUAGE:CXX>:-std=c++20>           $<$<CONFIG:Debug>:-g3>  $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g3>>
-	$<$<OR:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>:      $<$<COMPILE_LANGUAGE:C>:/std:c17>   $<$<COMPILE_LANGUAGE:CXX>:/std:c++20>   /utf-8  $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>    $<$<CONFIG:MinSizeRel>:/Os> $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
+	$<$<OR:$<C_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:GNU>>:        $<$<COMPILE_LANGUAGE:C>:-std=c99>   $<$<COMPILE_LANGUAGE:CXX>:-std=c++20>           $<$<CONFIG:Debug>:-g3>  $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g3>>
+	$<$<OR:$<C_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:Clang>>:    $<$<COMPILE_LANGUAGE:C>:-std=c99>   $<$<COMPILE_LANGUAGE:CXX>:-std=c++20>           $<$<CONFIG:Debug>:-g3>  $<$<CONFIG:Release>:-O3>    $<$<CONFIG:MinSizeRel>:-Os> $<$<CONFIG:RelWithDebInfo>:-O3 -g3>>
+	$<$<OR:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>:      $<$<COMPILE_LANGUAGE:C>:/std:c99>   $<$<COMPILE_LANGUAGE:CXX>:/std:c++20>   /utf-8  $<$<CONFIG:Debug>:/Od>  $<$<CONFIG:Release>:/Ot>    $<$<CONFIG:MinSizeRel>:/Os> $<$<CONFIG:RelWithDebInfo>:/Ot /Od>>)
 target_link_libraries(SoLoud PRIVATE SDL2-static)
 
 set(DONUT_PRIVATE_DEPENDENCIES ${DONUT_PRIVATE_DEPENDENCIES} SoLoud PARENT_SCOPE)

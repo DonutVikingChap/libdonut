@@ -9,7 +9,7 @@
 
 #include <algorithm>    // std::lower_bound
 #include <cassert>      // assert
-#include <cstddef>      // std::size_t, std::byte
+#include <cstddef>      // std::size_t, std::ptrdiff_t, std::byte
 #include <cstdint>      // std::uint32_t
 #include <fmt/format.h> // fmt::format
 #include <schrift.h>    // SFT..., sft_...
@@ -92,11 +92,11 @@ std::pair<Font::Glyph, bool> Font::renderGlyph(Renderer& renderer, u32 character
 	} else {
 		assert(glyphIndex <= sortedGlyphKeys.size());
 		assert(glyphIndex <= glyphsSortedByKey.size());
-		sortedGlyphKeys.insert(sortedGlyphKeys.begin() + glyphIndex, glyphKey);
+		sortedGlyphKeys.insert(sortedGlyphKeys.begin() + static_cast<std::ptrdiff_t>(glyphIndex), glyphKey);
 		try {
-			glyphsSortedByKey.insert(glyphsSortedByKey.begin() + glyphIndex, renderedGlyph);
+			glyphsSortedByKey.insert(glyphsSortedByKey.begin() + static_cast<std::ptrdiff_t>(glyphIndex), renderedGlyph);
 		} catch (...) {
-			sortedGlyphKeys.erase(sortedGlyphKeys.begin() + glyphIndex);
+			sortedGlyphKeys.erase(sortedGlyphKeys.begin() + static_cast<std::ptrdiff_t>(glyphIndex));
 			throw;
 		}
 	}
@@ -190,17 +190,17 @@ void Font::markGlyphForRendering(u32 characterSize, char32_t codePoint) {
 	const std::size_t glyphIndex = static_cast<std::size_t>(it - sortedGlyphKeys.begin());
 	assert(glyphIndex <= sortedGlyphKeys.size());
 	assert(glyphIndex <= glyphsSortedByKey.size());
-	sortedGlyphKeys.insert(sortedGlyphKeys.begin() + glyphIndex, glyphKey);
+	sortedGlyphKeys.insert(sortedGlyphKeys.begin() + static_cast<std::ptrdiff_t>(glyphIndex), glyphKey);
 	try {
 		glyphKeysMarkedForRendering.push_back(glyphKey);
 		try {
-			glyphsSortedByKey.insert(glyphsSortedByKey.begin() + glyphIndex, Glyph{.positionInAtlas{}, .sizeInAtlas{}, .rendered = false});
+			glyphsSortedByKey.insert(glyphsSortedByKey.begin() + static_cast<std::ptrdiff_t>(glyphIndex), Glyph{.positionInAtlas{}, .sizeInAtlas{}, .rendered = false});
 		} catch (...) {
 			glyphKeysMarkedForRendering.pop_back();
 			throw;
 		}
 	} catch (...) {
-		sortedGlyphKeys.erase(sortedGlyphKeys.begin() + glyphIndex);
+		sortedGlyphKeys.erase(sortedGlyphKeys.begin() + static_cast<std::ptrdiff_t>(glyphIndex));
 		throw;
 	}
 }

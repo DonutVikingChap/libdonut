@@ -322,7 +322,7 @@ private:
 
 				vec3 color = emissive;
 				for (uint i = uint(0); i < uint(POINT_LIGHT_COUNT); ++i) {
-					color += calculatePointLight(pointLights[i], normal, viewDirection, vec3(1.0), diffuse.rgb, specular);
+					color += calculatePointLight(pointLights[i], normal, viewDirection, diffuse.rgb, diffuse.rgb, specular);
 				}
 
 				color *= texture(tintTexture, fragmentTextureCoordinates).rgb;

@@ -13,7 +13,6 @@
 #include <cstddef>  // std::size_t, std::byte, std::max_align_t
 #include <memory>   // std::construct_at, std::destroy_at
 #include <optional> // std::optional
-#include <utility>  // std::move
 
 namespace donut::graphics {
 
@@ -313,17 +312,20 @@ void Texture::createSharedTextures() {
 		constexpr std::array<std::byte, 4> DEFAULT_SPECULAR_PIXEL{std::byte{16}, std::byte{16}, std::byte{16}, std::byte{255}};
 		constexpr std::array<std::byte, 4> DEFAULT_NORMAL_PIXEL{std::byte{128}, std::byte{128}, std::byte{255}, std::byte{255}};
 		constexpr TextureOptions PIXEL_TEXTURE_OPTIONS{.repeat = true, .useLinearFiltering = false, .useMipmap = false};
-		std::construct_at(TRANSPARENT, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, TRANSPARENT_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
+		std::construct_at(const_cast<Texture*>(TRANSPARENT), TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, TRANSPARENT_PIXEL.data(),
+			PIXEL_TEXTURE_OPTIONS);
 		try {
-			std::construct_at(BLACK, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, BLACK_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
+			std::construct_at(const_cast<Texture*>(BLACK), TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, BLACK_PIXEL.data(),
+				PIXEL_TEXTURE_OPTIONS);
 			try {
-				std::construct_at(WHITE, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, WHITE_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
+				std::construct_at(const_cast<Texture*>(WHITE), TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, WHITE_PIXEL.data(),
+					PIXEL_TEXTURE_OPTIONS);
 				try {
-					std::construct_at(DEFAULT_SPECULAR, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, DEFAULT_SPECULAR_PIXEL.data(),
-						PIXEL_TEXTURE_OPTIONS);
+					std::construct_at(const_cast<Texture*>(DEFAULT_SPECULAR), TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8,
+						DEFAULT_SPECULAR_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
 					try {
-						std::construct_at(DEFAULT_NORMAL, TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8, DEFAULT_NORMAL_PIXEL.data(),
-							PIXEL_TEXTURE_OPTIONS);
+						std::construct_at(const_cast<Texture*>(DEFAULT_NORMAL), TextureFormat::R8G8B8A8_UNORM, 1, 1, PixelFormat::RGBA, PixelComponentType::U8,
+							DEFAULT_NORMAL_PIXEL.data(), PIXEL_TEXTURE_OPTIONS);
 					} catch (...) {
 						std::destroy_at(DEFAULT_SPECULAR);
 						throw;

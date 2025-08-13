@@ -188,7 +188,7 @@ const char* const Shader3D::FRAGMENT_SHADER_SOURCE_CODE_BLINN_PHONG = R"GLSL(
 
         vec3 color = emissive;
         for (uint i = uint(0); i < uint(POINT_LIGHT_COUNT); ++i) {
-            color += calculatePointLight(POINT_LIGHTS[i], normal, viewDirection, vec3(1.0), diffuse.rgb, specular);
+            color += calculatePointLight(POINT_LIGHTS[i], normal, viewDirection, diffuse.rgb, diffuse.rgb, specular);
         }
         outputColor = vec4(pow(tonemap(color), vec3(1.0 / GAMMA)), diffuse.a);
     }

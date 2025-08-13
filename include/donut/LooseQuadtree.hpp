@@ -10,7 +10,6 @@
 #include <cstddef>     // std::size_t, std::ptrdiff_t
 #include <cstdint>     // std::uint..._t
 #include <iterator>    // std::iterator_traits
-#include <memory>      // std::unique_ptr, std::make_unique
 #include <optional>    // std::optional
 #include <type_traits> // std::conditional_t, std::is_convertible_v, std::invoke_result_t
 #include <utility>     // std::pair, std::forward, std::move, std::exchange
@@ -845,7 +844,10 @@ private:
 				const float halfQuadrantSize = quadrantSize * 0.5f;
 				forEachActiveQuadrant(node.subQuadrantIndices, center, halfQuadrantSize,
 					[this, &predicate, quadrantSize = quadrantSize, halfQuadrantSize](TreeIndex quadrantIndex, vec2 quadrantCenter) {
-						const Box<2, float> looseBounds{quadrantCenter - vec2{quadrantSize}, quadrantCenter + vec2{quadrantSize}};
+						const Box<2, float> looseBounds{
+							.min = quadrantCenter - vec2{quadrantSize},
+							.max = quadrantCenter + vec2{quadrantSize},
+						};
 						if (predicate(looseBounds)) {
 							iterationStack.push_back(IterationState{
 								.center = quadrantCenter,
