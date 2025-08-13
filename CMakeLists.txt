@@ -4,11 +4,13 @@ project("libdonut"
 	DESCRIPTION "Application framework for cross-platform game development in C++20"
 	LANGUAGES C CXX)
 
+include(CMakeDependentOption)
+
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(DONUT_ENABLE_LIBRARY "Enable building the library" ON)
+cmake_dependent_option(DONUT_ENABLE_EXAMPLES "Enable building examples" ${PROJECT_IS_TOP_LEVEL} "DONUT_ENABLE_LIBRARY" OFF)
+cmake_dependent_option(DONUT_ENABLE_TESTING "Enable test suite" ${PROJECT_IS_TOP_LEVEL} "DONUT_ENABLE_LIBRARY" OFF)
 option(DONUT_ENABLE_DOCUMENTATION "Enable generation of documentation using Doxygen" ${PROJECT_IS_TOP_LEVEL})
-option(DONUT_ENABLE_EXAMPLES "Enable building examples" ${PROJECT_IS_TOP_LEVEL})
-option(DONUT_ENABLE_TESTING "Enable test suite" ${PROJECT_IS_TOP_LEVEL})
 
 if(DONUT_ENABLE_LIBRARY)
 	add_subdirectory(dependencies)
@@ -163,6 +165,15 @@ if(DONUT_ENABLE_LIBRARY)
 		ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
 		LIBRARY_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}"
 		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_INSTALL_BINDIR}")
+
+	if(DONUT_ENABLE_EXAMPLES)
+		add_subdirectory(examples)
+	endif()
+
+	if(DONUT_ENABLE_TESTING)
+		enable_testing()
+		add_subdirectory(test)
+	endif()
 endif()
 
 if(DONUT_ENABLE_DOCUMENTATION)
@@ -177,13 +188,4 @@ if(DONUT_ENABLE_DOCUMENTATION)
     else()
         message(WARNING "Doxygen package not found; documentation will not be generated.")
     endif()
-endif()
-
-if(DONUT_ENABLE_EXAMPLES)
-	add_subdirectory(examples)
-endif()
-
-if(DONUT_ENABLE_TESTING)
-	enable_testing()
-	add_subdirectory(test)
 endif()
