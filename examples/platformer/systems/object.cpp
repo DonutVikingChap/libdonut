@@ -91,9 +91,11 @@ void poseObjectTransformations(exec::Entities<ObjectModelInstance, const phys::P
 		const phys::Position3D displayPosition = mix(previousPosition, position, frameInfo.tickInterpolationAlpha);
 		const phys::Orientation3D displayOrientation = mix(previousOrientation, orientation, frameInfo.tickInterpolationAlpha);
 		const phys::Scale3D displayScale = mix(previousScale, scale, frameInfo.tickInterpolationAlpha);
+		const bool rootVisible = modelInstance.transformation.jointsVisible[0];
 		modelInstance.transformation.assign(translateRotateScale(displayPosition, displayOrientation, displayScale) * modelInstance.localTransformation,
 			modelInstance.pose.localJoints, modelInstance.pose.localMorphTargetWeights, modelInstance.model->getJointParentIndices());
-		modelInstance.visible = worldView.isPotentiallyVisible(Graphics::getBoundingBox(*modelInstance.model, modelInstance.transformation));
+		modelInstance.transformation.jointsVisible[0] = rootVisible;
+		modelInstance.visible = rootVisible && worldView.isPotentiallyVisible(Graphics::getBoundingBox(*modelInstance.model, modelInstance.transformation));
 	}
 }
 
@@ -163,11 +165,19 @@ void createObject(phys::EntityBuilder3D& entity, const phys::ResourceRegistry3D&
 	GREM_PROFILE_FUNCTION();
 
 	phys::Simulation3D::addObjectComponents(entity.getRegistry(), resources, entity.getEntityID(), std::move(options));
-	entity.addComponent<ObjectPreviousPosition>(entity.getComponent<phys::Position3D>());
-	entity.addComponent<ObjectPreviousOrientation>(entity.getComponent<phys::Orientation3D>());
-	entity.addComponent<ObjectPreviousScale>(entity.getComponent<phys::Scale3D>());
+	const phys::Position3D position = entity.getComponent<phys::Position3D>();
+	const phys::Orientation3D orientation = entity.getComponent<phys::Orientation3D>();
+	const phys::Scale3D scale = entity.getComponent<phys::Scale3D>();
+	entity.addComponent<ObjectPreviousPosition>(position);
+	entity.addComponent<ObjectPreviousOrientation>(orientation);
+	entity.addComponent<ObjectPreviousScale>(scale);
 	entity.addComponent<ObjectPreviousLinearVelocity>(entity.getComponent<phys::LinearVelocity3D>());
-	entity.addComponent<ObjectModelInstance>(ObjectModelInstance{.model = &model, .pose = model.getBindPose()});
+	ObjectModelInstance& modelInstance = entity.addComponent<ObjectModelInstance>(ObjectModelInstance{
+		.model = &model,
+		.pose = model.getBindPose(),
+	});
+	modelInstance.transformation.assign(translateRotateScale(position, orientation, scale) * modelInstance.localTransformation, modelInstance.pose.localJoints,
+		modelInstance.pose.localMorphTargetWeights, model.getJointParentIndices());
 }
 
 void createAnimatedObject(phys::EntityBuilder3D& entity, const phys::ResourceRegistry3D& resources, const gfx::Model3D& model, phys::ObjectOptions3D&& options) {

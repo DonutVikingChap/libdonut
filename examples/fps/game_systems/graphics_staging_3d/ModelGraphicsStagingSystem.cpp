@@ -596,11 +596,11 @@ private:
 			const phys::Shape3D* shape = nullptr;
 			if (modelDescription.shapeOverride) {
 				shape = &*modelDescription.shapeOverride;
-			} else {
+			} else if (schema.findEntityDescription(EntityType{"MODEL_OBJECT"})) {
 				const ModelObjectDescription& modelObjectDescription = schema.loadModelObjectDescription(assetCache, modelType);
-				if (modelObjectDescription.jointDescriptions.front().physicsObjectIndex) {
+				if (!modelObjectDescription.jointDescriptions.empty() && modelObjectDescription.jointDescriptions.front().physicsObjectIndex) {
 					shape = &modelObjectDescription.physicsObjectDescriptions[*modelObjectDescription.jointDescriptions.front().physicsObjectIndex].collider.shape;
-				} else if (modelObjectDescription.physicsObjectDescriptions.empty()) {
+				} else {
 					shape = &schema.loadModelConvexHullShape(assetCache, modelType);
 				}
 			}
@@ -622,10 +622,15 @@ private:
 			}
 			const Span<const ConvexPolytopeVertex3D> vertices = convexPolytope->getVertices();
 			const Span<const ConvexPolytopeEdge3D> edges = convexPolytope->getEdges();
+			phys::Length3D rootTranslation = modelDescription.options.rootTranslation * phys::METERS;
+			if (modelDescription.centerOfMassOverride && *modelDescription.centerOfMassOverride != 0) {
+				rootTranslation -= *modelDescription.centerOfMassOverride;
+			}
 			const phys::InverseLocalTransformation3D inverseRootTransformation =
-				inverseTranslateRotateScale(modelDescription.options.rootTranslation * phys::METERS, modelDescription.options.rootRotation, modelDescription.options.rootScale);
+				inverseTranslateRotateScale(rootTranslation, modelDescription.options.rootRotation, modelDescription.options.rootScale);
 			GREM_ASSERT(edges.size() % 2 == 0);
 			Buffer<HullVertex> hullWireframeVertices{};
+			hullWireframeVertices.reserve(edges.size());
 			for (const ConvexPolytope3D::Edge& edge : edges) {
 				hullWireframeVertices.push_back(HullVertex{.vertexPosition{inverseRootTransformation(vertices[edge.vertexIndex] * phys::METERS).in(phys::METERS)}});
 			}
@@ -852,8 +857,12 @@ private:
 			if (!convexPolytope) {
 				return {};
 			}
+			phys::Length3D rootTranslation = modelDescription.options.rootTranslation * phys::METERS;
+			if (modelDescription.centerOfMassOverride && *modelDescription.centerOfMassOverride != 0) {
+				rootTranslation -= *modelDescription.centerOfMassOverride;
+			}
 			const phys::InverseLocalTransformation3D inverseRootTransformation =
-				inverseTranslateRotateScale(modelDescription.options.rootTranslation * phys::METERS, modelDescription.options.rootRotation, modelDescription.options.rootScale);
+				inverseTranslateRotateScale(rootTranslation, modelDescription.options.rootRotation, modelDescription.options.rootScale);
 			return SharedPointer<gfx::Model3D>::create(device, renderer3D,
 				res::Model{*convexPolytope, inverseRootTransformation * phys::LocalTransformation3D{scale(phys::Scale3D{0.95f})}});
 		}

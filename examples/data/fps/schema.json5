@@ -217,7 +217,6 @@
             filepath: "models/carrot_cake/carrot_cake_1k.gltf",
             options: { rootScale: 4 },
             massOverride: 30,
-            shadowCasterType: "INSET_CONVEX_HULL",
             preloadObjectDescription: true,
             preloadConvexHullShape: true,
         },
@@ -225,6 +224,7 @@
             filepath: "models/Television_01/Television_01_1k.gltf",
             massOverride: 200,
             centerOfMassOverride: [0, 0.18, 0],
+            shadowCasterType: "INSET_CONVEX_HULL",
             preloadObjectDescription: true,
             preloadConvexHullShape: true,
         },
@@ -546,7 +546,7 @@
             physics: {
                 mass: Infinity,
                 principalMomentsOfInertia: Infinity,
-                energyLevel: 0,
+                gravityAcceleration: 0,
             },
         },
         MODEL_OBJECT: {

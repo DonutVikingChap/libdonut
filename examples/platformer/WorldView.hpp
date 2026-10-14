@@ -8,8 +8,9 @@
 #include <GREM/aliases.hpp>
 
 struct WorldView {
-	Frustum<float> frustum{};
-	Box<3, float> visibleBounds{};
+	Frustum<float> frustum;
+	Box<3, float> visibleBounds;
+	phys::EntityID playerEntityID;
 
 	[[nodiscard]] bool isPotentiallyVisible(const phys::Box3D& box) const {
 		return frustum.isPotentiallyIntersecting(box.in(phys::METERS));

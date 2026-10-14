@@ -130,21 +130,23 @@ void Simulation<N>::addObjectComponents(EntityRegistry<N>& registry, const Resou
 			.emitsCollisionEvents = options.emitsCollisionEvents,
 			.emitsSeparationEvents = options.emitsSeparationEvents,
 			.enableResting = options.enableResting,
-			.enableWaking = options.enableWaking,
 		});
 	registry.template addComponentIfMissing<ObjectContacts<N>>(entityID);
 	if (ObjectActivity* const activity = registry.template addComponentIfMissing<ObjectActivity>(entityID)) {
 		if (registry.template getComponent<InverseMass>(entityID) != 0 || registry.template getComponent<InversePrincipalMomentsOfInertia<N>>(entityID) != 0) {
-			activity->isCorrectable = 1;
+			activity->isCorrectable = true;
+			activity->isActive = true;
+		} else if (!options.enableResting || registry.template getComponent<LinearVelocity<N>>(entityID) != 0 ||
+				   registry.template getComponent<AngularVelocity<N>>(entityID) != 0 || registry.template getComponent<LinearAcceleration<N>>(entityID) != 0) {
+			activity->isActive = true;
 		}
-		activity->energyLevel = options.energyLevel;
 	}
 	if (ObjectBounds<N>* const bounds = registry.template addComponentIfMissing<ObjectBounds<N>>(entityID)) {
 		const Position<N> position = registry.template getComponent<Position<N>>(entityID);
 		const Scale<N> scale = registry.template getComponent<Scale<N>>(entityID);
 		const Transformation<N> transformation = translateRotateScale(position, orientation, scale);
 		if (const Optional<Box<N>> shapeAABB = registry.template getComponent<Collider<N>>(entityID).shape.getBoundingBox(transformation)) {
-			if (registry.template getComponent<ObjectActivity>(entityID).isCorrectable != 0) {
+			if (registry.template getComponent<ObjectActivity>(entityID).isCorrectable) {
 				const SimulationOptions<N>& simulationOptions = resources.template getResource<SimulationOptions<N>>();
 				const Distance minAABBExpansion = simulationOptions.collisionAlgorithmOptions.maxCollisionTouchingDistance * 2.0f;
 				const Time stepInterval = simulationOptions.stepInterval;
@@ -218,7 +220,7 @@ void Simulation<N>::updateObjectBounds(EntityRegistry<N>& registry, const Resour
 	if (const Optional<Box<N>> shapeAABB = collider.shape.getBoundingBox(transformation)) {
 		const LinearVelocity<N> linearVelocity = registry.template getComponent<LinearVelocity<N>>(objectID);
 		const AngularVelocity<N> angularVelocity = registry.template getComponent<AngularVelocity<N>>(objectID);
-		if (registry.template getComponent<ObjectActivity>(objectID).isCorrectable != 0) {
+		if (registry.template getComponent<ObjectActivity>(objectID).isCorrectable) {
 			const SimulationOptions<N>& simulationOptions = resources.template getResource<SimulationOptions<N>>();
 			const Distance minAABBExpansion = simulationOptions.collisionAlgorithmOptions.maxCollisionTouchingDistance * 2.0f;
 			const Time stepInterval = simulationOptions.stepInterval;

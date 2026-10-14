@@ -32,7 +32,11 @@ struct PhysicsGameOptions {
 	app::ApplicationOptions app{
 		.tickInterval = 1.0_seconds / 120,
 	};
-	exec::DynamicExecutorOptions exe{};
+	exec::DynamicExecutorOptions exe{
+#ifndef NDEBUG
+		.targetParallelism = 1,
+#endif
+	};
 };
 
 class PhysicsGame final : public app::Application {
@@ -76,15 +80,12 @@ protected:
 				}
 				GREM_CASE(const evt::MouseButtonPressedEvent& pressed) {
 					if (pressed.windowID == window.getID()) {
-						const phys::Position2D clickPosition =
-							vec2{pressed.mousePosition.x, static_cast<float>(window.getSize().height) - pressed.mousePosition.y} * PIXEL_LENGTH_UNIT;
-
 						const phys::Broadphase2D& broadphase = simulation.resources.getResource<phys::Broadphase2D>();
 
 						phys::EntityID clickedObjectID{};
-						broadphase.testPoint(clickPosition, phys::CollisionFilter{}, simulation.registry, phys::CollisionFilterTest{},
+						broadphase.testPoint(cursorPosition, phys::CollisionFilter{}, simulation.registry, phys::CollisionFilterTest{},
 							[&](phys::EntityID objectID, phys::CollisionFilterTestResult) -> bool {
-								if (simulation.registry.getComponent<phys::ObjectActivity>(objectID).isCorrectable != 0) {
+								if (simulation.registry.getComponent<phys::ObjectActivity>(objectID).isCorrectable) {
 									clickedObjectID = objectID;
 									return true;
 								}
@@ -92,20 +93,9 @@ protected:
 							});
 
 						if (pressed.mouseButton == evt::MouseButton::LEFT) {
-							simulation.registry.destroyEntity(cursorJointID);
-							cursorJointID = {};
-
+							destroyCursorJoint();
 							if (clickedObjectID) {
-								const phys::Position2D position = simulation.registry.getComponent<phys::Position2D>(clickedObjectID);
-								const phys::Orientation2D orientation = simulation.registry.getComponent<phys::Orientation2D>(clickedObjectID);
-								cursorJointID =
-									simulation
-										.createWeld({cursorObjectID, clickedObjectID},
-											{
-												.attachmentOffsets{{}, inverse(orientation)(clickPosition - position)},
-												.attachmentOrientations{{}, inverse(orientation)},
-											})
-										.build();
+								createCursorJoint(clickedObjectID);
 							}
 						} else if (pressed.mouseButton == evt::MouseButton::RIGHT) {
 							if (clickedObjectID) {
@@ -117,8 +107,7 @@ protected:
 				}
 				GREM_CASE(const evt::MouseButtonReleasedEvent& released) {
 					if (released.mouseButton == evt::MouseButton::LEFT) {
-						simulation.registry.destroyEntity(cursorJointID);
-						cursorJointID = {};
+						destroyCursorJoint();
 					}
 					break;
 				}
@@ -135,6 +124,8 @@ protected:
 						showFPS = !showFPS;
 					} else if (pressed.keyCode == evt::KeyCode::F4) {
 						showDebugVisualization = !showDebugVisualization;
+					} else if (pressed.keyCode == evt::KeyCode::F8) {
+						GREM_PROFILER_SAVE_NEXT_N_FRAMES(16, "physics_profiler_trace_", ProfileFormat::TRACE_EVENT_FORMAT);
 					} else if (pressed.keyCode == evt::KeyCode::F10) {
 						quit();
 					} else if (pressed.keyCode == evt::KeyCode::F11 || (pressed.keyCode == evt::KeyCode::RETURN && pressed.keyModifiers.containsAnyOf(evt::KeyModifiers::ALT))) {
@@ -162,15 +153,17 @@ protected:
 			lastWindowPosition = windowPosition;
 
 			for (auto&& [entityID, position, activity] : simulation.registry.getEntities<phys::Position2D, phys::ObjectActivity>()) {
-				if (activity.isCorrectable != 0) {
+				if (activity.isCorrectable) {
 					position -= windowMotion;
-					activity.energyLevel = phys::ObjectActivity::MAX_ENERGY_LEVEL;
+					activity.isActive = true;
+					activity.stepsResting = 0;
 				}
 			}
 		}
 
 		if (cursorMotion != 0) {
-			simulation.registry.getComponent<phys::ObjectActivity>(cursorObjectID).energyLevel = phys::ObjectActivity::MAX_ENERGY_LEVEL;
+			simulation.registry.getComponent<phys::ObjectActivity>(cursorObjectID).isActive = true;
+			simulation.registry.getComponent<phys::ObjectActivity>(cursorObjectID).stepsResting = 0;
 			simulation.registry.getComponent<phys::LinearVelocity2D>(cursorObjectID) = cursorMotion / simulation.resources.getResource<phys::SimulationOptions2D>().stepInterval;
 			cursorMotion = {};
 		} else {
@@ -365,8 +358,9 @@ private:
 		simulation.updateObjectBounds(ceilingObjectID);
 
 		for (auto&& [entityID, activity] : simulation.registry.getEntities<phys::ObjectActivity>()) {
-			if (activity.isCorrectable != 0) {
-				activity.energyLevel = phys::ObjectActivity::MAX_ENERGY_LEVEL;
+			if (activity.isCorrectable) {
+				activity.isActive = true;
+				activity.stepsResting = 0;
 			}
 		}
 	}
@@ -437,6 +431,30 @@ private:
 		const ShapeCategory shapeCategory = static_cast<ShapeCategory>(shapeCategoryIndex);
 		const Color color = Color::fromLinear(shapeColorR, shapeColorG, shapeColorB);
 		return createShapeObject(position, size, shapeCategory, color);
+	}
+
+	void createCursorJoint(phys::EntityID objectID) {
+		const phys::Position2D position = simulation.registry.getComponent<phys::Position2D>(objectID);
+		const phys::Orientation2D orientation = simulation.registry.getComponent<phys::Orientation2D>(objectID);
+		cursorJointID =
+			simulation
+				.createWeld({cursorObjectID, objectID},
+					{
+						.attachmentOffsets{{}, inverse(orientation)(cursorPosition - position)},
+						.attachmentOrientations{{}, inverse(orientation)},
+					})
+				.build();
+	}
+
+	void destroyCursorJoint() {
+		if (const phys::JointConnectedObjects* const connectedObjects = simulation.registry.findComponent<phys::JointConnectedObjects>(cursorJointID)) {
+			if (phys::ObjectActivity* const objectActivity = simulation.registry.findComponent<phys::ObjectActivity>(connectedObjects->second)) {
+				objectActivity->isActive = true;
+				objectActivity->stepsResting = 0;
+			}
+		}
+		simulation.registry.destroyEntity(cursorJointID);
+		cursorJointID = {};
 	}
 
 	exec::DynamicExecutor executor;

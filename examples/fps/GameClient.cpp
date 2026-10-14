@@ -547,10 +547,10 @@ void runPredictionUntil(Audio& audio, Graphics& graphics, GameState& gameState, 
 		// Make any correctable unpredicted objects that aren't colliding with the player uncorrectable.
 		for (auto&& [objectID, activity, linearVelocity, angularVelocity, gravityAcceleration, collider] :
 			registry.getEntities<phys::ObjectActivity, phys::LinearVelocity3D, phys::AngularVelocity3D, phys::LinearAcceleration3D, phys::Collider3D>()) {
-			if (activity.isCorrectable != 0 && collider.filter.layers.contains(UNPREDICTED_OBJECT_LAYER)) {
-				activity.isCorrectable = 0;
+			if (activity.isCorrectable && collider.filter.layers.contains(UNPREDICTED_OBJECT_LAYER)) {
+				activity.isCorrectable = false;
 
-				if (activity.wasCorrected == 0) {
+				if (!activity.wasCorrected) {
 					// If the object's movement is unobstructed, extrapolate its position, but don't detect collisions.
 					collider.filter.detectionLayers = {};
 					collider.filter.responseLayers = {};
@@ -559,7 +559,7 @@ void runPredictionUntil(Audio& audio, Graphics& graphics, GameState& gameState, 
 					linearVelocity = {};
 					angularVelocity = {};
 					gravityAcceleration = {};
-					activity.energyLevel = 0;
+					activity.isActive = false;
 				}
 			}
 

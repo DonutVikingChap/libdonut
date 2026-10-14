@@ -220,10 +220,6 @@ inline void initializeComponentDefault(phys::Scale3D& component, ParseEntityComp
 	component = phys::Scale3D{1_x};
 }
 
-inline void initializeComponentDefault(phys::ObjectActivity& objectActivity, ParseEntityComponentContext&, const Schema&, const EntityInitializer&) {
-	objectActivity = phys::ObjectActivity{phys::ObjectActivity::MAX_ENERGY_LEVEL};
-}
-
 struct ModelJointController {
 	SynchronizedEntityID target{};
 	res::Model::JointIndex jointIndex = 0;

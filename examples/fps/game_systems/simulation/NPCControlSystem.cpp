@@ -55,7 +55,8 @@ private:
 				continue;
 			}
 
-			activity.energyLevel = phys::ObjectActivity::MAX_ENERGY_LEVEL;
+			activity.isActive = true;
+			activity.stepsResting = 0;
 
 			npcState.targetAngle += npcInfo.turnRate * deltaTime;
 

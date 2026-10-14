@@ -889,24 +889,25 @@ private:
 
 	void initializeContactPoint(ContactPoint<N>& point, Direction<N> normal, LinearVelocity<N> linearVelocityA, LinearVelocity<N> linearVelocityB,
 		AngularVelocity<N> angularVelocityA, AngularVelocity<N> angularVelocityB) {
-		const LinearVelocity<N> newRelativeVelocity =
-			(linearVelocityA + cross(point.offsets.first, angularVelocityA)) - (linearVelocityB + cross(point.offsets.second, angularVelocityB));
-		const OrthonormalBasis<N> newTangentSpaceBasis = getTangentSpaceBasis(normal, newRelativeVelocity);
-		point.tangent = newTangentSpaceBasis[X];
-		point.relativeVelocityInTangentSpace = transpose(newTangentSpaceBasis) * newRelativeVelocity;
+		const LinearVelocity<N> velocityA = calculatePointVelocity(linearVelocityA, angularVelocityA, point.offsets.first);
+		const LinearVelocity<N> velocityB = calculatePointVelocity(linearVelocityB, angularVelocityB, point.offsets.second);
+		const LinearVelocity<N> relativeVelocity = velocityA - velocityB;
+		const OrthonormalBasis<N> tangentSpaceBasis = getTangentSpaceBasis(normal, relativeVelocity);
+		point.tangent = tangentSpaceBasis[X];
+		point.relativeVelocityInTangentSpace = transpose(tangentSpaceBasis) * relativeVelocity;
 	}
 
 	void transformContactPoint(ContactPoint<N>& point, Direction<N> normal, Direction<N> oldNormal, LinearVelocity<N> linearVelocityA, LinearVelocity<N> linearVelocityB,
 		AngularVelocity<N> angularVelocityA, AngularVelocity<N> angularVelocityB) {
-		const LinearVelocity<N> newRelativeVelocity =
-			(linearVelocityA + cross(point.offsets.first, angularVelocityA)) - (linearVelocityB + cross(point.offsets.second, angularVelocityB));
+		const LinearVelocity<N> velocityA = calculatePointVelocity(linearVelocityA, angularVelocityA, point.offsets.first);
+		const LinearVelocity<N> velocityB = calculatePointVelocity(linearVelocityB, angularVelocityB, point.offsets.second);
+		const LinearVelocity<N> relativeVelocity = velocityA - velocityB;
 		const OrthonormalBasis<N> oldTangentSpaceBasis = point.getTangentSpaceBasis(oldNormal);
-		const OrthonormalBasis<N> newTangentSpaceBasis = getTangentSpaceBasis(normal, newRelativeVelocity);
+		const OrthonormalBasis<N> newTangentSpaceBasis = getTangentSpaceBasis(normal, relativeVelocity);
 		const OrthonormalBasis<N> tangentSpaceTransformation = transpose(newTangentSpaceBasis) * oldTangentSpaceBasis;
 		const Scale1D normalTransformation = dot(normal, oldNormal);
 		point.tangent = newTangentSpaceBasis[X];
-		point.relativeVelocityInTangentSpace = transpose(newTangentSpaceBasis) * newRelativeVelocity;
-		const auto old = point.momentumInTangentSpace;
+		point.relativeVelocityInTangentSpace = transpose(newTangentSpaceBasis) * relativeVelocity;
 		point.momentumInTangentSpace = tangentSpaceTransformation * point.momentumInTangentSpace;
 		point.impulseInTangentSpace = tangentSpaceTransformation * point.impulseInTangentSpace;
 		point.restitutionMomentum = normalTransformation * point.restitutionMomentum;

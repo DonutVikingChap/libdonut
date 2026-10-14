@@ -217,6 +217,7 @@ protected:
 		WorldView worldView{
 			.frustum = Frustum<float>::fromViewProjectionMatrix(graphics.camera3D.getProjectionMatrix() * graphics.camera3D.getViewMatrix()),
 			.visibleBounds = calculateBoundingBox<3, float>(worldView.frustum.corners),
+			.playerEntityID = playerEntityID,
 		};
 		worldView.visibleBounds.min = max(worldView.visibleBounds.min, vec3{levelBounds.min.in(phys::METERS)});
 		worldView.visibleBounds.max = min(worldView.visibleBounds.max, vec3{levelBounds.max.in(phys::METERS)});

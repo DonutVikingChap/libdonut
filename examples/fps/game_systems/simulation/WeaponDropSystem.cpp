@@ -62,7 +62,6 @@ private:
 				phys::Position3D{*position + aim->offset + rotate(angles) * weaponDescription.proceduralAnimation.hipFireBaseOffset},
 				phys::LinearVelocity3D{*linearVelocity},
 				phys::Orientation3D::fromAngles(angles + weaponDescription.proceduralAnimation.hipFireBaseRotations),
-				phys::ObjectActivity{phys::ObjectActivity::MAX_ENERGY_LEVEL},
 				WeaponType{*weaponType},
 				DestroyCountdown{.destroyOnTickIndex = Timestamp{tickIndex, weaponDescription.droppedDespawnTime, tickInterval}.getTickIndex()},
 			});

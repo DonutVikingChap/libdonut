@@ -112,8 +112,10 @@ struct SimulationOptions {
 	/**
 	 * Linear speed at or below which objects are considered to be at rest.
 	 *
-	 * Going below this speed causes an object's activity level to drop until it
-	 * is eventually frozen in place.
+	 * When an object has resting enabled, going below this speed and
+	 * #maxRestingAngularSpeed at the same time causes its
+	 * ObjectActivity::stepsResting counter to increase until it is
+	 * eventually frozen in place after the #restingTimeThreshold.
 	 *
 	 * \warning Must be non-negative.
 	 */
@@ -122,23 +124,25 @@ struct SimulationOptions {
 	/**
 	 * Angular speed at or below which objects are considered to be at rest.
 	 *
-	 * Going below this speed causes an object's activity level to drop until it
-	 * is eventually frozen in place.
+	 * When an object has resting enabled, going below this speed and
+	 * #maxRestingSpeed at the same time causes its ObjectActivity::stepsResting
+	 * counter to increase until it is eventually frozen in place after the
+	 * #restingTimeThreshold.
 	 *
 	 * \warning Must be non-negative.
 	 */
 	AngularSpeed maxRestingAngularSpeed = 4.0f * DEGREES_PER_SECOND;
 
 	/**
-	 * Value of each energy level step represented by an object's
-	 * ObjectActivity::energyLevel.
-	 *
-	 * This determines how the energy level is recalulated at the end of each
-	 * simulation step.
+	 * How long an object with resting enabled can spend below resting speed
+	 * before it gets flagged as inactive.
 	 *
 	 * \warning Must be positive.
+	 *
+	 * \note Values above `65535 * stepInterval` are treated as if they were
+	 *       clamped to that value.
 	 */
-	Energy energyLevelUnit = 1.0f * JOULES;
+	Time restingTimeThreshold = 1.0f * SECONDS;
 
 	/**
 	 * Safety coefficient to multiply the velocities of objects by when

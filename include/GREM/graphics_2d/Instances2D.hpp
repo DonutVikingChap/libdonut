@@ -493,7 +493,13 @@ struct TextInstance2D {
 	/**
 	 * Alignment mode of the text.
 	 */
-	graphics::TextAlign alignment{};
+	TextAlign alignment = TextAlign::NONE;
+
+	/**
+	 * Additional offset to apply to the text after applying the specified
+	 * #alignment.
+	 */
+	vec2 alignmentOffset{0.0f, 0.0f};
 
 	/**
 	 * Base text color.
@@ -560,7 +566,13 @@ struct TextStringInstance2D {
 	/**
 	 * Alignment mode of the text.
 	 */
-	graphics::TextAlign alignment{};
+	TextAlign alignment = TextAlign::NONE;
+
+	/**
+	 * Additional offset to apply to the text after applying the specified
+	 * #alignment.
+	 */
+	vec2 alignmentOffset{0.0f, 0.0f};
 
 	/**
 	 * Base text color.

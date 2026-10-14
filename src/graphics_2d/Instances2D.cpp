@@ -139,6 +139,7 @@ void Instances2D::putShadedTextStringInstance(const Model2D::ShaderPipeline& sha
 			.angle = instance.angle,
 			.scale = instance.scale,
 			.alignment = instance.alignment,
+			.alignmentOffset = instance.alignmentOffset,
 			.color = instance.color,
 		});
 }
@@ -177,7 +178,7 @@ void Instances2D::putShadedTextInstanceImplementation(SharedPointer<ShaderPipeli
 		GREM_ASSERT(shapedGlyph.font);
 		shapedGlyph.font->renderGlyph(*device, shapedGlyph.characterSize, shapedGlyph.codePoint);
 	}
-	const vec2 alignmentOffset = text.getAlignmentOffset(instance.alignment);
+	const vec2 alignmentOffset = text.getAlignmentOffset(instance.alignment) + instance.alignmentOffset;
 	SharedPointer<MeshImplementation> meshHandle = renderer2D->getUnitSquareModel2D().getNodes().front().mesh.lock();
 	const Font2D* font = text.getShapedGlyphs().front().font;
 	uint32_t instanceOffset = instanceBuffer.size();

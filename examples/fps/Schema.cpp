@@ -555,7 +555,7 @@ const phys::Shape3D& Schema::loadModelConvexHullShape(AssetCache& assetCache, Mo
 				}
 			}
 
-			it->second = phys::ConvexPolytopeShape3D{vertices, 32};
+			it->second = phys::ConvexPolytopeShape3D{vertices, 16};
 		} catch (...) {
 			modelConvexHullShapes.erase(it);
 			throw;
@@ -961,7 +961,8 @@ void setImpliedModelJointComponents(EntityBuilder& entityBuilder, ModelType mode
 	phys::Simulation3D::updateObjectBounds(registry, resources, entityBuilder.getEntityID());
 
 	phys::ObjectActivity& activity = entityBuilder.getComponent<phys::ObjectActivity>();
-	activity.isCorrectable = (isfinite(mass) || inversePrincipalMomentsOfInertia != 0) ? 1 : 0;
+	activity.isCorrectable = isfinite(mass) || inversePrincipalMomentsOfInertia != 0;
+	activity.isActive = activity.isCorrectable;
 }
 
 SpawnEntityResult spawnEntity(EntityRegistry& registry, ResourceRegistry& resources, ParseEntityComponentContext& context, EntityType entityType, EntityID::Flags flags,

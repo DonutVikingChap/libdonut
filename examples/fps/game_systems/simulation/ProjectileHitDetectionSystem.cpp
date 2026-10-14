@@ -366,10 +366,6 @@ private:
 			const phys::Position3D hitObjectPosition = registry.getComponent<phys::Position3D>(hitEntityID);
 			const phys::Orientation3D hitObjectOrientation = registry.getComponent<phys::Orientation3D>(hitEntityID);
 			const phys::LinearVelocity3D hitObjectLinearVelocity = registry.getComponent<phys::LinearVelocity3D>(hitEntityID);
-			const phys::AngularVelocity3D hitObjectAngularVelocity = registry.getComponent<phys::AngularVelocity3D>(hitEntityID);
-			const phys::InverseMass hitObjectInverseMass = registry.getComponent<phys::InverseMass>(hitEntityID);
-			const phys::InverseMomentOfInertiaTensor3D& hitObjectInverseMomentOfInertiaTensor = registry.getComponent<phys::InverseMomentOfInertiaTensor3D>(hitEntityID);
-			const phys::ObjectActivity hitObjectActivity = registry.getComponent<phys::ObjectActivity>(hitEntityID);
 
 			const phys::Orientation3D particleOrientation = phys::Orientation3D::lookAt(hit.normal, phys::Y_AXIS_3D);
 			const phys::Orientation3D decalOrientation = phys::Orientation3D::lookAt(-hit.normal, phys::Y_AXIS_3D);
@@ -444,25 +440,33 @@ private:
 				continue;
 			}
 
-			if (hitObjectActivity.isCorrectable != 0) {
-				if (const Optional<phys::Direction3D> projectileDirection = tryNormalize(projectileLinearVelocity)) {
-					const phys::Direction3D counterProjectileDirection = -*projectileDirection;
-					const phys::Length3D hitObjectOffset = hit.point - hitObjectPosition;
-					const phys::LinearVelocity1D relativeVelocity =
-						dot(hitObjectLinearVelocity + cross(hitObjectAngularVelocity, hitObjectOffset) - projectileLinearVelocity, counterProjectileDirection);
-					const phys::MomentArm3D hitObjectMomentArm = cross(hitObjectOffset, counterProjectileDirection);
-					const phys::InverseMass hitObjectGeneralizedInverseMass =
-						hitObjectInverseMass + dot(hitObjectMomentArm, hitObjectInverseMomentOfInertiaTensor * hitObjectMomentArm);
-					const phys::InverseMass projectileGeneralizedInverseMass = 1_x / projectileDescription.mass;
-					const phys::InverseMass combinedGeneralizedInverseMass = hitObjectGeneralizedInverseMass + projectileGeneralizedInverseMass;
-					const phys::Mass combinedGeneralizedMass = 1_x / combinedGeneralizedInverseMass;
-					const phys::LinearImpulse1D impulse = -relativeVelocity * combinedGeneralizedMass;
-					const phys::LinearImpulse3D linearImpulse = counterProjectileDirection * impulse;
-					registry.getComponent<phys::ObjectActivity>(hitEntityID).wasCorrected = 1;
-					registry.getComponent<phys::ObjectActivity>(hitEntityID).energyLevel = phys::ObjectActivity::MAX_ENERGY_LEVEL;
-					registry.getComponent<phys::LinearVelocity3D>(hitEntityID) += hitObjectInverseMass * linearImpulse;
-					registry.getComponent<phys::AngularVelocity3D>(hitEntityID) += hitObjectInverseMomentOfInertiaTensor * cross(hitObjectOffset, linearImpulse);
-				}
+			if (const Optional<phys::Direction3D> projectileDirection = tryNormalize(projectileLinearVelocity)) {
+				const phys::Direction3D axis = -*projectileDirection;
+				phys::AngularVelocity3D& hitObjectAngularVelocity = registry.getComponent<phys::AngularVelocity3D>(hitEntityID);
+				const phys::InverseMass hitObjectInverseMass = registry.getComponent<phys::InverseMass>(hitEntityID);
+				const phys::InverseMomentOfInertiaTensor3D& hitObjectInverseMomentOfInertiaTensor = registry.getComponent<phys::InverseMomentOfInertiaTensor3D>(hitEntityID);
+				const phys::Length3D hitObjectOffset = hit.point - hitObjectPosition;
+				const phys::LinearVelocity3D hitObjectVelocity = phys::calculatePointVelocity(hitObjectLinearVelocity, hitObjectAngularVelocity, hitObjectOffset);
+				const phys::LinearVelocity3D relativeVelocity = hitObjectVelocity - projectileLinearVelocity;
+				const phys::LinearVelocity1D relativeVelocityAlongAxis = dot(relativeVelocity, axis);
+				const phys::Mass combinedEffectivedMassAlongAxis = phys::calculateCombinedEffectiveMassAlongAxis( //
+					hitObjectInverseMass,                                                                         //
+					phys::calculateInverseMass(projectileDescription.mass),                                       //
+					hitObjectInverseMomentOfInertiaTensor,                                                        //
+					phys::InverseMomentOfInertiaTensor3D{0.0f * phys::PER_KILOGRAM_SQUARE_METER},                 //
+					hitObjectOffset,                                                                              //
+					phys::Length3D{},                                                                             //
+					axis);
+				const phys::LinearImpulse1D impulseAlongAxis = combinedEffectivedMassAlongAxis * -relativeVelocityAlongAxis;
+				const phys::LinearImpulse3D linearImpulse = impulseAlongAxis * axis;
+				phys::applyCorrectionImpulse(                                   //
+					registry.getComponent<phys::ObjectActivity>(hitEntityID),   //
+					registry.getComponent<phys::LinearVelocity3D>(hitEntityID), //
+					hitObjectAngularVelocity,                                   //
+					hitObjectInverseMass,                                       //
+					hitObjectInverseMomentOfInertiaTensor,                      //
+					linearImpulse,                                              //
+					hitObjectOffset);
 			}
 
 			if (projectileDescription.impactDecalMaterialType != DecalMaterialType{}) {

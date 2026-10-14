@@ -103,25 +103,28 @@ void updateObjectActivityAndBounds(
 	const Time stepInterval = simulationOptions.stepInterval;
 	const SquaredSpeed maxRestingSquaredSpeed = length2(simulationOptions.maxRestingSpeed);
 	const SquaredAngularSpeed maxRestingSquaredAngularSpeed = length2(simulationOptions.maxRestingAngularSpeed);
+	const uint16_t stepsRestingThreshold = static_cast<uint16_t>(clamp(float{ceil(simulationOptions.restingTimeThreshold / stepInterval)}, 1.0f, 65535.0f));
 	const Distance minAABBExpansion = simulationOptions.collisionAlgorithmOptions.maxCollisionTouchingDistance * 2.0f;
 
 	for (auto&& [objectID, activity, linearVelocity, angularVelocity, bounds, broadphaseID, collider, position, orientation, scale, flags, inverseMass, momentOfInertiaTensor,
 			 inverseMomentOfInertiaTensor, gravityAcceleration, externalForce, externalTorque, centerOfBuoyancy, fluidDensity, volume] : objectEntities) {
-		activity.wasCorrected = 0;
-		if (length2(linearVelocity) <= maxRestingSquaredSpeed && length2(angularVelocity) <= maxRestingSquaredAngularSpeed && externalForce == 0 && externalTorque == 0 &&
-			flags.enableResting) {
-			if (activity.energyLevel > 0) {
-				--activity.energyLevel;
-			}
-			if (activity.energyLevel == 0) {
+		if (flags.enableResting && length2(linearVelocity) <= maxRestingSquaredSpeed && length2(angularVelocity) <= maxRestingSquaredAngularSpeed && externalForce == 0 &&
+			externalTorque == 0) {
+			if (activity.stepsResting >= stepsRestingThreshold) {
 				linearVelocity = {};
 				angularVelocity = {};
+				activity.isActive = false;
+			} else {
+				++activity.stepsResting;
 			}
-		} else if (flags.enableWaking) {
-			activity.energyLevel = max(ObjectActivity::EnergyLevel{activity.energyLevel}, ObjectActivity::EnergyLevel{1});
+		} else {
+			activity.stepsResting = 0;
 		}
 
-		if (activity.energyLevel > 0) {
+		const bool isActive = activity.isActive || linearVelocity != 0 || angularVelocity != 0 || externalForce != 0 || externalTorque != 0;
+		activity.isActive = isActive;
+		if (isActive) {
+			activity.wasCorrected = false;
 			if (const Optional<Box<N>> shapeAABB = collider.shape.getBoundingBox(translateRotateScale(position, orientation, scale))) {
 				if (activity.isCorrectable) {
 					const Force<N> buoyancyForce = fluidDensity * gravityAcceleration * volume * product(scale);
@@ -233,8 +236,9 @@ void removeInvalidatedContacts(execution::Entities<ObjectActivity, ObjectContact
 			if (!isValidA) {
 				if (isValidB) {
 					auto&& [entityIDB, activityB, contactsB, flagsB, boundsB, positionB, orientationB, scaleB, linearVelocityB, angularVelocityB] = objectEntities[objectIDB];
-					if (activityB.isCorrectable != 0 && flagsB.enableWaking) {
-						activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
+					if (activityB.isCorrectable) {
+						activityB.isActive = true;
+						activityB.stepsResting = 0;
 					}
 					if (flagsB.emitsSeparationEvents) {
 						const Transformation<N> transformationB = translateRotateScale(positionB, orientationB, scaleB);
@@ -248,8 +252,9 @@ void removeInvalidatedContacts(execution::Entities<ObjectActivity, ObjectContact
 				}
 			} else if (!isValidB) {
 				auto&& [entityIDA, activityA, contactsA, flagsA, boundsA, positionA, orientationA, scaleA, linearVelocityA, angularVelocityA] = objectEntities[objectIDA];
-				if (activityA.isCorrectable != 0 && flagsA.enableWaking) {
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
+				if (activityA.isCorrectable) {
+					activityA.isActive = true;
+					activityA.stepsResting = 0;
 				}
 				if (flagsA.emitsSeparationEvents) {
 					const Transformation<N> transformationA = translateRotateScale(positionA, orientationA, scaleA);
@@ -263,14 +268,13 @@ void removeInvalidatedContacts(execution::Entities<ObjectActivity, ObjectContact
 			} else {
 				auto&& [entityIDA, activityA, contactsA, flagsA, boundsA, positionA, orientationA, scaleA, linearVelocityA, angularVelocityA] = objectEntities[objectIDA];
 				auto&& [entityIDB, activityB, contactsB, flagsB, boundsB, positionB, orientationB, scaleB, linearVelocityB, angularVelocityB] = objectEntities[objectIDB];
-				if (activityB.energyLevel > activityA.energyLevel) {
-					if (activityA.isCorrectable != 0 && flagsA.enableWaking) {
-						activityA.energyLevel = activityB.energyLevel;
-					}
-				} else if (activityA.energyLevel > activityB.energyLevel) {
-					if (activityB.isCorrectable != 0 && flagsB.enableWaking) {
-						activityB.energyLevel = activityA.energyLevel;
-					}
+				if (activityA.isCorrectable) {
+					activityA.isActive = true;
+					activityA.stepsResting = 0;
+				}
+				if (activityB.isCorrectable) {
+					activityB.isActive = true;
+					activityB.stepsResting = 0;
 				}
 				if (flagsA.emitsSeparationEvents || flagsB.emitsSeparationEvents) {
 					const Transformation<N> transformationA = translateRotateScale(positionA, orientationA, scaleA);
@@ -316,10 +320,10 @@ void removeInvalidatedContactsWithoutEmittingEventsOrAffectingActivity(execution
 template <size_t N>
 void updateActiveObjectSet(execution::Entities<const ObjectActivity> objectEntities, execution::ComponentPool<ObjectActiveTag> objectActiveTags) {
 	for (auto&& [objectID, activity] : objectEntities) {
-		if (activity.energyLevel == 0) {
-			objectActiveTags.remove(objectID);
-		} else {
+		if (activity.isActive) {
 			objectActiveTags.addIfMissing(objectID);
+		} else {
+			objectActiveTags.remove(objectID);
 		}
 	}
 }
@@ -388,7 +392,7 @@ void colorContacts(execution::Entities<const ObjectActivity, const Collider<N>> 
 
 		bool colored = false;
 		for (ContactColor& contactColor : Span{contactColorGraph}.first(simulationOptions.contactColorCount)) {
-			if (contactColor.tryAddContact(contactIndex, objectIDA.getIndex(), activityA.isCorrectable != 0, objectIDB.getIndex(), activityB.isCorrectable != 0)) {
+			if (contactColor.tryAddContact(contactIndex, objectIDA.getIndex(), activityA.isCorrectable, objectIDB.getIndex(), activityB.isCorrectable)) {
 				colored = true;
 				break;
 			}
@@ -592,7 +596,7 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 
 		for (const EntityID otherObjectID : objectContacts.otherObjectIDs) {
 			auto&& [otherEntityID, otherCollider, otherPosition, otherOrientation, otherScale, otherActivity] = objectEntities[otherObjectID];
-			if (!otherCollider.shape.template is<TriangleMeshShape<N>>() && (!otherCollider.shape.isConvexPolytopeShapeType() || otherActivity.isCorrectable != 0)) {
+			if (!otherCollider.shape.template is<TriangleMeshShape<N>>() && (!otherCollider.shape.isConvexPolytopeShapeType() || otherActivity.isCorrectable)) {
 				continue;
 			}
 
@@ -794,35 +798,12 @@ void emitCollisionAndSeparationEvents(
 }
 
 template <size_t N>
-void activateSeparatedObjects(execution::Entities<ObjectActivity, const ObjectFlags> objectEntities, execution::ComponentPool<ObjectActiveTag> objectActiveTags,
-	const Contacts<N>& contacts, const ActiveContactList& activeContactList) {
-	for (const ContactIndex contactIndex : activeContactList) {
-		const auto& [objectIDs, contact] = contacts.getAtIndex(contactIndex);
-		if (contact.manifolds.empty() && contact.wasTouchingOnLastSubStep) {
-			auto&& [objectIDA, activityA, flagsA] = objectEntities[objectIDs.first];
-			auto&& [objectIDB, activityB, flagsB] = objectEntities[objectIDs.second];
-
-			if (activityB.energyLevel > activityA.energyLevel) {
-				if (activityA.isCorrectable != 0 && flagsA.enableWaking) {
-					activityA.energyLevel = activityB.energyLevel;
-					objectActiveTags.addOrAssign(objectIDA, ObjectActiveTag{});
-				}
-			} else if (activityA.energyLevel > activityB.energyLevel) {
-				if (activityB.isCorrectable != 0 && flagsB.enableWaking) {
-					activityB.energyLevel = activityA.energyLevel;
-					objectActiveTags.addOrAssign(objectIDB, ObjectActiveTag{});
-				}
-			}
-		}
-	}
-}
-
-template <size_t N>
-void updateActiveJointSet(execution::Entities<> allEntities, execution::Entities<const JointConnectedObjects> jointEntities,
-	execution::Entities<const ObjectActiveTag> activeObjectEntities, execution::ComponentPool<JointActiveTag> jointActiveTags) {
+void updateActiveJointSet(execution::Entities<const ObjectActivity> objectEntities, execution::Entities<const JointConnectedObjects> jointEntities,
+	execution::ComponentPool<JointActiveTag> jointActiveTags) {
 	for (auto&& [jointID, connectedObjects] : jointEntities) {
-		if (allEntities.containsEntity(connectedObjects.first) && allEntities.containsEntity(connectedObjects.second) &&
-			(activeObjectEntities.containsEntity(connectedObjects.first) || activeObjectEntities.containsEntity(connectedObjects.second))) {
+		const ObjectActivity* const activityA = objectEntities.findComponent<ObjectActivity>(connectedObjects.first);
+		const ObjectActivity* const activityB = objectEntities.findComponent<ObjectActivity>(connectedObjects.second);
+		if (activityA && activityB && (activityA->isActive || activityB->isActive)) {
 			jointActiveTags.addOrAssign(jointID, JointActiveTag{});
 		} else {
 			jointActiveTags.remove(jointID);
@@ -918,16 +899,10 @@ void warmstartJointConstraints(
 		const AngularImpulse<N> warmstartImpulse = (orientationA * attachmentOrientations.first)(
 			angularConstraintImpulses.driveMomentums + angularConstraintImpulses.lowerLimitMomentums - angularConstraintImpulses.upperLimitMomentums);
 		if (warmstartImpulse != 0) {
-			if (activityA.isCorrectable != 0) {
-				activityA.wasCorrected = 1;
-				angularVelocityA += inverseMomentOfInertiaTensorA * warmstartImpulse;
-				GREM_ASSERT(all(isfinite(angularVelocityA)));
-			}
-			if (activityB.isCorrectable != 0) {
-				activityB.wasCorrected = 1;
-				angularVelocityB -= inverseMomentOfInertiaTensorB * warmstartImpulse;
-				GREM_ASSERT(all(isfinite(angularVelocityB)));
-			}
+			applyAngularCorrectionImpulse<N>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, warmstartImpulse);
+			applyAngularCorrectionImpulse<N>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -warmstartImpulse);
+			GREM_ASSERT(all(isfinite(angularVelocityA)));
+			GREM_ASSERT(all(isfinite(angularVelocityB)));
 		}
 		angularConstraintImpulses.driveImpulses += angularConstraintImpulses.driveMomentums;
 		angularConstraintImpulses.lowerLimitImpulses += angularConstraintImpulses.lowerLimitMomentums;
@@ -946,20 +921,12 @@ void warmstartJointConstraints(
 		const LinearImpulse<N> warmstartImpulse = (orientationA * attachmentOrientations.first)(
 			linearConstraintImpulses.driveMomentums + linearConstraintImpulses.lowerLimitMomentums - linearConstraintImpulses.upperLimitMomentums);
 		if (warmstartImpulse != 0) {
-			if (activityA.isCorrectable != 0) {
-				activityA.wasCorrected = 1;
-				linearVelocityA += inverseMassA * warmstartImpulse;
-				angularVelocityA += inverseMomentOfInertiaTensorA * cross(offsetA, warmstartImpulse);
-				GREM_ASSERT(all(isfinite(linearVelocityA)));
-				GREM_ASSERT(all(isfinite(angularVelocityA)));
-			}
-			if (activityB.isCorrectable != 0) {
-				activityB.wasCorrected = 1;
-				linearVelocityB -= inverseMassB * warmstartImpulse;
-				angularVelocityB -= inverseMomentOfInertiaTensorB * cross(offsetB, warmstartImpulse);
-				GREM_ASSERT(all(isfinite(linearVelocityB)));
-				GREM_ASSERT(all(isfinite(angularVelocityB)));
-			}
+			applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, warmstartImpulse, offsetA);
+			applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -warmstartImpulse, offsetB);
+			GREM_ASSERT(all(isfinite(linearVelocityA)));
+			GREM_ASSERT(all(isfinite(linearVelocityB)));
+			GREM_ASSERT(all(isfinite(angularVelocityA)));
+			GREM_ASSERT(all(isfinite(angularVelocityB)));
 		}
 		linearConstraintImpulses.driveImpulses += linearConstraintImpulses.driveMomentums;
 		linearConstraintImpulses.lowerLimitImpulses += linearConstraintImpulses.lowerLimitMomentums;
@@ -978,30 +945,22 @@ void warmstartJointConstraints(
 		const Position<N> pointA = positionA + offsetA;
 		const Position<N> pointB = positionB + offsetB;
 		const Length<N> difference = pointA - pointB;
-		const Optional<Direction<N>> normalizedDifference = tryNormalize(difference);
-		if (!normalizedDifference) {
+		const Optional<Direction<N>> direction = tryNormalize(difference);
+		if (!direction) {
 			continue;
 		}
-		const Direction<N> normal = *normalizedDifference;
+		const Direction<N> axis = *direction;
 
-		const LinearImpulse1D warmstartImpulseAlongNormal =
+		const LinearImpulse1D warmstartImpulseAlongAxis =
 			distanceConstraintImpulses.driveMomentum + distanceConstraintImpulses.lowerLimitMomentum - distanceConstraintImpulses.upperLimitMomentum;
-		if (warmstartImpulseAlongNormal != 0) {
-			const LinearImpulse<N> warmstartImpulse = normal * warmstartImpulseAlongNormal;
-			if (activityA.isCorrectable != 0) {
-				activityA.wasCorrected = 1;
-				linearVelocityA += inverseMassA * warmstartImpulse;
-				angularVelocityA += inverseMomentOfInertiaTensorA * cross(offsetA, warmstartImpulse);
-				GREM_ASSERT(all(isfinite(linearVelocityA)));
-				GREM_ASSERT(all(isfinite(angularVelocityA)));
-			}
-			if (activityB.isCorrectable != 0) {
-				activityB.wasCorrected = 1;
-				linearVelocityB -= inverseMassB * warmstartImpulse;
-				angularVelocityB -= inverseMomentOfInertiaTensorB * cross(offsetB, warmstartImpulse);
-				GREM_ASSERT(all(isfinite(linearVelocityB)));
-				GREM_ASSERT(all(isfinite(angularVelocityB)));
-			}
+		if (warmstartImpulseAlongAxis != 0) {
+			const LinearImpulse<N> warmstartImpulse = warmstartImpulseAlongAxis * axis;
+			applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, warmstartImpulse, offsetA);
+			applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -warmstartImpulse, offsetB);
+			GREM_ASSERT(all(isfinite(linearVelocityA)));
+			GREM_ASSERT(all(isfinite(linearVelocityB)));
+			GREM_ASSERT(all(isfinite(angularVelocityA)));
+			GREM_ASSERT(all(isfinite(angularVelocityB)));
 		}
 		distanceConstraintImpulses.driveImpulse += distanceConstraintImpulses.driveMomentum;
 		distanceConstraintImpulses.lowerLimitImpulse += distanceConstraintImpulses.lowerLimitMomentum;
@@ -1024,26 +983,19 @@ void warmstart3DOnlyJointConstraints(
 		const OrthonormalBasis3D basisA = rotate(orientationA * attachmentOrientations.first);
 		const OrthonormalBasis3D basisB = rotate(orientationB * attachmentOrientations.second);
 
-		const Scale3D axisVector = cross(basisA[X], basisB[X]);
-		const Optional<Direction3D> normalizedAxisVector = tryNormalize(axisVector);
-		if (!normalizedAxisVector) {
+		const Optional<Direction3D> direction = tryNormalize(cross(basisA[X], basisB[X]));
+		if (!direction) {
 			continue;
 		}
-		const Direction3D axis = *normalizedAxisVector;
+		const Direction3D axis = *direction;
 
 		const AngularImpulse2D warmstartImpulseAroundAxis = coneConstraintImpulses.lowerLimitMomentum - coneConstraintImpulses.upperLimitMomentum;
 		if (warmstartImpulseAroundAxis != 0) {
-			const AngularImpulse3D warmstartImpulse = axis * warmstartImpulseAroundAxis;
-			if (activityA.isCorrectable != 0) {
-				activityA.wasCorrected = 1;
-				angularVelocityA += inverseMomentOfInertiaTensorA * warmstartImpulse;
-				GREM_ASSERT(all(isfinite(angularVelocityA)));
-			}
-			if (activityB.isCorrectable != 0) {
-				activityB.wasCorrected = 1;
-				angularVelocityB -= inverseMomentOfInertiaTensorB * warmstartImpulse;
-				GREM_ASSERT(all(isfinite(angularVelocityB)));
-			}
+			const AngularImpulse3D warmstartImpulse = warmstartImpulseAroundAxis * axis;
+			applyAngularCorrectionImpulse<3>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, warmstartImpulse);
+			applyAngularCorrectionImpulse<3>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -warmstartImpulse);
+			GREM_ASSERT(all(isfinite(angularVelocityA)));
+			GREM_ASSERT(all(isfinite(angularVelocityB)));
 		}
 		coneConstraintImpulses.lowerLimitImpulse += coneConstraintImpulses.lowerLimitMomentum;
 		coneConstraintImpulses.upperLimitImpulse += coneConstraintImpulses.upperLimitMomentum;
@@ -1058,27 +1010,20 @@ void warmstart3DOnlyJointConstraints(
 		const OrthonormalBasis3D basisA = rotate(orientationA * attachmentOrientations.first);
 		const OrthonormalBasis3D basisB = rotate(orientationB * attachmentOrientations.second);
 
-		const Scale3D axisVector = basisA[X] + basisB[X];
-		const Optional<Direction3D> normalizedAxisVector = tryNormalize(axisVector);
-		if (!normalizedAxisVector) {
+		const Optional<Direction3D> direction = tryNormalize(basisA[X] + basisB[X]);
+		if (!direction) {
 			continue;
 		}
-		const Direction3D axis = *normalizedAxisVector;
+		const Direction3D axis = *direction;
 
 		const AngularImpulse2D warmstartImpulseAroundAxis =
 			twistConstraintImpulses.driveMomentum + twistConstraintImpulses.lowerLimitMomentum - twistConstraintImpulses.upperLimitMomentum;
 		if (warmstartImpulseAroundAxis != 0) {
-			const AngularImpulse3D warmstartImpulse = axis * warmstartImpulseAroundAxis;
-			if (activityA.isCorrectable != 0) {
-				activityA.wasCorrected = 1;
-				angularVelocityA += inverseMomentOfInertiaTensorA * warmstartImpulse;
-				GREM_ASSERT(all(isfinite(angularVelocityA)));
-			}
-			if (activityB.isCorrectable != 0) {
-				activityB.wasCorrected = 1;
-				angularVelocityB -= inverseMomentOfInertiaTensorB * warmstartImpulse;
-				GREM_ASSERT(all(isfinite(angularVelocityB)));
-			}
+			const AngularImpulse3D warmstartImpulse = warmstartImpulseAroundAxis * axis;
+			applyAngularCorrectionImpulse<3>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, warmstartImpulse);
+			applyAngularCorrectionImpulse<3>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -warmstartImpulse);
+			GREM_ASSERT(all(isfinite(angularVelocityA)));
+			GREM_ASSERT(all(isfinite(angularVelocityB)));
 		}
 		twistConstraintImpulses.driveImpulse += twistConstraintImpulses.driveMomentum;
 		twistConstraintImpulses.lowerLimitImpulse += twistConstraintImpulses.lowerLimitMomentum;
@@ -1113,36 +1058,22 @@ void warmstartContactConstraintsImplementation(
 					const Length<N> offsetB = point.offsets.second;
 
 					const LinearImpulse<N> warmstartImpulse = tangentSpaceBasis * point.momentumInTangentSpace;
-					if (activityA.isCorrectable != 0) {
-						activityA.wasCorrected = 1;
-						linearVelocityA += inverseMassA * warmstartImpulse;
-						angularVelocityA += inverseMomentOfInertiaTensorA * cross(offsetA, warmstartImpulse);
-						GREM_ASSERT(all(isfinite(linearVelocityA)));
-						GREM_ASSERT(all(isfinite(angularVelocityA)));
-					}
-					if (activityB.isCorrectable != 0) {
-						activityB.wasCorrected = 1;
-						linearVelocityB -= inverseMassB * warmstartImpulse;
-						angularVelocityB -= inverseMomentOfInertiaTensorB * cross(offsetB, warmstartImpulse);
-						GREM_ASSERT(all(isfinite(linearVelocityB)));
-						GREM_ASSERT(all(isfinite(angularVelocityB)));
-					}
+					applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, warmstartImpulse, offsetA);
+					applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -warmstartImpulse, offsetB);
+					GREM_ASSERT(all(isfinite(linearVelocityA)));
+					GREM_ASSERT(all(isfinite(linearVelocityB)));
+					GREM_ASSERT(all(isfinite(angularVelocityA)));
+					GREM_ASSERT(all(isfinite(angularVelocityB)));
 					point.impulseInTangentSpace += point.momentumInTangentSpace;
 				}
 			}
 
 			if (manifold.rollingResistanceMomentum != 0) {
 				const AngularImpulse<N> warmstartImpulse = manifold.rollingResistanceMomentum;
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					angularVelocityA += inverseMomentOfInertiaTensorA * warmstartImpulse;
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * warmstartImpulse;
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+				applyAngularCorrectionImpulse<N>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, warmstartImpulse);
+				applyAngularCorrectionImpulse<N>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -warmstartImpulse);
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 				manifold.rollingResistanceImpulse += manifold.rollingResistanceMomentum;
 			}
 		}
@@ -1188,36 +1119,26 @@ void applyJointDrives(execution::Entities<JointLinearConstraintImpulses<N>, cons
 		auto&& [objectIDB, activityB, linearVelocityB, angularVelocityB, positionB, orientationB, scaleB, inverseMassB, inverseMomentOfInertiaTensorB] =
 			objectEntities[connectedObjects.second];
 
-		const InverseMomentOfInertiaTensor<N> combinedInverseEffectiveMomentOfInertiaTensor = inverseMomentOfInertiaTensorA + inverseMomentOfInertiaTensorB;
 		const MomentOfInertiaTensor<N> combinedEffectiveMomentOfInertiaTensor =
-			(combinedInverseEffectiveMomentOfInertiaTensor == 0) ? MomentOfInertiaTensor<N>{0.0f * KILOGRAM_SQUARE_METERS} : inverse(combinedInverseEffectiveMomentOfInertiaTensor);
-
+			calculateCombinedEffectiveMomentOfInertiaTensor<N>(inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB);
 		const Orientation<N> referenceFrame = orientationA * attachmentOrientations.first;
 
 		const AngularVelocity<N> relativeAngularVelocity = angularVelocityA - angularVelocityB;
 		const AngularVelocity<N> relativeAngularVelocityInReferenceFrame = inverse(referenceFrame)(relativeAngularVelocity);
-		const AngularVelocity<N> velocityError = relativeAngularVelocityInReferenceFrame - angularConstraint.driveTargetVelocities;
-		const AngularImpulse<N> desiredImpulse = combinedEffectiveMomentOfInertiaTensor * -velocityError;
+		const AngularVelocity<N> velocityErrorInReferenceFrame = relativeAngularVelocityInReferenceFrame - angularConstraint.driveTargetVelocities;
+		const AngularImpulse<N> desiredImpulseInReferenceFrame = combinedEffectiveMomentOfInertiaTensor * -velocityErrorInReferenceFrame;
 
 		const AngularMomentum<N> momentum = angularConstraintImpulses.driveMomentums;
 		const AngularMomentum<N> maxMomentum = min(angularConstraint.driveMaxTorques * deltaTime, AngularMomentum<N>{simulationOptions.jointMaxAngularMomentum});
-		const AngularMomentum<N> newMomentum = clamp(momentum + desiredImpulse, -maxMomentum, maxMomentum);
+		const AngularMomentum<N> newMomentum = clamp(momentum + desiredImpulseInReferenceFrame, -maxMomentum, maxMomentum);
 		const AngularImpulse<N> impulseInReferenceFrame = newMomentum - momentum;
 
 		if (impulseInReferenceFrame != 0) {
 			const AngularImpulse<N> angularImpulse = referenceFrame(impulseInReferenceFrame);
-			if (activityA.isCorrectable != 0) {
-				activityA.wasCorrected = 1;
-				activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-				angularVelocityA += inverseMomentOfInertiaTensorA * angularImpulse;
-				GREM_ASSERT(all(isfinite(angularVelocityA)));
-			}
-			if (activityB.isCorrectable != 0) {
-				activityB.wasCorrected = 1;
-				activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-				angularVelocityB -= inverseMomentOfInertiaTensorB * angularImpulse;
-				GREM_ASSERT(all(isfinite(angularVelocityB)));
-			}
+			applyAngularCorrectionImpulse<N>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, angularImpulse);
+			applyAngularCorrectionImpulse<N>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -angularImpulse);
+			GREM_ASSERT(all(isfinite(angularVelocityA)));
+			GREM_ASSERT(all(isfinite(angularVelocityB)));
 		}
 		angularConstraintImpulses.driveMomentums = newMomentum;
 		angularConstraintImpulses.driveImpulses += impulseInReferenceFrame;
@@ -1238,42 +1159,29 @@ void applyJointDrives(execution::Entities<JointLinearConstraintImpulses<N>, cons
 		const OrthonormalBasis<N> inverseBasis = transpose(basis);
 		const Length<N> offsetsInReferenceFrame = inverseBasis * (pointA - pointB);
 
-		const MomentArmTensor<N> momentArmsA = cross(offsetA, basis);
-		const MomentArmTensor<N> momentArmsB = cross(offsetB, basis);
-		const AngularQuantity<N, InverseMass::Unit> inverseEffectiveMassesA = inverseMassA + dot(momentArmsA, inverseMomentOfInertiaTensorA * momentArmsA);
-		const AngularQuantity<N, InverseMass::Unit> inverseEffectiveMassesB = inverseMassB + dot(momentArmsB, inverseMomentOfInertiaTensorB * momentArmsB);
-		const AngularQuantity<N, InverseMass::Unit> combinedInverseEffectiveMasses = inverseEffectiveMassesA + inverseEffectiveMassesB;
-		const AngularQuantity<N, Mass::Unit> combinedEffectiveMasses =
-			select(equal(combinedInverseEffectiveMasses, 0), AngularQuantity<N, Mass::Unit>{}, inverse(combinedInverseEffectiveMasses));
+		const Quantity<N, Mass::Unit> combinedEffectiveMassesInReferenceFrame =
+			calculateCombinedEffectiveMassesAlongAxes(inverseMassA, inverseMassB, inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB, offsetA, offsetB, basis);
 
-		const LinearVelocity<N> relativeVelocity = (linearVelocityA + cross(offsetA, angularVelocityA)) - (linearVelocityB + cross(offsetB, angularVelocityB));
-		const LinearVelocity<N> relativeVelocityInReferenceFrameA = inverseBasis * relativeVelocity;
-		const LinearVelocity<N> velocityError = relativeVelocityInReferenceFrameA - linearConstraint.driveTargetVelocities;
-		const LinearImpulse<N> desiredImpulse = combinedEffectiveMasses * -velocityError;
+		const LinearVelocity<N> velocityA = calculatePointVelocity(linearVelocityA, angularVelocityA, offsetA);
+		const LinearVelocity<N> velocityB = calculatePointVelocity(linearVelocityB, angularVelocityB, offsetB);
+		const LinearVelocity<N> relativeVelocity = velocityA - velocityB;
+		const LinearVelocity<N> relativeVelocityInReferenceFrame = inverseBasis * relativeVelocity;
+		const LinearVelocity<N> velocityErrorInReferenceFrame = relativeVelocityInReferenceFrame - linearConstraint.driveTargetVelocities;
+		const LinearImpulse<N> desiredImpulseInReferenceFrame = combinedEffectiveMassesInReferenceFrame * -velocityErrorInReferenceFrame;
 
 		const LinearMomentum<N> momentum = linearConstraintImpulses.driveMomentums;
 		const LinearMomentum<N> maxMomentum = min(linearConstraint.driveMaxForces * deltaTime, LinearMomentum<N>{simulationOptions.jointMaxMomentum});
-		const LinearMomentum<N> newMomentum = clamp(momentum + desiredImpulse, -maxMomentum, maxMomentum);
+		const LinearMomentum<N> newMomentum = clamp(momentum + desiredImpulseInReferenceFrame, -maxMomentum, maxMomentum);
 		const LinearImpulse<N> impulseInReferenceFrame = newMomentum - momentum;
 
 		if (impulseInReferenceFrame != 0) {
 			const LinearImpulse<N> linearImpulse = basis * impulseInReferenceFrame;
-			if (activityA.isCorrectable != 0) {
-				activityA.wasCorrected = 1;
-				activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-				linearVelocityA += inverseMassA * linearImpulse;
-				angularVelocityA += inverseMomentOfInertiaTensorA * cross(offsetA, linearImpulse);
-				GREM_ASSERT(all(isfinite(linearVelocityA)));
-				GREM_ASSERT(all(isfinite(angularVelocityA)));
-			}
-			if (activityB.isCorrectable != 0) {
-				activityB.wasCorrected = 1;
-				activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-				linearVelocityB -= inverseMassB * linearImpulse;
-				angularVelocityB -= inverseMomentOfInertiaTensorB * cross(offsetB, linearImpulse);
-				GREM_ASSERT(all(isfinite(linearVelocityB)));
-				GREM_ASSERT(all(isfinite(angularVelocityB)));
-			}
+			applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, linearImpulse, offsetA);
+			applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -linearImpulse, offsetB);
+			GREM_ASSERT(all(isfinite(linearVelocityA)));
+			GREM_ASSERT(all(isfinite(linearVelocityB)));
+			GREM_ASSERT(all(isfinite(angularVelocityA)));
+			GREM_ASSERT(all(isfinite(angularVelocityB)));
 		}
 		linearConstraintImpulses.driveMomentums = newMomentum;
 		linearConstraintImpulses.driveImpulses += impulseInReferenceFrame;
@@ -1291,48 +1199,38 @@ void applyJointDrives(execution::Entities<JointLinearConstraintImpulses<N>, cons
 		const Position<N> pointA = positionA + offsetA;
 		const Position<N> pointB = positionB + offsetB;
 		const Length<N> difference = pointA - pointB;
-		const Optional<Direction<N>> normalizedDifference = tryNormalize(difference);
-		if (!normalizedDifference) {
+		const Optional<Direction<N>> direction = tryNormalize(difference);
+		if (!direction) {
 			continue;
 		}
-		const Direction<N> normal = *normalizedDifference;
+		const Direction<N> axis = *direction;
 
-		const MomentArm<N> momentArmA = cross(offsetA, normal);
-		const MomentArm<N> momentArmB = cross(offsetB, normal);
-		const InverseMass inverseEffectiveMassA = inverseMassA + dot(momentArmA, inverseMomentOfInertiaTensorA * momentArmA);
-		const InverseMass inverseEffectiveMassB = inverseMassB + dot(momentArmB, inverseMomentOfInertiaTensorB * momentArmB);
-		const InverseMass combinedInverseEffectiveMass = inverseEffectiveMassA + inverseEffectiveMassB;
-		const Mass combinedEffectiveMass = (combinedInverseEffectiveMass == 0) ? Mass{} : inverse(combinedInverseEffectiveMass);
+		const Mass combinedEffectiveMassAlongAxis =
+			calculateCombinedEffectiveMassAlongAxis(inverseMassA, inverseMassB, inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB, offsetA, offsetB, axis);
 
-		const LinearVelocity1D relativeNormalVelocity = dot(normal, (linearVelocityA + cross(offsetA, angularVelocityA)) - (linearVelocityB + cross(offsetB, angularVelocityB)));
-		const LinearVelocity1D velocityError = relativeNormalVelocity - distanceConstraint.driveTargetVelocity;
-		const LinearImpulse1D desiredImpulse = combinedEffectiveMass * -velocityError;
+		const LinearVelocity<N> velocityA = calculatePointVelocity(linearVelocityA, angularVelocityA, offsetA);
+		const LinearVelocity<N> velocityB = calculatePointVelocity(linearVelocityB, angularVelocityB, offsetB);
+		const LinearVelocity<N> relativeVelocity = velocityA - velocityB;
+		const LinearVelocity1D relativeVelocityAlongAxis = dot(relativeVelocity, axis);
+		const LinearVelocity1D velocityErrorAlongAxis = relativeVelocityAlongAxis - distanceConstraint.driveTargetVelocity;
+		const LinearImpulse1D desiredImpulseAlongAxis = combinedEffectiveMassAlongAxis * -velocityErrorAlongAxis;
 
 		const LinearMomentum1D momentum = distanceConstraintImpulses.driveMomentum;
 		const LinearMomentum1D maxMomentum = min(distanceConstraint.driveMaxForce * deltaTime, simulationOptions.jointMaxMomentum);
-		const LinearMomentum1D newMomentum = clamp(momentum + desiredImpulse, -maxMomentum, maxMomentum);
-		const LinearImpulse1D impulse = newMomentum - momentum;
+		const LinearMomentum1D newMomentum = clamp(momentum + desiredImpulseAlongAxis, -maxMomentum, maxMomentum);
+		const LinearImpulse1D impulseAlongAxis = newMomentum - momentum;
 
-		if (impulse != 0) {
-			if (activityA.isCorrectable != 0) {
-				activityA.wasCorrected = 1;
-				activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-				linearVelocityA += normal * (inverseMassA * impulse);
-				angularVelocityA += inverseMomentOfInertiaTensorA * (momentArmA * impulse);
-				GREM_ASSERT(all(isfinite(linearVelocityA)));
-				GREM_ASSERT(all(isfinite(angularVelocityA)));
-			}
-			if (activityB.isCorrectable != 0) {
-				activityB.wasCorrected = 1;
-				activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-				linearVelocityB -= normal * (inverseMassB * impulse);
-				angularVelocityB -= inverseMomentOfInertiaTensorB * (momentArmB * impulse);
-				GREM_ASSERT(all(isfinite(linearVelocityB)));
-				GREM_ASSERT(all(isfinite(angularVelocityB)));
-			}
+		if (impulseAlongAxis != 0) {
+			const LinearImpulse<N> linearImpulse = impulseAlongAxis * axis;
+			applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, linearImpulse, offsetA);
+			applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -linearImpulse, offsetB);
+			GREM_ASSERT(all(isfinite(linearVelocityA)));
+			GREM_ASSERT(all(isfinite(linearVelocityB)));
+			GREM_ASSERT(all(isfinite(angularVelocityA)));
+			GREM_ASSERT(all(isfinite(angularVelocityB)));
 		}
 		distanceConstraintImpulses.driveMomentum = newMomentum;
-		distanceConstraintImpulses.driveImpulse += impulse;
+		distanceConstraintImpulses.driveImpulse += impulseAlongAxis;
 	}
 }
 
@@ -1350,41 +1248,31 @@ void apply3DOnlyJointDrives(
 		const OrthonormalBasis3D basisA = rotate(orientationA * attachmentOrientations.first);
 		const OrthonormalBasis3D basisB = rotate(orientationB * attachmentOrientations.second);
 
-		const Scale3D axisVector = basisA[X] + basisB[X];
-		const Optional<Direction3D> normalizedAxisVector = tryNormalize(axisVector);
-		if (!normalizedAxisVector) {
+		const Optional<Direction3D> direction = tryNormalize(basisA[X] + basisB[X]);
+		if (!direction) {
 			continue;
 		}
-		const Direction3D axis = *normalizedAxisVector;
+		const Direction3D axis = *direction;
 
-		const InverseMomentOfInertia2D inverseEffectiveMomentOfInertiaA = dot(axis, inverseMomentOfInertiaTensorA * axis);
-		const InverseMomentOfInertia2D inverseEffectiveMomentOfInertiaB = dot(axis, inverseMomentOfInertiaTensorB * axis);
-		const InverseMomentOfInertia2D combinedInverseEffectiveMomentOfInertia = inverseEffectiveMomentOfInertiaA + inverseEffectiveMomentOfInertiaB;
-		const MomentOfInertia2D combinedEffectiveMomentOfInertia =
-			(combinedInverseEffectiveMomentOfInertia == 0) ? MomentOfInertia2D{} : inverse(combinedInverseEffectiveMomentOfInertia);
+		const MomentOfInertia2D combinedEffectiveMomentOfInertiaAroundAxis =
+			calculateCombinedEffectiveMomentOfInertiaAroundAxis(inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB, axis);
 
-		const AngularVelocity2D relativeAngularVelocityAroundAxis = dot(axis, angularVelocityA - angularVelocityB);
-		const AngularVelocity2D velocityError = relativeAngularVelocityAroundAxis - twistConstraint.driveTargetVelocity;
+		const AngularVelocity3D relativeAngularVelocity = angularVelocityA - angularVelocityB;
+		const AngularVelocity2D relativeAngularVelocityAroundAxis = dot(relativeAngularVelocity, axis);
+		const AngularVelocity2D velocityErrorAroundAxis = relativeAngularVelocityAroundAxis - twistConstraint.driveTargetVelocity;
 
-		const AngularImpulse2D desiredImpulse = combinedEffectiveMomentOfInertia * -velocityError;
+		const AngularImpulse2D desiredImpulseAroundAxis = combinedEffectiveMomentOfInertiaAroundAxis * -velocityErrorAroundAxis;
 		const AngularMomentum2D momentum = twistConstraintImpulses.driveMomentum;
 		const AngularMomentum2D maxMomentum = min(twistConstraint.driveMaxTorque * deltaTime, simulationOptions.jointMaxAngularMomentum);
-		const AngularMomentum2D newMomentum = clamp(momentum + desiredImpulse, -maxMomentum, maxMomentum);
+		const AngularMomentum2D newMomentum = clamp(momentum + desiredImpulseAroundAxis, -maxMomentum, maxMomentum);
 		const AngularImpulse2D impulseAroundAxis = newMomentum - momentum;
 
 		if (impulseAroundAxis != 0) {
-			if (activityA.isCorrectable != 0) {
-				activityA.wasCorrected = 1;
-				activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-				angularVelocityA += inverseMomentOfInertiaTensorA * (axis * impulseAroundAxis);
-				GREM_ASSERT(all(isfinite(angularVelocityA)));
-			}
-			if (activityB.isCorrectable != 0) {
-				activityB.wasCorrected = 1;
-				activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-				angularVelocityB -= inverseMomentOfInertiaTensorB * (axis * impulseAroundAxis);
-				GREM_ASSERT(all(isfinite(angularVelocityB)));
-			}
+			const AngularImpulse3D angularImpulse = impulseAroundAxis * axis;
+			applyAngularCorrectionImpulse<3>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, angularImpulse);
+			applyAngularCorrectionImpulse<3>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -angularImpulse);
+			GREM_ASSERT(all(isfinite(angularVelocityA)));
+			GREM_ASSERT(all(isfinite(angularVelocityB)));
 		}
 		twistConstraintImpulses.driveMomentum = newMomentum;
 		twistConstraintImpulses.driveImpulse += impulseAroundAxis;
@@ -1420,9 +1308,8 @@ void solveJointConstraintsImplementation(
 		const Position<N> pointA = positionA + offsetA;
 		const Position<N> pointB = positionB + offsetB;
 
-		const InverseMomentOfInertiaTensor<N> combinedInverseEffectiveMomentOfInertiaTensor = inverseMomentOfInertiaTensorA + inverseMomentOfInertiaTensorB;
 		const MomentOfInertiaTensor<N> combinedEffectiveMomentOfInertiaTensor =
-			(combinedInverseEffectiveMomentOfInertiaTensor == 0) ? MomentOfInertiaTensor<N>{0.0f * KILOGRAM_SQUARE_METERS} : inverse(combinedInverseEffectiveMomentOfInertiaTensor);
+			calculateCombinedEffectiveMomentOfInertiaTensor<N>(inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB);
 
 		const auto [biasRates, massScales, momentumScales] =
 			(useBias) ? getSoftConstraintParameters(angularConstraint.limitStiffnesses, angularConstraint.limitDampingRatios, deltaTime, inverseDeltaTime)
@@ -1451,20 +1338,10 @@ void solveJointConstraintsImplementation(
 
 			if (impulseInReferenceFrame != 0) {
 				const AngularImpulse<N> angularImpulse = referenceFrame(impulseInReferenceFrame);
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityA += inverseMomentOfInertiaTensorA * angularImpulse;
-					GREM_ASSERT(all(isfinite(linearVelocityA)));
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * angularImpulse;
-					GREM_ASSERT(all(isfinite(linearVelocityB)));
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+				applyAngularCorrectionImpulse<N>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, angularImpulse);
+				applyAngularCorrectionImpulse<N>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -angularImpulse);
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 			}
 			angularConstraintImpulses.lowerLimitMomentums = newLowerLimitMomentum;
 			angularConstraintImpulses.lowerLimitImpulses += lowerLimitImpulse;
@@ -1489,20 +1366,10 @@ void solveJointConstraintsImplementation(
 
 			if (impulseInReferenceFrame != 0) {
 				const AngularImpulse<N> angularImpulse = referenceFrame(impulseInReferenceFrame);
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityA += inverseMomentOfInertiaTensorA * angularImpulse;
-					GREM_ASSERT(all(isfinite(linearVelocityA)));
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * angularImpulse;
-					GREM_ASSERT(all(isfinite(linearVelocityB)));
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+				applyAngularCorrectionImpulse<N>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, angularImpulse);
+				applyAngularCorrectionImpulse<N>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -angularImpulse);
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 			}
 			angularConstraintImpulses.upperLimitMomentums = newUpperLimitMomentum;
 			angularConstraintImpulses.upperLimitImpulses += upperLimitImpulse;
@@ -1524,13 +1391,8 @@ void solveJointConstraintsImplementation(
 		const OrthonormalBasis<N> inverseBasis = transpose(basis);
 		const Length<N> offsetsInReferenceFrame = inverseBasis * (pointA - pointB);
 
-		const MomentArmTensor<N> momentArmsA = cross(offsetA, basis);
-		const MomentArmTensor<N> momentArmsB = cross(offsetB, basis);
-		const AngularQuantity<N, InverseMass::Unit> inverseEffectiveMassesA = inverseMassA + dot(momentArmsA, inverseMomentOfInertiaTensorA * momentArmsA);
-		const AngularQuantity<N, InverseMass::Unit> inverseEffectiveMassesB = inverseMassB + dot(momentArmsB, inverseMomentOfInertiaTensorB * momentArmsB);
-		const AngularQuantity<N, InverseMass::Unit> combinedInverseEffectiveMasses = inverseEffectiveMassesA + inverseEffectiveMassesB;
-		const AngularQuantity<N, Mass::Unit> combinedEffectiveMasses =
-			select(equal(combinedInverseEffectiveMasses, 0), AngularQuantity<N, Mass::Unit>{}, inverse(combinedInverseEffectiveMasses));
+		const Quantity<N, Mass::Unit> combinedEffectiveMassesInReferenceFrame =
+			calculateCombinedEffectiveMassesAlongAxes(inverseMassA, inverseMassB, inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB, offsetA, offsetB, basis);
 
 		const auto [biasRates, massScales, momentumScales] =
 			(useBias) ? getSoftConstraintParameters(linearConstraint.limitStiffnesses, linearConstraint.limitDampingRatios, deltaTime, inverseDeltaTime)
@@ -1540,12 +1402,14 @@ void solveJointConstraintsImplementation(
 			const Length<N> lowerLimitErrors = offsetsInReferenceFrame - linearConstraint.minOffsets;
 			const Mask<N> isSpeculativeLowerLimits = greaterThan(lowerLimitErrors, 0);
 
-			const LinearVelocity<N> relativeVelocity = (linearVelocityA + cross(offsetA, angularVelocityA)) - (linearVelocityB + cross(offsetB, angularVelocityB));
+			const LinearVelocity<N> velocityA = calculatePointVelocity(linearVelocityA, angularVelocityA, offsetA);
+			const LinearVelocity<N> velocityB = calculatePointVelocity(linearVelocityB, angularVelocityB, offsetB);
+			const LinearVelocity<N> relativeVelocity = velocityA - velocityB;
 			const LinearVelocity<N> relativeVelocityInReferenceFrame = inverseBasis * relativeVelocity;
 			const LinearVelocity<N> lowerLimitErrorGradient = relativeVelocityInReferenceFrame;
 			const LinearVelocity<N> lowerLimitErrorBiases = lowerLimitErrors * select(isSpeculativeLowerLimits, Rate<N>{inverseDeltaTime}, biasRates * massScales);
 			const LinearMomentum<N> lowerLimitMomentum = linearConstraintImpulses.lowerLimitMomentums;
-			const LinearImpulse<N> desiredLowerLimitImpulse = combinedEffectiveMasses * -(lowerLimitErrorGradient * massScales + lowerLimitErrorBiases) -
+			const LinearImpulse<N> desiredLowerLimitImpulse = combinedEffectiveMassesInReferenceFrame * -(lowerLimitErrorGradient * massScales + lowerLimitErrorBiases) -
 			                                                  select(isSpeculativeLowerLimits, LinearImpulse<N>{}, lowerLimitMomentum * momentumScales);
 
 			const LinearMomentum<N> newLowerLimitMomentum =
@@ -1555,22 +1419,12 @@ void solveJointConstraintsImplementation(
 
 			if (impulseInReferenceFrame != 0) {
 				const LinearImpulse<N> linearImpulse = basis * impulseInReferenceFrame;
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					linearVelocityA += inverseMassA * linearImpulse;
-					angularVelocityA += inverseMomentOfInertiaTensorA * cross(offsetA, linearImpulse);
-					GREM_ASSERT(all(isfinite(linearVelocityA)));
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					linearVelocityB -= inverseMassB * linearImpulse;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * cross(offsetB, linearImpulse);
-					GREM_ASSERT(all(isfinite(linearVelocityB)));
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+				applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, linearImpulse, offsetA);
+				applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -linearImpulse, offsetB);
+				GREM_ASSERT(all(isfinite(linearVelocityA)));
+				GREM_ASSERT(all(isfinite(linearVelocityB)));
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 			}
 			linearConstraintImpulses.lowerLimitMomentums = newLowerLimitMomentum;
 			linearConstraintImpulses.lowerLimitImpulses += lowerLimitImpulse;
@@ -1580,12 +1434,14 @@ void solveJointConstraintsImplementation(
 			const Length<N> upperLimitErrors = linearConstraint.maxOffsets - offsetsInReferenceFrame;
 			const Mask<N> isSpeculativeUpperLimits = greaterThan(upperLimitErrors, 0);
 
-			const LinearVelocity<N> relativeVelocity = (linearVelocityA + cross(offsetA, angularVelocityA)) - (linearVelocityB + cross(offsetB, angularVelocityB));
+			const LinearVelocity<N> velocityA = calculatePointVelocity(linearVelocityA, angularVelocityA, offsetA);
+			const LinearVelocity<N> velocityB = calculatePointVelocity(linearVelocityB, angularVelocityB, offsetB);
+			const LinearVelocity<N> relativeVelocity = velocityA - velocityB;
 			const LinearVelocity<N> relativeVelocityInReferenceFrame = inverseBasis * relativeVelocity;
 			const LinearVelocity<N> upperLimitErrorGradient = -relativeVelocityInReferenceFrame;
 			const LinearVelocity<N> upperLimitErrorBiases = upperLimitErrors * select(isSpeculativeUpperLimits, Rate<N>{inverseDeltaTime}, biasRates * massScales);
 			const LinearMomentum<N> upperLimitMomentum = linearConstraintImpulses.upperLimitMomentums;
-			const LinearImpulse<N> desiredUpperLimitImpulse = combinedEffectiveMasses * -(upperLimitErrorGradient * massScales + upperLimitErrorBiases) -
+			const LinearImpulse<N> desiredUpperLimitImpulse = combinedEffectiveMassesInReferenceFrame * -(upperLimitErrorGradient * massScales + upperLimitErrorBiases) -
 			                                                  select(isSpeculativeUpperLimits, LinearImpulse<N>{}, upperLimitMomentum * momentumScales);
 
 			const LinearMomentum<N> newUpperLimitMomentum =
@@ -1595,22 +1451,12 @@ void solveJointConstraintsImplementation(
 
 			if (impulseInReferenceFrame != 0) {
 				const LinearImpulse<N> linearImpulse = basis * impulseInReferenceFrame;
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					linearVelocityA += inverseMassA * linearImpulse;
-					angularVelocityA += inverseMomentOfInertiaTensorA * cross(offsetA, linearImpulse);
-					GREM_ASSERT(all(isfinite(linearVelocityA)));
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					linearVelocityB -= inverseMassB * linearImpulse;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * cross(offsetB, linearImpulse);
-					GREM_ASSERT(all(isfinite(linearVelocityB)));
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+				applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, linearImpulse, offsetA);
+				applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -linearImpulse, offsetB);
+				GREM_ASSERT(all(isfinite(linearVelocityA)));
+				GREM_ASSERT(all(isfinite(linearVelocityB)));
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 			}
 			linearConstraintImpulses.upperLimitMomentums = newUpperLimitMomentum;
 			linearConstraintImpulses.upperLimitImpulses += upperLimitImpulse;
@@ -1633,14 +1479,10 @@ void solveJointConstraintsImplementation(
 		if (distance <= Distance::MACHINE_EPSILON) {
 			continue;
 		}
-		const Direction<N> normal = Direction<N>::reinterpret(difference / distance);
+		const Direction<N> axis = Direction<N>::reinterpret(difference / distance);
 
-		const MomentArm<N> momentArmA = cross(offsetA, normal);
-		const MomentArm<N> momentArmB = cross(offsetB, normal);
-		const InverseMass inverseEffectiveMassA = inverseMassA + dot(momentArmA, inverseMomentOfInertiaTensorA * momentArmA);
-		const InverseMass inverseEffectiveMassB = inverseMassB + dot(momentArmB, inverseMomentOfInertiaTensorB * momentArmB);
-		const InverseMass combinedInverseEffectiveMass = inverseEffectiveMassA + inverseEffectiveMassB;
-		const Mass combinedEffectiveMass = (combinedInverseEffectiveMass == 0) ? Mass{} : inverse(combinedInverseEffectiveMass);
+		const Mass combinedEffectiveMassAlongAxis =
+			calculateCombinedEffectiveMassAlongAxis(inverseMassA, inverseMassB, inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB, offsetA, offsetB, axis);
 
 		const auto [biasRate, massScale, momentumScale] =
 			(useBias) ? getSoftConstraintParameters(distanceConstraint.limitStiffness, distanceConstraint.limitDampingRatio, deltaTime, inverseDeltaTime)
@@ -1649,37 +1491,29 @@ void solveJointConstraintsImplementation(
 		{
 			const Length1D lowerLimitError = distance - distanceConstraint.minDistance;
 			const Mask1D isSpeculativeLowerLimit = greaterThan(lowerLimitError, 0);
-			const LinearVelocity1D relativeNormalVelocity =
-				dot(normal, (linearVelocityA + cross(offsetA, angularVelocityA)) - (linearVelocityB + cross(offsetB, angularVelocityB)));
-			const LinearVelocity1D lowerLimitErrorDerivative = relativeNormalVelocity;
+			const LinearVelocity<N> velocityA = calculatePointVelocity(linearVelocityA, angularVelocityA, offsetA);
+			const LinearVelocity<N> velocityB = calculatePointVelocity(linearVelocityB, angularVelocityB, offsetB);
+			const LinearVelocity<N> relativeVelocity = velocityA - velocityB;
+			const LinearVelocity1D relativeVelocityAlongAxis = dot(relativeVelocity, axis);
+			const LinearVelocity1D lowerLimitErrorDerivative = relativeVelocityAlongAxis;
 			const LinearVelocity1D lowerLimitErrorBias = lowerLimitError * select(isSpeculativeLowerLimit, inverseDeltaTime, biasRate * massScale);
 			const LinearMomentum1D lowerLimitMomentum = distanceConstraintImpulses.lowerLimitMomentum;
-			const LinearImpulse1D desiredLowerLimitImpulse = combinedEffectiveMass * -(lowerLimitErrorDerivative * massScale + lowerLimitErrorBias) -
+			const LinearImpulse1D desiredLowerLimitImpulse = combinedEffectiveMassAlongAxis * -(lowerLimitErrorDerivative * massScale + lowerLimitErrorBias) -
 			                                                 select(isSpeculativeLowerLimit, LinearImpulse1D{}, lowerLimitMomentum * momentumScale);
 
 			const LinearMomentum1D newLowerLimitMomentum = select(equal(distanceConstraint.minDistance, distanceConstraint.maxDistance), LinearMomentum1D{},
 				clamp(lowerLimitMomentum + desiredLowerLimitImpulse, LinearMomentum1D{}, simulationOptions.jointMaxMomentum));
 			const LinearImpulse1D lowerLimitImpulse = newLowerLimitMomentum - lowerLimitMomentum;
 
-			const LinearImpulse1D impulse = lowerLimitImpulse;
-			if (impulse != 0) {
-				const LinearImpulse<N> linearImpulse = normal * impulse;
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					linearVelocityA += inverseMassA * linearImpulse;
-					angularVelocityA += inverseMomentOfInertiaTensorA * (momentArmA * impulse);
-					GREM_ASSERT(all(isfinite(linearVelocityA)));
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					linearVelocityB -= inverseMassB * linearImpulse;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * (momentArmB * impulse);
-					GREM_ASSERT(all(isfinite(linearVelocityB)));
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+			const LinearImpulse1D impulseAlongAxis = lowerLimitImpulse;
+			if (impulseAlongAxis != 0) {
+				const LinearImpulse<N> linearImpulse = impulseAlongAxis * axis;
+				applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, linearImpulse, offsetA);
+				applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -linearImpulse, offsetB);
+				GREM_ASSERT(all(isfinite(linearVelocityA)));
+				GREM_ASSERT(all(isfinite(linearVelocityB)));
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 			}
 			distanceConstraintImpulses.lowerLimitMomentum = newLowerLimitMomentum;
 			distanceConstraintImpulses.lowerLimitImpulse += lowerLimitImpulse;
@@ -1688,12 +1522,14 @@ void solveJointConstraintsImplementation(
 		{
 			const Length1D upperLimitError = distanceConstraint.maxDistance - distance;
 			const Mask1D isSpeculativeUpperLimit = greaterThan(upperLimitError, 0);
-			const LinearVelocity1D relativeNormalVelocity =
-				dot(normal, (linearVelocityA + cross(offsetA, angularVelocityA)) - (linearVelocityB + cross(offsetB, angularVelocityB)));
-			const LinearVelocity1D upperLimitErrorDerivative = -relativeNormalVelocity;
+			const LinearVelocity<N> velocityA = calculatePointVelocity(linearVelocityA, angularVelocityA, offsetA);
+			const LinearVelocity<N> velocityB = calculatePointVelocity(linearVelocityB, angularVelocityB, offsetB);
+			const LinearVelocity<N> relativeVelocity = velocityA - velocityB;
+			const LinearVelocity1D relativeVelocityAlongAxis = dot(relativeVelocity, axis);
+			const LinearVelocity1D upperLimitErrorDerivative = -relativeVelocityAlongAxis;
 			const LinearVelocity1D upperLimitErrorBias = upperLimitError * select(isSpeculativeUpperLimit, inverseDeltaTime, biasRate * massScale);
 			const LinearMomentum1D upperLimitMomentum = distanceConstraintImpulses.upperLimitMomentum;
-			const LinearImpulse1D desiredUpperLimitImpulse = combinedEffectiveMass * -(upperLimitErrorDerivative * massScale + upperLimitErrorBias) -
+			const LinearImpulse1D desiredUpperLimitImpulse = combinedEffectiveMassAlongAxis * -(upperLimitErrorDerivative * massScale + upperLimitErrorBias) -
 			                                                 select(isSpeculativeUpperLimit, LinearImpulse1D{}, upperLimitMomentum * momentumScale);
 
 			const LinearMomentum1D newUpperLimitMomentum = clamp(upperLimitMomentum + desiredUpperLimitImpulse,
@@ -1701,25 +1537,15 @@ void solveJointConstraintsImplementation(
 				simulationOptions.jointMaxMomentum);
 			const LinearImpulse1D upperLimitImpulse = newUpperLimitMomentum - upperLimitMomentum;
 
-			const LinearImpulse1D impulse = -upperLimitImpulse;
-			if (impulse != 0) {
-				const LinearImpulse<N> linearImpulse = normal * impulse;
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					linearVelocityA += inverseMassA * linearImpulse;
-					angularVelocityA += inverseMomentOfInertiaTensorA * (momentArmA * impulse);
-					GREM_ASSERT(all(isfinite(linearVelocityA)));
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					linearVelocityB -= inverseMassB * linearImpulse;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * (momentArmB * impulse);
-					GREM_ASSERT(all(isfinite(linearVelocityB)));
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+			const LinearImpulse1D impulseAlongAxis = -upperLimitImpulse;
+			if (impulseAlongAxis != 0) {
+				const LinearImpulse<N> linearImpulse = impulseAlongAxis * axis;
+				applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, linearImpulse, offsetA);
+				applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -linearImpulse, offsetB);
+				GREM_ASSERT(all(isfinite(linearVelocityA)));
+				GREM_ASSERT(all(isfinite(linearVelocityB)));
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 			}
 			distanceConstraintImpulses.upperLimitMomentum = newUpperLimitMomentum;
 			distanceConstraintImpulses.upperLimitImpulse += upperLimitImpulse;
@@ -1764,19 +1590,15 @@ void solve3DOnlyJointConstraintsImplementation(
 		const OrthonormalBasis3D basisA = rotate(orientationA * attachmentOrientations.first);
 		const OrthonormalBasis3D basisB = rotate(orientationB * attachmentOrientations.second);
 
-		const Scale3D axisVector = cross(basisA[X], basisB[X]);
-		const Optional<Direction3D> normalizedAxisVector = tryNormalize(axisVector);
-		if (!normalizedAxisVector) {
+		const Optional<Direction3D> direction = tryNormalize(cross(basisA[X], basisB[X]));
+		if (!direction) {
 			continue;
 		}
-		const Direction3D axis = *normalizedAxisVector;
+		const Direction3D axis = *direction;
 		const Angle angle = getAngleDifferenceAroundAxis(axis, basisA[X], basisB[X]);
 
-		const InverseMomentOfInertia2D inverseEffectiveMomentOfInertiaA = dot(axis, inverseMomentOfInertiaTensorA * axis);
-		const InverseMomentOfInertia2D inverseEffectiveMomentOfInertiaB = dot(axis, inverseMomentOfInertiaTensorB * axis);
-		const InverseMomentOfInertia2D combinedInverseEffectiveMomentOfInertia = inverseEffectiveMomentOfInertiaA + inverseEffectiveMomentOfInertiaB;
-		const MomentOfInertia2D combinedEffectiveMomentOfInertia =
-			(combinedInverseEffectiveMomentOfInertia == 0) ? MomentOfInertia2D{} : inverse(combinedInverseEffectiveMomentOfInertia);
+		const MomentOfInertia2D combinedEffectiveMomentOfInertiaAroundAxis =
+			calculateCombinedEffectiveMomentOfInertiaAroundAxis(inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB, axis);
 
 		const auto [biasRate, massScale, momentumScale] =
 			(useBias) ? getSoftConstraintParameters(coneConstraint.limitStiffness, coneConstraint.limitDampingRatio, deltaTime, inverseDeltaTime) : SoftConstraintParameters<1>{};
@@ -1784,11 +1606,12 @@ void solve3DOnlyJointConstraintsImplementation(
 		{
 			const Angle lowerLimitError = angle - coneConstraint.minAngle;
 			const AngularMask2D isSpeculativeLowerLimit = greaterThan(lowerLimitError, 0);
-			const AngularVelocity2D relativeAngularVelocityAroundAxis = dot(axis, angularVelocityA - angularVelocityB);
+			const AngularVelocity3D relativeAngularVelocity = angularVelocityA - angularVelocityB;
+			const AngularVelocity2D relativeAngularVelocityAroundAxis = dot(relativeAngularVelocity, axis);
 			const AngularVelocity2D lowerLimitErrorDerivative = relativeAngularVelocityAroundAxis;
 			const AngularVelocity2D lowerLimitErrorBias = lowerLimitError * select(isSpeculativeLowerLimit, inverseDeltaTime, biasRate * massScale);
 			const AngularMomentum2D lowerLimitMomentum = coneConstraintImpulses.lowerLimitMomentum;
-			const AngularImpulse2D desiredLowerLimitImpulse = combinedEffectiveMomentOfInertia * -(lowerLimitErrorDerivative * massScale + lowerLimitErrorBias) -
+			const AngularImpulse2D desiredLowerLimitImpulse = combinedEffectiveMomentOfInertiaAroundAxis * -(lowerLimitErrorDerivative * massScale + lowerLimitErrorBias) -
 			                                                  select(isSpeculativeLowerLimit, AngularImpulse2D{}, lowerLimitMomentum * momentumScale);
 
 			const AngularMomentum2D newLowerLimitMomentum = clamp(lowerLimitMomentum + desiredLowerLimitImpulse, AngularMomentum2D{}, simulationOptions.jointMaxAngularMomentum);
@@ -1796,18 +1619,11 @@ void solve3DOnlyJointConstraintsImplementation(
 
 			const AngularImpulse2D impulseAroundAxis = lowerLimitImpulse;
 			if (impulseAroundAxis != 0) {
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityA += inverseMomentOfInertiaTensorA * (axis * impulseAroundAxis);
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * (axis * impulseAroundAxis);
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+				const AngularImpulse3D angularImpulse = impulseAroundAxis * axis;
+				applyAngularCorrectionImpulse<3>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, angularImpulse);
+				applyAngularCorrectionImpulse<3>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -angularImpulse);
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 			}
 			coneConstraintImpulses.lowerLimitMomentum = newLowerLimitMomentum;
 			coneConstraintImpulses.lowerLimitImpulse += lowerLimitImpulse;
@@ -1816,11 +1632,12 @@ void solve3DOnlyJointConstraintsImplementation(
 		{
 			const Angle upperLimitError = coneConstraint.maxAngle - angle;
 			const AngularMask2D isSpeculativeUpperLimit = greaterThan(upperLimitError, 0);
-			const AngularVelocity2D relativeAngularVelocityAroundAxis = dot(axis, angularVelocityA - angularVelocityB);
+			const AngularVelocity3D relativeAngularVelocity = angularVelocityA - angularVelocityB;
+			const AngularVelocity2D relativeAngularVelocityAroundAxis = dot(relativeAngularVelocity, axis);
 			const AngularVelocity2D upperLimitErrorDerivative = -relativeAngularVelocityAroundAxis;
 			const AngularVelocity2D upperLimitErrorBias = upperLimitError * select(isSpeculativeUpperLimit, inverseDeltaTime, biasRate * massScale);
 			const AngularMomentum2D upperLimitMomentum = coneConstraintImpulses.upperLimitMomentum;
-			const AngularImpulse2D desiredUpperLimitImpulse = combinedEffectiveMomentOfInertia * -(upperLimitErrorDerivative * massScale + upperLimitErrorBias) -
+			const AngularImpulse2D desiredUpperLimitImpulse = combinedEffectiveMomentOfInertiaAroundAxis * -(upperLimitErrorDerivative * massScale + upperLimitErrorBias) -
 			                                                  select(isSpeculativeUpperLimit, AngularImpulse2D{}, upperLimitMomentum * momentumScale);
 
 			const AngularMomentum2D newUpperLimitMomentum = clamp(upperLimitMomentum + desiredUpperLimitImpulse, AngularMomentum2D{}, simulationOptions.jointMaxAngularMomentum);
@@ -1828,18 +1645,11 @@ void solve3DOnlyJointConstraintsImplementation(
 
 			const AngularImpulse2D impulseAroundAxis = -upperLimitImpulse;
 			if (impulseAroundAxis != 0) {
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityA += inverseMomentOfInertiaTensorA * (axis * impulseAroundAxis);
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * (axis * impulseAroundAxis);
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+				const AngularImpulse3D angularImpulse = impulseAroundAxis * axis;
+				applyAngularCorrectionImpulse<3>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, angularImpulse);
+				applyAngularCorrectionImpulse<3>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -angularImpulse);
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 			}
 			coneConstraintImpulses.upperLimitMomentum = newUpperLimitMomentum;
 			coneConstraintImpulses.upperLimitImpulse += upperLimitImpulse;
@@ -1853,19 +1663,15 @@ void solve3DOnlyJointConstraintsImplementation(
 		const OrthonormalBasis3D basisA = rotate(orientationA * attachmentOrientations.first);
 		const OrthonormalBasis3D basisB = rotate(orientationB * attachmentOrientations.second);
 
-		const Scale3D axisVector = basisA[X] + basisB[X];
-		const Optional<Direction3D> normalizedAxisVector = tryNormalize(axisVector);
-		if (!normalizedAxisVector) {
+		const Optional<Direction3D> direction = tryNormalize(basisA[X] + basisB[X]);
+		if (!direction) {
 			continue;
 		}
-		const Direction3D axis = *normalizedAxisVector;
+		const Direction3D axis = *direction;
 		const Angle angle = getAngleDifferenceAroundAxis(axis, basisA[Y], basisB[Y]);
 
-		const InverseMomentOfInertia2D inverseEffectiveMomentOfInertiaA = dot(axis, inverseMomentOfInertiaTensorA * axis);
-		const InverseMomentOfInertia2D inverseEffectiveMomentOfInertiaB = dot(axis, inverseMomentOfInertiaTensorB * axis);
-		const InverseMomentOfInertia2D combinedInverseEffectiveMomentOfInertia = inverseEffectiveMomentOfInertiaA + inverseEffectiveMomentOfInertiaB;
-		const MomentOfInertia2D combinedEffectiveMomentOfInertia =
-			(combinedInverseEffectiveMomentOfInertia == 0) ? MomentOfInertia2D{} : inverse(combinedInverseEffectiveMomentOfInertia);
+		const MomentOfInertia2D combinedEffectiveMomentOfInertiaAroundAxis =
+			calculateCombinedEffectiveMomentOfInertiaAroundAxis(inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB, axis);
 
 		const auto [biasRate, massScale, momentumScale] =
 			(useBias) ? getSoftConstraintParameters(twistConstraint.limitStiffness, twistConstraint.limitDampingRatio, deltaTime, inverseDeltaTime) : SoftConstraintParameters<1>{};
@@ -1873,11 +1679,12 @@ void solve3DOnlyJointConstraintsImplementation(
 		{
 			const Angle lowerLimitError = angle - twistConstraint.minAngle;
 			const AngularMask2D isSpeculativeLowerLimit = greaterThan(lowerLimitError, 0);
-			const AngularVelocity2D relativeAngularVelocityAroundAxis = dot(axis, angularVelocityA - angularVelocityB);
+			const AngularVelocity3D relativeAngularVelocity = angularVelocityA - angularVelocityB;
+			const AngularVelocity2D relativeAngularVelocityAroundAxis = dot(relativeAngularVelocity, axis);
 			const AngularVelocity2D lowerLimitErrorDerivative = relativeAngularVelocityAroundAxis;
 			const AngularVelocity2D lowerLimitErrorBias = lowerLimitError * select(isSpeculativeLowerLimit, inverseDeltaTime, biasRate * massScale);
 			const AngularMomentum2D lowerLimitMomentum = twistConstraintImpulses.lowerLimitMomentum;
-			const AngularImpulse2D desiredLowerLimitImpulse = combinedEffectiveMomentOfInertia * -(lowerLimitErrorDerivative * massScale + lowerLimitErrorBias) -
+			const AngularImpulse2D desiredLowerLimitImpulse = combinedEffectiveMomentOfInertiaAroundAxis * -(lowerLimitErrorDerivative * massScale + lowerLimitErrorBias) -
 			                                                  select(isSpeculativeLowerLimit, AngularImpulse2D{}, lowerLimitMomentum * momentumScale);
 
 			const AngularMomentum2D newLowerLimitMomentum = clamp(lowerLimitMomentum + desiredLowerLimitImpulse, AngularMomentum2D{}, simulationOptions.jointMaxAngularMomentum);
@@ -1885,18 +1692,11 @@ void solve3DOnlyJointConstraintsImplementation(
 
 			const AngularImpulse2D impulseAroundAxis = lowerLimitImpulse;
 			if (impulseAroundAxis != 0) {
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityA += inverseMomentOfInertiaTensorA * (axis * impulseAroundAxis);
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * (axis * impulseAroundAxis);
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+				const AngularImpulse3D angularImpulse = impulseAroundAxis * axis;
+				applyAngularCorrectionImpulse<3>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, angularImpulse);
+				applyAngularCorrectionImpulse<3>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -angularImpulse);
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 			}
 			twistConstraintImpulses.lowerLimitMomentum = newLowerLimitMomentum;
 			twistConstraintImpulses.lowerLimitImpulse += lowerLimitImpulse;
@@ -1905,11 +1705,12 @@ void solve3DOnlyJointConstraintsImplementation(
 		{
 			const Angle upperLimitError = twistConstraint.maxAngle - angle;
 			const AngularMask2D isSpeculativeUpperLimit = greaterThan(upperLimitError, 0);
-			const AngularVelocity2D relativeAngularVelocityAroundAxis = dot(axis, angularVelocityA - angularVelocityB);
+			const AngularVelocity3D relativeAngularVelocity = angularVelocityA - angularVelocityB;
+			const AngularVelocity2D relativeAngularVelocityAroundAxis = dot(relativeAngularVelocity, axis);
 			const AngularVelocity2D upperLimitErrorDerivative = -relativeAngularVelocityAroundAxis;
 			const AngularVelocity2D upperLimitErrorBias = upperLimitError * select(isSpeculativeUpperLimit, inverseDeltaTime, biasRate * massScale);
 			const AngularMomentum2D upperLimitMomentum = twistConstraintImpulses.upperLimitMomentum;
-			const AngularImpulse2D desiredUpperLimitImpulse = combinedEffectiveMomentOfInertia * -(upperLimitErrorDerivative * massScale + upperLimitErrorBias) -
+			const AngularImpulse2D desiredUpperLimitImpulse = combinedEffectiveMomentOfInertiaAroundAxis * -(upperLimitErrorDerivative * massScale + upperLimitErrorBias) -
 			                                                  select(isSpeculativeUpperLimit, AngularImpulse2D{}, upperLimitMomentum * momentumScale);
 
 			const AngularMomentum2D newUpperLimitMomentum = clamp(upperLimitMomentum + desiredUpperLimitImpulse, AngularMomentum2D{}, simulationOptions.jointMaxAngularMomentum);
@@ -1917,18 +1718,11 @@ void solve3DOnlyJointConstraintsImplementation(
 
 			const AngularImpulse2D impulseAroundAxis = -upperLimitImpulse;
 			if (impulseAroundAxis != 0) {
-				if (activityA.isCorrectable != 0) {
-					activityA.wasCorrected = 1;
-					activityA.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityA += inverseMomentOfInertiaTensorA * (axis * impulseAroundAxis);
-					GREM_ASSERT(all(isfinite(angularVelocityA)));
-				}
-				if (activityB.isCorrectable != 0) {
-					activityB.wasCorrected = 1;
-					activityB.energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
-					angularVelocityB -= inverseMomentOfInertiaTensorB * (axis * impulseAroundAxis);
-					GREM_ASSERT(all(isfinite(angularVelocityB)));
-				}
+				const AngularImpulse3D angularImpulse = impulseAroundAxis * axis;
+				applyAngularCorrectionImpulse<3>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, angularImpulse);
+				applyAngularCorrectionImpulse<3>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -angularImpulse);
+				GREM_ASSERT(all(isfinite(angularVelocityA)));
+				GREM_ASSERT(all(isfinite(angularVelocityB)));
 			}
 			twistConstraintImpulses.upperLimitMomentum = newUpperLimitMomentum;
 			twistConstraintImpulses.upperLimitImpulse += upperLimitImpulse;
@@ -1955,12 +1749,6 @@ void solveContactConstraintsImplementation(
 	Span<const ContactIndex> contactIndices, Contacts<N>& contacts, const SimulationOptions<N>& simulationOptions, bool useBias) {
 	const Time deltaTime = simulationOptions.stepInterval / static_cast<float>(simulationOptions.subStepCount);
 	const Frequency inverseDeltaTime = inverse(deltaTime);
-	const Speed maxRestingSpeed = simulationOptions.maxRestingSpeed;
-	const AngularSpeed maxRestingAngularSpeed = simulationOptions.maxRestingAngularSpeed;
-	const SquaredSpeed maxRestingSpeedSquared = length2(maxRestingSpeed);
-	const SquaredAngularSpeed maxRestingAngularSpeedSquared = length2(maxRestingAngularSpeed);
-	const Quantity<1, Reciprocal<Speed::Unit>> energyPerUnitSpeed = inverse(maxRestingSpeed);
-	const Quantity<1, Reciprocal<AngularSpeed::Unit>> energyPerUnitAngularSpeed = inverse(maxRestingAngularSpeed);
 	const Momentum maxMomentum = simulationOptions.contactMaxMomentum;
 
 	for (const ContactIndex contactIndex : contactIndices) {
@@ -1971,12 +1759,6 @@ void solveContactConstraintsImplementation(
 		auto&& [objectIDB, activityB, linearVelocityB, angularVelocityB, positionB, orientationB, scaleB, flagsB, materialB, inverseMassB, inverseMomentOfInertiaTensorB] =
 			objectEntities[objectIDs.second];
 
-		const bool isCorrectableA = activityA.isCorrectable != 0;
-		const bool isCorrectableB = activityB.isCorrectable != 0;
-		const bool isRestingA = activityA.energyLevel == 0;
-		const bool isRestingB = activityB.energyLevel == 0;
-		const bool isWakeableA = isCorrectableA && flagsA.enableWaking;
-		const bool isWakeableB = isCorrectableB && flagsB.enableWaking;
 		const Coefficient staticFriction =
 			calculateCombinedStaticFriction(materialA.staticFriction, materialB.staticFriction, materialA.frictionCombine, materialB.frictionCombine);
 		const Coefficient kineticFriction =
@@ -1989,8 +1771,8 @@ void solveContactConstraintsImplementation(
 			(useBias) ? getSoftConstraintParameters(simulationOptions.contactStiffness, simulationOptions.contactDampingRatio, deltaTime, inverseDeltaTime)
 			          : SoftConstraintParameters<1>{};
 
-		bool wakeA = false;
-		bool wakeB = false;
+		bool affectedA = false;
+		bool affectedB = false;
 		// Correct the velocity of each colliding contact point.
 		for (ContactManifold<N>& manifold : contact.manifolds) {
 			if (!manifold.filterTestResult.respondsToCollision()) {
@@ -2014,19 +1796,16 @@ void solveContactConstraintsImplementation(
 				// Get the relative velocity of the objects' respective points along the contact tangent, bitangent and normal.
 				const Length<N> offsetA = point.offsets.first;
 				const Length<N> offsetB = point.offsets.second;
-				const LinearVelocity<N> relativeVelocity = (linearVelocityA + cross(angularVelocityA, offsetA)) - (linearVelocityB + cross(angularVelocityB, offsetB));
+				const LinearVelocity<N> velocityA = calculatePointVelocity(linearVelocityA, angularVelocityA, offsetA);
+				const LinearVelocity<N> velocityB = calculatePointVelocity(linearVelocityB, angularVelocityB, offsetB);
+				const LinearVelocity<N> relativeVelocity = velocityA - velocityB;
 				const LinearVelocity<N> relativeVelocityInTangentSpace = transpose(tangentSpaceBasis) * relativeVelocity;
 				const LinearVelocity1D relativeNormalVelocity = getNormalComponent(relativeVelocityInTangentSpace);
 				const LinearVelocity<N - 1> relativeTangentialVelocity = getTangentialComponent(relativeVelocityInTangentSpace);
 
-				// Calculate the effective inverse masses (linear + angular) of the objects at the collision point along the tangent space directions.
-				const MomentArmTensor<N> momentArmsA = cross(offsetA, tangentSpaceBasis);
-				const MomentArmTensor<N> momentArmsB = cross(offsetB, tangentSpaceBasis);
-				const AngularQuantity<N, InverseMass::Unit> inverseEffectiveMassesA = inverseMassA + dot(momentArmsA, inverseMomentOfInertiaTensorA * momentArmsA);
-				const AngularQuantity<N, InverseMass::Unit> inverseEffectiveMassesB = inverseMassB + dot(momentArmsB, inverseMomentOfInertiaTensorB * momentArmsB);
-				const AngularQuantity<N, InverseMass::Unit> combinedInverseEffectiveMasses = inverseEffectiveMassesA + inverseEffectiveMassesB;
-				const AngularQuantity<N, Mass::Unit> combinedEffectiveMasses =
-					select(equal(combinedInverseEffectiveMasses, 0), AngularQuantity<N, Mass::Unit>{}, inverse(combinedInverseEffectiveMasses));
+				// Calculate the combined effective masses (linear + angular) of the objects at the collision point along the tangent space directions.
+				const Quantity<N, Mass::Unit> combinedEffectiveMassesInTangentSpace = calculateCombinedEffectiveMassesAlongAxes(inverseMassA, inverseMassB,
+					inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB, offsetA, offsetB, tangentSpaceBasis);
 
 				// Calculate the impulse to apply along the normal direction.
 				const Length1D normalError = penetrationDepth;
@@ -2034,7 +1813,7 @@ void solveContactConstraintsImplementation(
 				const LinearVelocity1D normalErrorDerivative = relativeNormalVelocity;
 				const LinearVelocity1D normalErrorBias = normalError * select(isSpeculative, inverseDeltaTime, biasRate * massScale);
 				const LinearMomentum1D normalMomentum = getNormalComponent(point.momentumInTangentSpace);
-				const Mass normalCombinedEffectiveMass = getNormalComponent(combinedEffectiveMasses);
+				const Mass normalCombinedEffectiveMass = getNormalComponent(combinedEffectiveMassesInTangentSpace);
 				const LinearImpulse1D desiredNormalImpulse =
 					normalCombinedEffectiveMass * -(normalErrorDerivative * massScale + normalErrorBias) - select(isSpeculative, LinearImpulse1D{}, normalMomentum * momentumScale);
 				const LinearMomentum1D newNormalMomentum = clamp(normalMomentum + desiredNormalImpulse, -maxMomentum, LinearMomentum1D{});
@@ -2043,7 +1822,7 @@ void solveContactConstraintsImplementation(
 				// Calculate the impulse to apply along the tangential direction.
 				const LinearVelocity<N - 1> tangentialErrorGradient = relativeTangentialVelocity;
 				const LinearMomentum<N - 1> tangentialMomentum = getTangentialComponent(point.momentumInTangentSpace);
-				const Quantity<N - 1, Mass::Unit> tangentialCombinedEffectiveMasses = getTangentialComponent(combinedEffectiveMasses);
+				const Quantity<N - 1, Mass::Unit> tangentialCombinedEffectiveMasses = getTangentialComponent(combinedEffectiveMassesInTangentSpace);
 				const LinearImpulse<N - 1> desiredTangentialImpulse = (useBias) ? LinearImpulse<N - 1>{} : -tangentialErrorGradient * tangentialCombinedEffectiveMasses;
 				const LinearMomentum<N - 1> desiredNewTangentialMomentum = tangentialMomentum + desiredTangentialImpulse;
 				const bool isStaticFriction = length2(desiredNewTangentialMomentum) < staticFriction * length2(newNormalMomentum);
@@ -2055,33 +1834,15 @@ void solveContactConstraintsImplementation(
 				const LinearImpulse<N> impulse{tangentialImpulse, normalImpulse};
 				if (impulse != 0) {
 					const LinearImpulse<N> linearImpulse = tangentSpaceBasis * impulse;
-					const LinearVelocity<N> deltaLinearVelocityA = inverseMassA * linearImpulse;
-					const LinearVelocity<N> deltaLinearVelocityB = inverseMassB * linearImpulse;
-					const AngularVelocity<N> deltaAngularVelocityA = inverseMomentOfInertiaTensorA * cross(offsetA, linearImpulse);
-					const AngularVelocity<N> deltaAngularVelocityB = inverseMomentOfInertiaTensorB * cross(offsetB, linearImpulse);
-
-					// If an object is movable and the impulse that we're about to apply to it is above the wake threshold, wake it up.
-					wakeA |=
-						isRestingA & isWakeableA & ((length2(deltaLinearVelocityA) > maxRestingSpeedSquared) | (length2(deltaAngularVelocityA) > maxRestingAngularSpeedSquared));
-					wakeB |=
-						isRestingB & isWakeableA & ((length2(deltaLinearVelocityB) > maxRestingSpeedSquared) | (length2(deltaAngularVelocityB) > maxRestingAngularSpeedSquared));
-
-					if (isCorrectableA & ((!isRestingA) | wakeA)) {
-						// Note: This parallel mutation is safe thanks to graph coloring.
-						activityA.wasCorrected = 1;
-						linearVelocityA += deltaLinearVelocityA;
-						angularVelocityA += deltaAngularVelocityA;
-						GREM_ASSERT(all(isfinite(linearVelocityA)));
-						GREM_ASSERT(all(isfinite(angularVelocityA)));
-					}
-					if (isCorrectableB & ((!isRestingB) | wakeB)) {
-						// Note: This parallel mutation is safe thanks to graph coloring.
-						activityB.wasCorrected = 1;
-						linearVelocityB -= deltaLinearVelocityB;
-						angularVelocityB -= deltaAngularVelocityB;
-						GREM_ASSERT(all(isfinite(linearVelocityB)));
-						GREM_ASSERT(all(isfinite(angularVelocityB)));
-					}
+					// Note: This parallel mutation is safe thanks to graph coloring.
+					applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, linearImpulse, offsetA);
+					applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -linearImpulse, offsetB);
+					GREM_ASSERT(all(isfinite(linearVelocityA)));
+					GREM_ASSERT(all(isfinite(linearVelocityB)));
+					GREM_ASSERT(all(isfinite(angularVelocityA)));
+					GREM_ASSERT(all(isfinite(angularVelocityB)));
+					affectedA |= activityA.isCorrectable;
+					affectedB |= activityB.isCorrectable;
 				}
 
 				// Update the correction impulses.
@@ -2096,14 +1857,12 @@ void solveContactConstraintsImplementation(
 
 			// Apply rolling resistance.
 			if (!useBias && rollingResistance > 0) {
-				const SquaredDistance radiusSquaredA = (isCorrectableA) ? maxRadiusSquaredA : maxRadiusSquaredB;
-				const SquaredDistance radiusSquaredB = (isCorrectableB) ? maxRadiusSquaredB : maxRadiusSquaredA;
+				const SquaredDistance radiusSquaredA = (activityA.isCorrectable) ? maxRadiusSquaredA : maxRadiusSquaredB;
+				const SquaredDistance radiusSquaredB = (activityB.isCorrectable) ? maxRadiusSquaredB : maxRadiusSquaredA;
 				const Distance radius = sqrt(min(radiusSquaredA, radiusSquaredB));
-				const InverseMomentOfInertiaTensor<N> combinedInverseEffectiveMomentOfInertiaTensor = inverseMomentOfInertiaTensorA + inverseMomentOfInertiaTensorB;
+
 				const MomentOfInertiaTensor<N> combinedEffectiveMomentOfInertiaTensor =
-					(combinedInverseEffectiveMomentOfInertiaTensor == 0)
-				        ? MomentOfInertiaTensor<N>{0.0f * KILOGRAM_SQUARE_METERS}
-				        : inverse(combinedInverseEffectiveMomentOfInertiaTensor);
+					calculateCombinedEffectiveMomentOfInertiaTensor<N>(inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB);
 
 				const AngularVelocity<N> relativeAngularVelocity = angularVelocityA - angularVelocityB;
 				const AngularVelocity<N> errorDerivative = relativeAngularVelocity;
@@ -2111,47 +1870,26 @@ void solveContactConstraintsImplementation(
 				const AngularImpulse<N> desiredImpulse = combinedEffectiveMomentOfInertiaTensor * -errorDerivative;
 				const AngularMomentum2D maxRollingResistanceMomentum = min(abs(totalNormalMomentum * rollingResistance * radius), maxMomentum * radius);
 				const AngularMomentum<N> newMomentum = clampLength(momentum + desiredImpulse, maxRollingResistanceMomentum);
-				const AngularImpulse<N> impulse = newMomentum - momentum;
 
-				if (impulse != 0) {
-					const AngularVelocity<N> deltaAngularVelocityA = inverseMomentOfInertiaTensorA * impulse;
-					const AngularVelocity<N> deltaAngularVelocityB = inverseMomentOfInertiaTensorB * impulse;
-
-					wakeA |= isRestingA & isWakeableA & (length2(deltaAngularVelocityA) > maxRestingAngularSpeedSquared);
-					wakeB |= isRestingB & isWakeableA & (length2(deltaAngularVelocityB) > maxRestingAngularSpeedSquared);
-
-					if (isCorrectableA & ((!isRestingA) | wakeA)) {
-						// Note: This parallel mutation is safe thanks to graph coloring.
-						activityA.wasCorrected = 1;
-						angularVelocityA += deltaAngularVelocityA;
-						GREM_ASSERT(all(isfinite(angularVelocityA)));
-					}
-					if (isCorrectableB & ((!isRestingB) | wakeB)) {
-						// Note: This parallel mutation is safe thanks to graph coloring.
-						activityB.wasCorrected = 1;
-						angularVelocityB -= deltaAngularVelocityB;
-						GREM_ASSERT(all(isfinite(angularVelocityB)));
-					}
+				const AngularImpulse<N> angularImpulse = newMomentum - momentum;
+				if (angularImpulse != 0) {
+					// Note: This parallel mutation is safe thanks to graph coloring.
+					applyAngularCorrectionImpulse<N>(activityA, angularVelocityA, inverseMomentOfInertiaTensorA, angularImpulse);
+					applyAngularCorrectionImpulse<N>(activityB, angularVelocityB, inverseMomentOfInertiaTensorB, -angularImpulse);
+					GREM_ASSERT(all(isfinite(angularVelocityA)));
+					GREM_ASSERT(all(isfinite(angularVelocityB)));
+					affectedA |= activityA.isCorrectable;
+					affectedB |= activityB.isCorrectable;
 				}
 				manifold.rollingResistanceMomentum = newMomentum;
-				manifold.rollingResistanceImpulse += impulse;
+				manifold.rollingResistanceImpulse += angularImpulse;
 			}
 		}
 
-		// Note: This parallel mutation is safe thanks to graph coloring.
-		GREM_ASSERT(!wakeA || !wakeB);
-		if (wakeA) {
-			const Coefficient energyFromLinearSpeedA = (length(linearVelocityA) - maxRestingSpeed) * energyPerUnitSpeed;
-			const Coefficient energyFromAngularSpeedA = (length(angularVelocityA) - maxRestingAngularSpeed) * energyPerUnitAngularSpeed;
-			activityA.energyLevel = max(ObjectActivity::EnergyLevel{activityA.energyLevel},
-				static_cast<ObjectActivity::EnergyLevel>(
-					clamp(max(energyFromLinearSpeedA, energyFromAngularSpeedA), Coefficient{1}, static_cast<Coefficient>(ObjectActivity::MAX_ENERGY_LEVEL))));
-		} else if (wakeB) {
-			const Coefficient energyFromLinearSpeedB = (length(linearVelocityB) - maxRestingSpeed) * energyPerUnitSpeed;
-			const Coefficient energyFromAngularSpeedB = (length(angularVelocityB) - maxRestingAngularSpeed) * energyPerUnitAngularSpeed;
-			activityB.energyLevel = max(ObjectActivity::EnergyLevel{activityB.energyLevel},
-				static_cast<ObjectActivity::EnergyLevel>(
-					clamp(max(energyFromLinearSpeedB, energyFromAngularSpeedB), Coefficient{1}, static_cast<Coefficient>(ObjectActivity::MAX_ENERGY_LEVEL))));
+		if (affectedA & affectedB) {
+			const uint16_t synchronizedStepsResting = min(activityA.stepsResting, activityB.stepsResting);
+			activityA.stepsResting = synchronizedStepsResting;
+			activityB.stepsResting = synchronizedStepsResting;
 		}
 	}
 }
@@ -2210,9 +1948,6 @@ void applyContactRestitutionImplementation(
 		auto&& [objectIDB, linearVelocityB, angularVelocityB, activityB, positionB, orientationB, scaleB, flagsB, materialB, inverseMassB, inverseMomentOfInertiaTensorB,
 			gravityAccelerationB] = objectEntities[objectIDs.second];
 
-		const bool isCorrectableA = activityA.isCorrectable != 0;
-		const bool isCorrectableB = activityB.isCorrectable != 0;
-
 		const Coefficient restitution = calculateCombinedRestitution(materialA.restitution, materialB.restitution, materialA.restitutionCombine, materialB.restitutionCombine);
 		const LinearVelocity<N> gravityInducedRelativeVelocity = 2.0f * (gravityAccelerationA - gravityAccelerationB) * stepInterval;
 
@@ -2239,37 +1974,26 @@ void applyContactRestitutionImplementation(
 
 					const Length<N> offsetA = orientationA(scaleA * point.localOffsets.first);
 					const Length<N> offsetB = orientationB(scaleB * point.localOffsets.second);
-
-					const MomentArm<N> momentArmA = cross(offsetA, normal);
-					const MomentArm<N> momentArmB = cross(offsetB, normal);
-					const InverseMass inverseEffectiveMassA = inverseMassA + dot(momentArmA, inverseMomentOfInertiaTensorA * momentArmA);
-					const InverseMass inverseEffectiveMassB = inverseMassB + dot(momentArmB, inverseMomentOfInertiaTensorB * momentArmB);
-					const InverseMass combinedInverseEffectiveMass = inverseEffectiveMassA + inverseEffectiveMassB;
-					const Mass combinedEffectiveMass = (combinedInverseEffectiveMass == 0) ? Mass{} : inverse(combinedInverseEffectiveMass);
+					const Mass combinedEffectiveMassAlongNormal =
+						calculateCombinedEffectiveMassAlongAxis(inverseMassA, inverseMassB, inverseMomentOfInertiaTensorA, inverseMomentOfInertiaTensorB, offsetA, offsetB, normal);
 
 					const LinearVelocity1D relativeNormalVelocity =
 						dot(normal, (linearVelocityA + cross(angularVelocityA, offsetA)) - (linearVelocityB + cross(angularVelocityB, offsetB)));
 					const LinearMomentum1D restitutionMomentum = point.restitutionMomentum;
-					const LinearImpulse1D desiredRestitutionImpulse = combinedEffectiveMass * -(relativeNormalVelocity + restitution * preSolveRelativeNormalVelocity);
+					const LinearImpulse1D desiredRestitutionImpulse = combinedEffectiveMassAlongNormal * -(relativeNormalVelocity + restitution * preSolveRelativeNormalVelocity);
 					const LinearMomentum1D newRestitutionMomentum = min(restitutionMomentum + desiredRestitutionImpulse, LinearMomentum1D{});
 					const LinearImpulse1D restitutionImpulse = newRestitutionMomentum - restitutionMomentum;
 
 					if (restitutionImpulse != 0) {
-						const LinearImpulse<N> linearImpulse = normal * restitutionImpulse;
-						if (isCorrectableA) {
-							// Note: This parallel mutation is safe thanks to graph coloring.
-							linearVelocityA += inverseMassA * linearImpulse;
-							angularVelocityA += inverseMomentOfInertiaTensorA * (momentArmA * restitutionImpulse);
-							GREM_ASSERT(all(isfinite(linearVelocityA)));
-							GREM_ASSERT(all(isfinite(angularVelocityA)));
-						}
-						if (isCorrectableB) {
-							// Note: This parallel mutation is safe thanks to graph coloring.
-							linearVelocityB -= inverseMassB * linearImpulse;
-							angularVelocityB -= inverseMomentOfInertiaTensorB * (momentArmB * restitutionImpulse);
-							GREM_ASSERT(all(isfinite(linearVelocityB)));
-							GREM_ASSERT(all(isfinite(angularVelocityB)));
-						}
+						const LinearImpulse<N> linearImpulse = restitutionImpulse * normal;
+
+						// Note: This parallel mutation is safe thanks to graph coloring.
+						applyCorrectionImpulse<N>(activityA, linearVelocityA, angularVelocityA, inverseMassA, inverseMomentOfInertiaTensorA, linearImpulse, offsetA);
+						applyCorrectionImpulse<N>(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -linearImpulse, offsetB);
+						GREM_ASSERT(all(isfinite(linearVelocityA)));
+						GREM_ASSERT(all(isfinite(linearVelocityB)));
+						GREM_ASSERT(all(isfinite(angularVelocityA)));
+						GREM_ASSERT(all(isfinite(angularVelocityB)));
 
 						// Note: This parallel mutation is safe thanks to graph coloring.
 						point.restitutionMomentum = newRestitutionMomentum;
@@ -2317,21 +2041,6 @@ void updateInverseMomentOfInertiaTensors(
 }
 
 template <size_t N>
-void updateObjectEnergyLevels(
-	execution::Entities<ObjectActivity, const InverseMass, const MomentOfInertiaTensor<N>, const LinearVelocity<N>, const AngularVelocity<N>, const ObjectActiveTag>
-		activeObjectEntities,
-	const SimulationOptions<N>& simulationOptions) {
-	const Quantity<1, Reciprocal<Energy::Unit>> inverseEnergyLevelUnit = inverse(simulationOptions.energyLevelUnit);
-	for (auto&& [objectID, activity, inverseMass, momentOfInertiaTensor, linearVelocity, angularVelocity, activeTag] : activeObjectEntities) {
-		const Energy linearKineticEnergy = (inverseMass == 0) ? Energy{} : Energy{(0.5f / inverseMass) * length2(linearVelocity)};
-		const Energy angularKineticEnergy = 0.5f * dot(angularVelocity, momentOfInertiaTensor * angularVelocity);
-		activity.energyLevel = max(ObjectActivity::EnergyLevel{activity.energyLevel},
-			static_cast<ObjectActivity::EnergyLevel>(
-				clamp(max(linearKineticEnergy, angularKineticEnergy) * inverseEnergyLevelUnit, Coefficient{1}, static_cast<Coefficient>(ObjectActivity::MAX_ENERGY_LEVEL))));
-	}
-}
-
-template <size_t N>
 void scheduleStep(Scheduler<N>& scheduler, const SimulationOptions<N>& simulationOptions, const ScheduleStepOptions<N>& scheduleStepOptions) {
 	const execution::Task::ParallelCount parallelism = clamp(simulationOptions.targetParallelism, execution::Task::ParallelCount{1}, execution::Task::ParallelCount{64});
 
@@ -2354,7 +2063,6 @@ void scheduleStep(Scheduler<N>& scheduler, const SimulationOptions<N>& simulatio
 	scheduleStepOptions.addPostCollisionDetectionTasks(scheduler);
 
 	scheduler.template addTask<emitCollisionAndSeparationEvents<N>>("Emit collision and separation events");
-	scheduler.template addTask<activateSeparatedObjects<N>>("Activate separated objects");
 	scheduler.template addTask<updateActiveJointSet<N>>("Update active joint set");
 
 	scheduleStepOptions.addPreSolverTasks(scheduler);
@@ -2435,8 +2143,6 @@ void scheduleStep(Scheduler<N>& scheduler, const SimulationOptions<N>& simulatio
 
 	scheduler.template addTask<updateMomentOfInertiaTensors<N>>("Update moment of inertia tensors");
 	scheduler.template addTask<updateInverseMomentOfInertiaTensors<N>>("Update inverse moment of inertia tensors");
-
-	scheduler.template addParallelTransformationTask<updateObjectEnergyLevels<N>>(parallelism, "Update object energy levels");
 }
 
 template <size_t N>

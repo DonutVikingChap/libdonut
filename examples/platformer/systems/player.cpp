@@ -9,37 +9,13 @@
 #include "../Audio.hpp"
 #include "../Graphics.hpp"
 #include "../System.hpp"
-#include "../collision_layers.hpp"
+#include "../physics.hpp"
 #include "level.hpp"
 #include "object.hpp"
 
 #include <utility> // std::move
 
 namespace {
-
-enum class PlayerAction : uint8_t {
-	CONFIRM,
-	CANCEL,
-	MOVE_FORWARD,
-	MOVE_BACKWARD,
-	MOVE_LEFT,
-	MOVE_RIGHT,
-	AIM_UP,
-	AIM_DOWN,
-	AIM_LEFT,
-	AIM_RIGHT,
-	TURN_UP,
-	TURN_DOWN,
-	TURN_LEFT,
-	TURN_RIGHT,
-	SPRINT,
-	GROUND_POUND,
-	JUMP,
-	ATTACK,
-	ZOOM_IN,
-	ZOOM_OUT,
-	TOGGLE_FLYING,
-};
 
 constexpr phys::CollisionFilter PLAYER_COLLISION_FILTER{
 	.layers = COLLISION_LAYER_PLAYER,
@@ -197,14 +173,6 @@ struct PlayerSounds {
 
 // Components:
 
-struct PlayerTag {};
-
-struct PlayerInput {
-	evt::InputManager inputManager{{.emitOutputEvents = true}};
-	Optional<uint32_t> controllerID{};
-	bool hasKeyboardControl = false;
-};
-
 struct PlayerMovement {
 	phys::AbsoluteAngle headingYaw;
 	phys::Scale3D desiredDirectionScale{};
@@ -236,8 +204,6 @@ struct PlayerCamera {
 	phys::Distance distance;
 	phys::Distance previousDistance = distance;
 	phys::AbsoluteAngle desiredPitch{};
-	phys::Scale2D aimSensitivity{1.0f, 1.0f};
-	phys::PitchYawRates turnSensitivity{200_degrees_per_second};
 };
 
 struct PlayerAnimation {
@@ -406,6 +372,12 @@ void setCameraPosition(PlayerCamera& camera, phys::Position3D newPosition, phys:
 
 // Systems:
 
+void animatePlayerInventories(exec::Entities<PlayerInventory> playerEntities, const app::FrameInfo& frameInfo) {
+	for (auto&& [entityID, inventory] : playerEntities) {
+		countdown(inventory.collectAnimationCooldown, frameInfo.deltaTime);
+	}
+}
+
 void controlPlayers(exec::Entities<PlayerInput, PlayerMovement, PlayerCamera, phys::Orientation3D, phys::LinearVelocity3D, phys::LinearAcceleration3D, const phys::Position3D,
 						const phys::InverseMass, const phys::Collider3D>
 						playerEntities,
@@ -417,7 +389,10 @@ void controlPlayers(exec::Entities<PlayerInput, PlayerMovement, PlayerCamera, ph
 		camera.previousAngles = camera.angles;
 		camera.previousDistance = camera.distance;
 
-		for (const evt::InputManager::OutputEvent& event : input.inputManager.pollOutputEvents()) {
+		movement.timeSinceAttack += deltaTime;
+		movement.timeSinceJump += deltaTime;
+
+		for (const evt::InputManager::OutputEvent& event : input.pollOutputEvents()) {
 			GREM_MATCH(event) {
 				GREM_CASE(const evt::InputManager::OutputMoved& moved) break;
 				GREM_CASE(const evt::InputManager::OutputPressed& pressed) {
@@ -436,10 +411,10 @@ void controlPlayers(exec::Entities<PlayerInput, PlayerMovement, PlayerCamera, ph
 			}
 		}
 
-		const vec2 cameraAimScale = input.inputManager.getRelativeState2D(PlayerAction::AIM_DOWN, PlayerAction::AIM_UP, PlayerAction::AIM_RIGHT, PlayerAction::AIM_LEFT).motion;
-		const vec2 cameraTurnScale = input.inputManager.getCurrentState2D(PlayerAction::TURN_DOWN, PlayerAction::TURN_UP, PlayerAction::TURN_RIGHT, PlayerAction::TURN_LEFT).value;
-		const float cameraDistanceScale = input.inputManager.getRelativeState1D(PlayerAction::ZOOM_IN, PlayerAction::ZOOM_OUT).motion;
-		const phys::PitchYawRotations angleRotations = cameraAimScale * camera.aimSensitivity + cameraTurnScale * camera.turnSensitivity * deltaTime;
+		const vec2 cameraAimScale = input.getRelativeState2D(PlayerAction::AIM_DOWN, PlayerAction::AIM_UP, PlayerAction::AIM_RIGHT, PlayerAction::AIM_LEFT).motion;
+		const vec2 cameraLookScale = input.getCurrentState2D(PlayerAction::LOOK_DOWN, PlayerAction::LOOK_UP, PlayerAction::LOOK_RIGHT, PlayerAction::LOOK_LEFT).value;
+		const float cameraDistanceScale = input.getRelativeState1D(PlayerAction::ZOOM_IN, PlayerAction::ZOOM_OUT).motion;
+		const phys::PitchYawRotations angleRotations = cameraAimScale * input.settings.aimSensitivity + cameraLookScale * input.settings.lookSensitivity * deltaTime;
 		if (angleRotations != 0) {
 			const phys::OrthonormalBasis2D yawRotation = rotate(-angleRotations.getY());
 			camera.horizontalDirectionScale = yawRotation * camera.horizontalDirectionScale;
@@ -447,6 +422,7 @@ void controlPlayers(exec::Entities<PlayerInput, PlayerMovement, PlayerCamera, ph
 			camera.angles += angleRotations;
 			camera.horizontalDirectionFollowCooldown = settings.camera.yawFollowCooldownAfterAdjustment;
 		}
+
 		const phys::Length1D newCameraDistance = camera.distance + cameraDistanceScale * phys::METERS;
 		if (newCameraDistance < settings.camera.minDistance) {
 			camera.distance = min(camera.distance, settings.camera.minDistance);
@@ -454,35 +430,32 @@ void controlPlayers(exec::Entities<PlayerInput, PlayerMovement, PlayerCamera, ph
 			camera.distance = min(newCameraDistance, settings.camera.maxDistance);
 		}
 
-		const vec3 inputScale =
-			input.inputManager
-				.getCurrentState3D(PlayerAction::MOVE_LEFT, PlayerAction::MOVE_RIGHT, PlayerAction::MOVE_BACKWARD, PlayerAction::MOVE_FORWARD, PlayerAction::GROUND_POUND,
-					PlayerAction::JUMP)
-				.value;
-		const phys::Scale2D desiredHorizontalDirectionScale = phys::Orientation2D{0 - camera.angles.getY()}(phys::Scale2D{inputScale.x, -inputScale.y});
-		movement.desiredDirectionScale = {desiredHorizontalDirectionScale.getX(), inputScale.z, desiredHorizontalDirectionScale.getY()};
-		movement.desiredSpeed = (input.inputManager.isPressed(PlayerAction::SPRINT)) ? ((movement.flying) ? settings.flying.sprintSpeed : settings.grounded.sprintSpeed)
-		                                                                             : ((movement.flying) ? settings.flying.baseSpeed : settings.grounded.baseSpeed);
+		const evt::InputManager::ControlState3D movementInput = input.getCurrentState3D( //
+			PlayerAction::MOVE_LEFT, PlayerAction::MOVE_RIGHT,                           //
+			PlayerAction::MOVE_BACKWARD, PlayerAction::MOVE_FORWARD,                     //
+			PlayerAction::GROUND_POUND, PlayerAction::JUMP);
+		const phys::Scale2D desiredHorizontalDirectionScale = phys::Orientation2D{0 - camera.angles.getY()}(phys::Scale2D{movementInput.value.x, -movementInput.value.y});
+		movement.desiredDirectionScale = {desiredHorizontalDirectionScale.getX(), movementInput.value.z, desiredHorizontalDirectionScale.getY()};
+		movement.desiredSpeed = (input.isPressed(PlayerAction::SPRINT)) ? ((movement.flying) ? settings.flying.sprintSpeed : settings.grounded.sprintSpeed)
+		                                                                : ((movement.flying) ? settings.flying.baseSpeed : settings.grounded.baseSpeed);
 
-		const bool wantsToAttack = input.inputManager.isPressed(PlayerAction::ATTACK) || input.inputManager.justPressed(PlayerAction::ATTACK);
-		if (input.inputManager.justPressed(PlayerAction::ATTACK)) {
+		const bool wantsToAttack = input.isPressed(PlayerAction::ATTACK) || input.justPressed(PlayerAction::ATTACK);
+		if (input.justPressed(PlayerAction::ATTACK)) {
 			movement.alreadyAttacked = false;
 		}
 
-		const bool wantsToJump = input.inputManager.isPressed(PlayerAction::JUMP) || input.inputManager.justPressed(PlayerAction::JUMP);
-		if (input.inputManager.justPressed(PlayerAction::JUMP)) {
+		const bool wantsToJump = input.isPressed(PlayerAction::JUMP) || input.justPressed(PlayerAction::JUMP);
+		if (input.justPressed(PlayerAction::JUMP)) {
 			movement.alreadyJumped = false;
 		}
 
-		const bool wantsToGroundPound = input.inputManager.isPressed(PlayerAction::GROUND_POUND) || input.inputManager.justPressed(PlayerAction::GROUND_POUND);
+		const bool wantsToGroundPound = input.isPressed(PlayerAction::GROUND_POUND) || input.justPressed(PlayerAction::GROUND_POUND);
 
-		movement.timeSinceAttack += deltaTime;
 		if (countdownLoop(movement.attackCooldown, deltaTime, settings.attack.interval, wantsToAttack && !movement.alreadyAttacked && settings.attack.allowed)) {
 			movement.timeSinceAttack = {};
 			movement.alreadyAttacked = true;
 		}
 
-		movement.timeSinceJump += deltaTime;
 		if (movement.flying) {
 			flyMove(movement, linearVelocity, gravityAcceleration, settings, deltaTime);
 		} else {
@@ -513,16 +486,14 @@ void controlPlayers(exec::Entities<PlayerInput, PlayerMovement, PlayerCamera, ph
 			const phys::AbsoluteAngle desiredWrappedYaw = getAngle(rotate90DegreesClockwise(flipY(*desiredHorizontalVelocityDirection)));
 			const phys::AbsoluteAngle desiredYaw = movement.headingYaw + getAngleDifference(movement.headingYaw, desiredWrappedYaw);
 			movement.headingYaw = expDecay(movement.headingYaw, desiredYaw, settings.turning.yawDecayRate, deltaTime);
-			orientation = phys::Orientation3D::yaw(movement.headingYaw);
 		}
-
-		input.inputManager.update();
+		orientation = phys::Orientation3D::yaw(movement.headingYaw);
 	}
 }
 
 void groundPlayers(
 	exec::Entities<PlayerMovement, phys::Position3D, phys::LinearVelocity3D, const phys::LinearAcceleration3D, const phys::InverseMass, const phys::InverseMomentOfInertiaTensor3D,
-		const phys::Volume, const phys::FluidDensity, const phys::Orientation3D, const phys::Scale3D, const phys::Collider3D, const phys::ObjectContacts3D>
+		const phys::Volume, const phys::FluidDensity, const phys::Orientation3D, const phys::Scale3D, const phys::Collider3D>
 		playerEntities,
 	exec::Entities<const phys::Position3D, const phys::Orientation3D, const phys::Scale3D, const phys::Collider3D, const phys::ObjectBounds3D> objectEntities,
 	exec::Entities<const phys::Material> materialEntities, Audio& audio, const PlayerSettings& settings, const PlayerSounds& sounds, const phys::Broadphase3D& broadphase,
@@ -530,8 +501,8 @@ void groundPlayers(
 	const phys::Time deltaTime = simulationOptions.stepInterval;
 	const phys::Scale1D minGroundNormalY = cos(settings.grounded.maxSlopeAngle);
 
-	for (auto&& [entityID, movement, position, linearVelocity, gravityAcceleration, inverseMass, inverseMomentOfInertiaTensor, volume, fluidDensity, orientation, scale, collider,
-			 objectContacts] : playerEntities) {
+	for (auto&& [entityID, movement, position, linearVelocity, gravityAcceleration, inverseMass, inverseMomentOfInertiaTensor, volume, fluidDensity, orientation, scale, collider] :
+		playerEntities) {
 		movement.timeSinceGrounded += deltaTime;
 
 		const phys::ConvexShapeView3D castShape{collider.shape};
@@ -618,8 +589,8 @@ void adjustPlayerCameras(exec::Entities<PlayerCamera, const PlayerMovement, cons
 				const phys::LinearVelocity1D velocityInHorizontalDirection = dot(horizontalVelocity, camera.horizontalDirection);
 				const phys::Angle pitchOffset =
 					lerp(settings.camera.pitchAtZeroSpeed, settings.camera.pitchAtBaseSpeed, clamp(velocityInHorizontalDirection / settings.grounded.baseSpeed, 0_x, 1_x));
-				camera.desiredPitch = (desiredHorizontalSpeed > phys::Speed::MACHINE_EPSILON)
-				                          ? phys::Angle{clamp(atan2(verticalVelocity, desiredHorizontalSpeed) + pitchOffset, -90_degrees, 90_degrees)}
+				camera.desiredPitch = (horizontalSpeed > phys::Speed::MACHINE_EPSILON)
+				                          ? phys::Angle{clamp(atan2(verticalVelocity, horizontalSpeed) + pitchOffset, -90_degrees, 90_degrees)}
 				                          : phys::Angle{(verticalSpeed > settings.grounded.minSpeed) ? copysign(90_degrees, verticalVelocity) : pitchOffset};
 			}
 			const phys::AbsoluteAngle newPitch = expDecay(camera.angles.getX(), camera.desiredPitch,
@@ -758,9 +729,9 @@ void animatePlayers(exec::Entities<ObjectAnimationState, PlayerAnimation, const 
 	}
 }
 
-void animatePlayerInventories(exec::Entities<PlayerInventory> playerEntities, const app::FrameInfo& frameInfo) {
-	for (auto&& [entityID, inventory] : playerEntities) {
-		countdown(inventory.collectAnimationCooldown, frameInfo.deltaTime);
+void advancePlayerInputStates(exec::Entities<PlayerInput> playerEntities) {
+	for (auto&& [entityID, input] : playerEntities) {
+		input.update();
 	}
 }
 
@@ -797,18 +768,21 @@ struct PlayerSystem final : System {
 	}
 
 	void putGraphics(Graphics& graphics, const phys::Simulation3D& simulation) override {
-		const PlayerSettings& settings = simulation.resources.getResource<PlayerSettings>();
+		GREM_PROFILE_FUNCTION();
 
-		for (const auto& [entityID, inventory] : simulation.registry.getEntities<const PlayerInventory>()) {
-			const float scale = 2.0f + 0.5f * sin(inventory.collectAnimationCooldown * (phys::PI / settings.animation.collectibleCollectionDuration));
-			graphics.put2DText({6, 6}, Color::GREEN_YELLOW, formatString("Carrot Cakes: {}", inventory.collectibles), scale);
+		const WorldView& worldView = simulation.resources.getResource<WorldView>();
 
-			if (inventory.collectibles >= getLevelCollectibleCount(simulation.resources)) {
-				const Offset2D screenCenter = graphics.viewport.region.offset + graphics.viewport.region.size / 2;
+		const Offset2D screenCenter = graphics.viewport.region.offset + graphics.viewport.region.size / 2;
+
+		if (const PlayerInventory* const inventory = simulation.registry.findComponent<PlayerInventory>(worldView.playerEntityID)) {
+			const PlayerSettings& settings = simulation.resources.getResource<PlayerSettings>();
+			const float scale = 2.0f + 0.5f * sin(inventory->collectAnimationCooldown * (phys::PI / settings.animation.collectibleCollectionDuration));
+			graphics.put2DText({6, 6}, Color::GREEN_YELLOW, formatString("Carrot Cakes: {}", inventory->collectibles), scale);
+
+			if (inventory->collectibles >= getLevelCollectibleCount(simulation.resources)) {
 				graphics.put2DText(screenCenter, Color::GREEN_YELLOW, "You collected all the things! :D", 4.0f, gfx::TextAlign::CENTER);
 				graphics.put2DText(screenCenter + Offset2D{0, -72}, Color::GREEN_YELLOW, "(Press F5 to reload the level)", 2.0f, gfx::TextAlign::CENTER);
 			}
-			break;
 		}
 	}
 } playerSystemImplementation{};
@@ -824,6 +798,7 @@ struct PlayerGroundingSystem final : System {
 		scheduler.addTask<groundPlayers>("Ground players");
 		scheduler.addTask<adjustPlayerCameras>("Adjust player cameras");
 		scheduler.addTask<animatePlayers>("Animate players");
+		scheduler.addTask<advancePlayerInputStates>("Advance player input states");
 	}
 } playerGroundingSystemImplementation{};
 
@@ -859,10 +834,7 @@ void createPlayer(phys::EntityBuilder3D& entity, phys::ResourceRegistry3D& resou
 		});
 	entity.getComponent<ObjectModelInstance>().localTransformation =
 		translateRotateScale(settings.feetOffset + settings.model.rootTranslation * phys::METERS, settings.model.rootRotation, settings.model.rootScale);
-	PlayerInput& input = entity.addComponent<PlayerInput>();
-	input.inputManager.loadConfiguration<PlayerAction>(filesystem, configurationFilepath);
-	input.controllerID = controllerID;
-	input.hasKeyboardControl = !controllerID;
+	entity.addComponent<PlayerInput>(filesystem, configurationFilepath, controllerID);
 	entity.addComponent<PlayerTag>();
 	entity.addComponent<PlayerMovement>(PlayerMovement{
 		.headingYaw = angles.getY(),
@@ -885,10 +857,6 @@ void createPlayer(phys::EntityBuilder3D& entity, phys::ResourceRegistry3D& resou
 		.attackAnimationDuration = model.model.getAnimation("Punch").maxTimePoint * phys::SECONDS,
 	});
 	entity.addComponent<PlayerInventory>();
-}
-
-bool isPlayer(const phys::EntityRegistry3D& registry, phys::EntityID entityID) {
-	return registry.hasComponent<PlayerTag>(entityID);
 }
 
 PlayerCameraView getPlayerCameraView(const phys::EntityRegistry3D& registry, phys::EntityID entityID, float tickInterpolationAlpha) {
@@ -917,7 +885,7 @@ void handlePlayerEvent(phys::EntityRegistry3D& registry, const evt::Event& event
 		[&](const evt::ControllerRemovedEvent& controllerRemoved) -> void {
 			for (auto&& [entityID, input] : playerEntities) {
 				if (input.controllerID == controllerRemoved.controllerID) {
-					input.inputManager.handleEvent(event);
+					input.handleEvent(event);
 					input.controllerID.reset();
 				}
 			}
@@ -930,7 +898,7 @@ void handlePlayerEvent(phys::EntityRegistry3D& registry, const evt::Event& event
 				bool handled = false;
 				for (auto&& [entityID, input] : playerEntities) {
 					if (input.controllerID == e.controllerID) {
-						input.inputManager.handleEvent(event);
+						input.handleEvent(event);
 						handled = true;
 					}
 				}
@@ -938,12 +906,12 @@ void handlePlayerEvent(phys::EntityRegistry3D& registry, const evt::Event& event
 				if (!handled && !playerEntities.empty()) {
 					PlayerInput& firstPlayerInput = get<PlayerInput&>(*playerEntities.begin());
 					firstPlayerInput.controllerID = e.controllerID;
-					firstPlayerInput.inputManager.handleEvent(event);
+					firstPlayerInput.handleEvent(event);
 				}
 			} else {
 				for (auto&& [entityID, input] : playerEntities) {
 					if (input.hasKeyboardControl) {
-						input.inputManager.handleEvent(event);
+						input.handleEvent(event);
 					}
 				}
 			}

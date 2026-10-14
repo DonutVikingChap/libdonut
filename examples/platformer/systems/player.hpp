@@ -9,14 +9,36 @@
 
 struct System;
 
+enum class PlayerAction : uint8_t {
+	CONFIRM,
+	CANCEL,
+	MOVE_FORWARD,
+	MOVE_BACKWARD,
+	MOVE_LEFT,
+	MOVE_RIGHT,
+	AIM_UP,
+	AIM_DOWN,
+	AIM_LEFT,
+	AIM_RIGHT,
+	LOOK_UP,
+	LOOK_DOWN,
+	LOOK_LEFT,
+	LOOK_RIGHT,
+	SPRINT,
+	GROUND_POUND,
+	JUMP,
+	ATTACK,
+	ZOOM_IN,
+	ZOOM_OUT,
+	TOGGLE_FLYING,
+};
+
 extern System* const playerSystem;
 extern System* const playerControlSystem;
 extern System* const playerGroundingSystem;
 
 void createPlayer(phys::EntityBuilder3D& entity, phys::ResourceRegistry3D& resources, const Filesystem& filesystem, CStringView configurationFilepath, phys::Position3D position,
 	phys::PitchYaw angles, Optional<uint32_t> controllerID);
-
-[[nodiscard]] bool isPlayer(const phys::EntityRegistry3D& registry, phys::EntityID entityID);
 
 struct PlayerCameraView {
 	phys::Position3D position;
@@ -33,5 +55,28 @@ void teleportPlayer(phys::EntityRegistry3D& registry, const phys::ResourceRegist
 void givePlayerCollectible(phys::EntityRegistry3D& registry, const phys::ResourceRegistry3D& resources, phys::EntityID entityID);
 
 void resetAllPlayerCollectibles(phys::EntityRegistry3D& registry);
+
+// Components:
+
+struct PlayerTag {};
+
+struct PlayerInput : evt::InputManager {
+	struct Settings {
+		phys::Scale2D aimSensitivity{1.0f, 1.0f};
+		phys::PitchYawRates lookSensitivity{200_degrees_per_second};
+	};
+
+	Settings settings{};
+	Optional<uint32_t> controllerID;
+	bool hasKeyboardControl = !controllerID;
+
+	PlayerInput(const Filesystem& filesystem, CStringView configurationFilepath, Optional<uint32_t> controllerID)
+		: evt::InputManager({.emitOutputEvents = true})
+		, controllerID(controllerID) {
+		loadConfiguration<PlayerAction>(filesystem, configurationFilepath, [&](StringView key, json::Reader& reader) -> void { //
+			reader.readAggregateField(key, settings);
+		});
+	}
+};
 
 #endif

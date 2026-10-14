@@ -37,7 +37,8 @@ private:
 				continue;
 			}
 
-			activity.energyLevel = phys::ObjectActivity::MAX_ENERGY_LEVEL;
+			activity.isActive = true;
+			activity.stepsResting = 0;
 
 			const bool jumping = movementState.flags.contains(MovementState::JUMPING);
 			const bool crouching = movementState.flags.contains(MovementState::CROUCHING);

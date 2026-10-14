@@ -153,8 +153,7 @@ struct Material {
 struct ObjectFlags {
 	bool emitsCollisionEvents : 1;  ///< Emit collision events.
 	bool emitsSeparationEvents : 1; ///< Emit separation events.
-	bool enableResting : 1;         ///< Enter a resting state on inactivity.
-	bool enableWaking : 1;          ///< Leave the resting state when the object's velocity is high enough, or when perturbed by another object.
+	bool enableResting : 1;         ///< Decay the object's velocity towards 0 on when below the resting threshold.
 
 	/**
 	 * Compare these flags to another set of flags for equality.
@@ -182,33 +181,32 @@ using ObjectContacts3D = ObjectContacts<3>; ///< Potential contacts of a 3-dimen
  * Activity information of an object.
  */
 struct ObjectActivity {
-	using value_type = uint8_t;     ///< Activity value of an object.
-	using EnergyLevel = value_type; ///< Energy level of an object.
-
-	static constexpr EnergyLevel MAX_ENERGY_LEVEL = 60; ///< Maximum energy level of an object.
-
-	value_type isCorrectable : 1 = 0; ///< Whether the object may be affected by the constraint solver or not.
-	value_type wasCorrected : 1 = 0;  ///< Whether the object was affected by the constraint solver during the last simulation step or not.
-	value_type energyLevel : 6 = 0;   ///< Current energy level value.
-
-	/** Construct the default object activity. */
-	constexpr ObjectActivity() noexcept = default;
-
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#endif
 	/**
-	 * Construct object activity information from a specific energy level.
-	 *
-	 * \param energyLevel initial energy level.
+	 * May be affected by the constraint solver.
 	 */
-	constexpr explicit ObjectActivity(EnergyLevel energyLevel) noexcept
-		: isCorrectable(1)
-		, energyLevel(energyLevel) {}
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+	bool isCorrectable : 1 = false;
+
+	/**
+	 * Had a correction impulse applied since the start of the last simulation
+	 * step where it was active.
+	 */
+	bool wasCorrected : 1 = false;
+
+	/**
+	 * Currently considered active (moving) in the simulation.
+	 */
+	bool isActive : 1 = false;
+
+	/**
+	 * Number of consecutive simulation steps that have passed where the object
+	 * was below resting speed.
+	 */
+	uint16_t stepsResting = 0;
+
+	/**
+	 * Construct the default object activity.
+	 */
+	constexpr ObjectActivity() noexcept = default;
 
 	/**
 	 * Compare this activity information to another for equality.
@@ -311,7 +309,7 @@ struct ObjectOptions {
 	 * \note If both #mass and #principalMomentsOfInertia are infinite, the
 	 *       object will be considered immovable for the rest of its lifetime
 	 *       unless its ObjectActivity::isCorrectable field is manually set to
-	 *       1.
+	 *       true.
 	 */
 	Mass mass{};
 
@@ -327,7 +325,7 @@ struct ObjectOptions {
 	 * \note If both #mass and #principalMomentsOfInertia are infinite, the
 	 *       object will be considered immovable for the rest of its lifetime
 	 *       unless its ObjectActivity::isCorrectable field is manually set to
-	 *       1.
+	 *       true.
 	 */
 	PrincipalMomentsOfInertia<N> principalMomentsOfInertia{};
 
@@ -363,22 +361,6 @@ struct ObjectOptions {
 	 * its speed.
 	 */
 	bool enableResting = true;
-
-	/**
-	 * Whether the object should leave its resting state or not when its
-	 * velocity is high enough or when perturbed by another object.
-	 */
-	bool enableWaking = true;
-
-	/**
-	 * Initial energy level of the object.
-	 *
-	 * Set to 0 to make the object be considered inactive in the simulation when
-	 * created, which might cause it to freeze in place until disturbed.
-	 *
-	 * Must be less than or equal to ObjectActivity::MAX_ENERGY_LEVEL.
-	 */
-	ObjectActivity::EnergyLevel energyLevel = ObjectActivity::MAX_ENERGY_LEVEL;
 
 	/**
 	 * Compare this set of options to another set for equality.
@@ -700,6 +682,256 @@ template <size_t N>
 	const InverseMomentOfInertiaTensor3D inverseLocalMomentOfInertiaTensor = rotateScale(localInertiaOrientation, inversePrincipalMomentsOfInertia);
 	const Basis3D rotation = rotate(orientation);
 	return rotation * inverseLocalMomentOfInertiaTensor * transpose(rotation);
+}
+
+/**
+ * Calculate the combined effective mass of two points on two different objects
+ * along a given axis.
+ *
+ * \param inverseMassA inverse mass of the first object.
+ * \param inverseMassB inverse mass of the second object.
+ * \param inverseMomentOfInertiaTensorA world-space inverse moment of inertia
+ *        tensor of the first object.
+ * \param inverseMomentOfInertiaTensorB world-space inverse moment of inertia
+ *        tensor of the second object.
+ * \param offsetA world-space offset relative to the first object's center of
+ *        mass to calculate the effective mass at.
+ * \param offsetB world-space offset relative to the second object's center of
+ *        mass to calculate the effective mass at.
+ * \param axis world-space direction along which to calculate the combined
+ *        effective mass of the two points.
+ *
+ * \return the combined effective mass of the two objects' points along the
+ *         given axis.
+ */
+template <size_t N>
+[[nodiscard]] inline Mass calculateCombinedEffectiveMassAlongAxis(InverseMass inverseMassA, InverseMass inverseMassB,
+	const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensorA, const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensorB, Length<N> offsetA,
+	Length<N> offsetB, Direction<N> axis) {
+	const MomentArm<N> momentArmA = cross(offsetA, axis);
+	const MomentArm<N> momentArmB = cross(offsetB, axis);
+	const InverseMass inverseEffectiveMassA = inverseMassA + dot(momentArmA, inverseMomentOfInertiaTensorA * momentArmA);
+	const InverseMass inverseEffectiveMassB = inverseMassB + dot(momentArmB, inverseMomentOfInertiaTensorB * momentArmB);
+	const InverseMass combinedInverseEffectiveMass = inverseEffectiveMassA + inverseEffectiveMassB;
+	const Mass combinedEffectiveMass = select(equal(combinedInverseEffectiveMass, 0), Mass{}, inverse(combinedInverseEffectiveMass));
+	return combinedEffectiveMass;
+}
+
+/**
+ * Calculate the combined effective mass of two points on two different objects
+ * along each axis of a given orthonormal basis.
+ *
+ * \param inverseMassA inverse mass of the first object.
+ * \param inverseMassB inverse mass of the second object.
+ * \param inverseMomentOfInertiaTensorA world-space inverse moment of inertia
+ *        tensor of the first object.
+ * \param inverseMomentOfInertiaTensorB world-space inverse moment of inertia
+ *        tensor of the second object.
+ * \param offsetA world-space offset relative to the first object's center of
+ *        mass to calculate the effective masses at.
+ * \param offsetB world-space offset relative to the second object's center of
+ *        mass to calculate the effective masses at.
+ * \param axes basis of world-space directions along which to calculate the
+ *        combined effective masses of the two points.
+ *
+ * \return the combined effective masses of the two objects' points along the
+ *         given axes.
+ */
+template <size_t N>
+[[nodiscard]] inline Quantity<N, Mass::Unit> calculateCombinedEffectiveMassesAlongAxes(InverseMass inverseMassA, InverseMass inverseMassB,
+	const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensorA, const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensorB, Length<N> offsetA,
+	Length<N> offsetB, OrthonormalBasis<N> axes) {
+	const MomentArmTensor<N> momentArmsA = cross(offsetA, axes);
+	const MomentArmTensor<N> momentArmsB = cross(offsetB, axes);
+	const Quantity<N, InverseMass::Unit> inverseEffectiveMassesA = inverseMassA + dot(momentArmsA, inverseMomentOfInertiaTensorA * momentArmsA);
+	const Quantity<N, InverseMass::Unit> inverseEffectiveMassesB = inverseMassB + dot(momentArmsB, inverseMomentOfInertiaTensorB * momentArmsB);
+	const Quantity<N, InverseMass::Unit> combinedInverseEffectiveMasses = inverseEffectiveMassesA + inverseEffectiveMassesB;
+	const Quantity<N, Mass::Unit> combinedEffectiveMasses = select(equal(combinedInverseEffectiveMasses, 0), Quantity<N, Mass::Unit>{}, inverse(combinedInverseEffectiveMasses));
+	return combinedEffectiveMasses;
+}
+
+/**
+ * Calculate the combined effective moment of inertia of two objects around a
+ * given axis.
+ *
+ * \param inverseMomentOfInertiaTensorA world-space inverse moment of inertia
+ *        tensor of the first object.
+ * \param inverseMomentOfInertiaTensorB world-space inverse moment of inertia
+ *        tensor of the second object.
+ * \param axis world-space axis around which to calculate the combined effective
+ *        moment of inertia of the two objects.
+ *
+ * \return the combined effective moment of inertia of the two objects around
+ *         the given axis.
+ */
+[[nodiscard]] inline MomentOfInertia2D calculateCombinedEffectiveMomentOfInertiaAroundAxis(const InverseMomentOfInertiaTensor3D& inverseMomentOfInertiaTensorA,
+	const InverseMomentOfInertiaTensor3D& inverseMomentOfInertiaTensorB, Direction3D axis) {
+	const InverseMomentOfInertia2D inverseEffectiveMomentOfInertiaA = dot(axis, inverseMomentOfInertiaTensorA * axis);
+	const InverseMomentOfInertia2D inverseEffectiveMomentOfInertiaB = dot(axis, inverseMomentOfInertiaTensorB * axis);
+	const InverseMomentOfInertia2D combinedInverseEffectiveMomentOfInertia = inverseEffectiveMomentOfInertiaA + inverseEffectiveMomentOfInertiaB;
+	const MomentOfInertia2D combinedEffectiveMomentOfInertia =
+		select(equal(combinedInverseEffectiveMomentOfInertia, 0), MomentOfInertia2D{}, inverse(combinedInverseEffectiveMomentOfInertia));
+	return combinedEffectiveMomentOfInertia;
+}
+
+/**
+ * Calculate the combined effective moment of inertia tensor of two objects.
+ *
+ * \param inverseMomentOfInertiaTensorA world-space inverse moment of inertia
+ *        tensor of the first object.
+ * \param inverseMomentOfInertiaTensorB world-space inverse moment of inertia
+ *        tensor of the second object.
+ *
+ * \return the combined effective world-space moment of inertia tensor of the
+ *         two objects.
+ */
+template <size_t N>
+[[nodiscard]] inline MomentOfInertiaTensor<N> calculateCombinedEffectiveMomentOfInertiaTensor(const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensorA,
+	const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensorB) {
+	const InverseMomentOfInertiaTensor<N> combinedInverseEffectiveMomentOfInertiaTensor = inverseMomentOfInertiaTensorA + inverseMomentOfInertiaTensorB;
+	const MomentOfInertiaTensor<N> combinedEffectiveMomentOfInertiaTensor =
+		(combinedInverseEffectiveMomentOfInertiaTensor == 0) ? MomentOfInertiaTensor<N>{0.0f * KILOGRAM_SQUARE_METERS} : inverse(combinedInverseEffectiveMomentOfInertiaTensor);
+	return combinedEffectiveMomentOfInertiaTensor;
+}
+
+/**
+ * Calculate the linear velocity of a point on an object with linear and angular
+ * velocity.
+ *
+ * \param linearVelocity linear velocity of the object's center of mass.
+ * \param angularVelocity angular velocity of the object around its center of
+ *        mass.
+ * \param offset world-space offset relative to the object's center of mass to
+ *        calculate the velocity at.
+ *
+ * \return the world-space linear velocity of the object at the given point.
+ */
+template <size_t N>
+[[nodiscard]] inline LinearVelocity<N> calculatePointVelocity(LinearVelocity<N> linearVelocity, AngularVelocity<N> angularVelocity, Length<N> offset) {
+	return linearVelocity + cross(angularVelocity, offset);
+}
+
+/**
+ * Apply a world-space impulse to an object's velocity.
+ *
+ * \param linearVelocity linear velocity of the object to apply the impulse to.
+ * \param angularVelocity angular velocity of the object to apply the impulse
+ *        to.
+ * \param inverseMass inverse mass of the object.
+ * \param inverseMomentOfInertiaTensor world-space inverse moment of inertia
+ *        tensor of the object.
+ * \param impulse world-space impulse to apply.
+ * \param offset world-space offset relative to the object's center of mass to
+ *        apply the impulse at.
+ */
+template <size_t N>
+inline void applyImpulse(LinearVelocity<N>& linearVelocity, AngularVelocity<N>& angularVelocity, InverseMass inverseMass,
+	const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensor, LinearImpulse<N> impulse, Length<N> offset) {
+	linearVelocity += inverseMass * impulse;
+	angularVelocity += inverseMomentOfInertiaTensor * cross(offset, impulse);
+}
+
+/**
+ * Apply a world-space impulse to an object's velocity, making it active and
+ * marking it as corrected, unless the object is not correctable.
+ *
+ * \param activity activity state of the object. If
+ *        ObjectActivity::isCorrectible is false, the impulse is ignored.
+ *        Otherwise, the impulse is applied, and ObjectActivity::wasCorrected
+ *        and ObjectActivity::isActive are both set to true.
+ * \param linearVelocity linear velocity of the object to apply the impulse to.
+ * \param angularVelocity angular velocity of the object to apply the impulse
+ *        to.
+ * \param inverseMass inverse mass of the object.
+ * \param inverseMomentOfInertiaTensor world-space inverse moment of inertia
+ *        tensor of the object.
+ * \param impulse world-space impulse to apply.
+ * \param offset world-space offset relative to the object's center of mass to
+ *        apply the impulse at.
+ */
+template <size_t N>
+inline void applyCorrectionImpulse(ObjectActivity& activity, LinearVelocity<N>& linearVelocity, AngularVelocity<N>& angularVelocity, InverseMass inverseMass,
+	const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensor, LinearImpulse<N> impulse, Length<N> offset) {
+	if (activity.isCorrectable) {
+		activity.wasCorrected = true;
+		activity.isActive = true;
+		applyImpulse<N>(linearVelocity, angularVelocity, inverseMass, inverseMomentOfInertiaTensor, impulse, offset);
+	}
+}
+
+/**
+ * Apply a world-space linear impulse to an object's velocity at its center of
+ * mass.
+ *
+ * \param linearVelocity linear velocity of the object to apply the impulse to.
+ * \param inverseMass inverse mass of the object.
+ * \param linearImpulse world-space impulse to apply.
+ */
+template <size_t N>
+inline void applyLinearImpulse(LinearVelocity<N>& linearVelocity, InverseMass inverseMass, LinearImpulse<N> linearImpulse) {
+	linearVelocity += inverseMass * linearImpulse;
+}
+
+/**
+ * Apply a world-space linear impulse to an object's velocity at its center of
+ * mass, making it active and marking it as corrected, unless the object is not
+ * correctable.
+ *
+ * \param activity activity state of the object. If
+ *        ObjectActivity::isCorrectible is false, the impulse is ignored.
+ *        Otherwise, the impulse is applied, and ObjectActivity::wasCorrected
+ *        and ObjectActivity::isActive are both set to true.
+ * \param linearVelocity linear velocity of the object to apply the impulse to.
+ * \param inverseMass inverse mass of the object.
+ * \param linearImpulse world-space impulse to apply.
+ */
+template <size_t N>
+inline void applyLinearCorrectionImpulse(ObjectActivity& activity, LinearVelocity<N>& linearVelocity, InverseMass inverseMass, LinearImpulse<N> linearImpulse) {
+	if (activity.isCorrectable) {
+		activity.wasCorrected = true;
+		activity.isActive = true;
+		applyLinearImpulse<N>(linearVelocity, inverseMass, linearImpulse);
+	}
+}
+
+/**
+ * Apply a world-space angular impulse to an object's velocity at its center of
+ * mass.
+ *
+ * \param angularVelocity angular velocity of the object to apply the impulse
+ *        to.
+ * \param inverseMomentOfInertiaTensor world-space inverse moment of inertia
+ *        tensor of the object.
+ * \param angularImpulse world-space angular impulse to apply.
+ */
+template <size_t N>
+inline void applyAngularImpulse(AngularVelocity<N>& angularVelocity, const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensor, AngularImpulse<N> angularImpulse) {
+	angularVelocity += inverseMomentOfInertiaTensor * angularImpulse;
+}
+
+/**
+ * Apply a world-space angular impulse to an object's velocity at its center of
+ * mass, making it active and marking it as corrected, unless the object is not
+ * correctable.
+ *
+ * \param activity activity state of the object. If
+ *        ObjectActivity::isCorrectible is false, the impulse is ignored.
+ *        Otherwise, the impulse is applied, and ObjectActivity::wasCorrected
+ *        and ObjectActivity::isActive are both set to true.
+ * \param angularVelocity angular velocity of the object to apply the impulse
+ *        to.
+ * \param inverseMomentOfInertiaTensor world-space inverse moment of inertia
+ *        tensor of the object.
+ * \param angularImpulse world-space angular impulse to apply.
+ */
+template <size_t N>
+inline void applyAngularCorrectionImpulse(ObjectActivity& activity, AngularVelocity<N>& angularVelocity, const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensor,
+	AngularImpulse<N> angularImpulse) {
+	if (activity.isCorrectable) {
+		activity.wasCorrected = true;
+		activity.isActive = true;
+		applyAngularImpulse<N>(angularVelocity, inverseMomentOfInertiaTensor, angularImpulse);
+	}
 }
 
 } // namespace grem::physics

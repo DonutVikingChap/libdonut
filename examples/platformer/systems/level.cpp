@@ -9,7 +9,7 @@
 #include "../Graphics.hpp"
 #include "../System.hpp"
 #include "../WorldView.hpp"
-#include "../collision_layers.hpp"
+#include "../physics.hpp"
 #include "../shaders.hpp"
 #include "collectible.hpp"
 #include "object.hpp"
@@ -55,25 +55,7 @@ struct Level {
 		try {
 			if (inserted) {
 				res::Model model{filesystem, filepath};
-
-				res::Model::Transformation bindPoseTransformation{};
-				bindPoseTransformation.assign(mat4{1.0f}, model.bindPose.localJoints, model.bindPose.localMorphTargetWeights, model.jointParentIndices);
-
-				Buffer<ConvexPolytopeVertex3D> vertices{};
-				for (const res::Model::Instance& instance : model.instances) {
-					const res::Model::Mesh& mesh = model.meshes.at(instance.meshIndex);
-					const mat4 jointMatrix = bindPoseTransformation.jointMatrices[((mesh.vertexFlags & res::Model::VERTEX_SKINNED) != 0) ? 0 : instance.jointIndex];
-					const Span<const vec3> meshPositions{
-						std::launder(reinterpret_cast<const vec3*>(
-							model.meshData.data() + static_cast<size_t>(mesh.meshDataOffset) * 4 + static_cast<size_t>(mesh.indexCount) * sizeof(uint32_t))),
-						static_cast<size_t>(mesh.vertexCount)};
-					vertices.reserve(vertices.size() + meshPositions.size());
-					for (const vec3 position : meshPositions) {
-						vertices.push_back(ConvexPolytopeVertex3D{vec3{jointMatrix * vec4{position, 1.0f}}});
-					}
-				}
-				it->second->shape = phys::ConvexPolytopeShape3D{vertices, 32};
-
+				it->second->shape = buildModelShape(model, buildBindPoseTransformation(model));
 				it->second->model = gfx::Model3D{device, renderer3D, std::move(model)};
 			}
 			return *it->second;
@@ -102,7 +84,7 @@ void enforceLevelBounds(phys::EntityRegistry3D& registry, LevelObjectsOutOfBound
 	}
 
 	for (const phys::EntityID entityID : objectsOutOfBounds) {
-		if (isPlayer(registry, entityID)) {
+		if (registry.hasComponent<PlayerTag>(entityID)) {
 			teleportPlayer(registry, resources, entityID, level.playerSpawnPositionAndAngles.first, level.playerSpawnPositionAndAngles.second, phys::LinearVelocity3D{});
 		} else {
 			registry.destroyEntity(entityID);
@@ -182,7 +164,7 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 		struct Prop {
 			phys::Position3D position{};
 			quat orientation{};
-			phys::Scale3D scale{1.0f};
+			phys::Scale3D scale{1_x};
 			String model{};
 			phys::Coefficient staticFriction = 0.8_x;
 			phys::Coefficient kineticFriction = 0.707_x;
@@ -195,7 +177,7 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 		struct PhysicsObject {
 			phys::Position3D position{};
 			quat orientation{};
-			phys::Scale3D scale{1.0f};
+			phys::Scale3D scale{1_x};
 			String model{};
 			phys::LinearVelocity3D linearVelocity{};
 			phys::AngularVelocity3D angularVelocity{};
@@ -430,7 +412,6 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 						.frictionCombine = material.frictionCombine,
 						.restitutionCombine = material.restitutionCombine,
 					},
-					.energyLevel = 0,
 				});
 		}
 	}
@@ -473,7 +454,6 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 					.frictionCombine = propJSON.frictionCombine,
 					.restitutionCombine = propJSON.restitutionCombine,
 				},
-				.energyLevel = 0,
 			});
 		entity.addComponent<LevelProp>(LevelProp{.model = &model, .instanceIndex = model.propInstances.size()});
 		model.propInstances.push_back(Level::Model::PropInstance{

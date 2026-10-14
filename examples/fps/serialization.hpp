@@ -39,7 +39,7 @@ template <size_t N, typename UnitT>
 struct packed_size<phys::Quantity<N, UnitT>> : meta::Constant<N * sizeof(float)> {};
 
 template <>
-struct packed_size<phys::ObjectActivity> : meta::Constant<sizeof(phys::ObjectActivity::value_type)> {};
+struct packed_size<phys::ObjectActivity> : meta::Constant<sizeof(uint32_t)> {};
 
 template <typename... Ts>
 struct packed_size<Tuple<Ts...>> : meta::Constant<(packed_size<std::remove_cvref_t<Ts>>::value + ... + size_t{0})> {};
@@ -64,10 +64,6 @@ struct is_trivially_serializable<phys::Quantity<N, UnitT>> : std::bool_constant<
 
 template <size_t N>
 struct is_trivially_serializable<phys::Orientation<N>> : std::bool_constant<HOST_IS_LITTLE_ENDIAN && sizeof(phys::Orientation<N>) == sizeof(quat)> {};
-
-template <>
-struct is_trivially_serializable<phys::ObjectActivity>
-    : std::bool_constant<is_trivially_serializable<phys::ObjectActivity::value_type>::value && sizeof(phys::ObjectActivity) == sizeof(phys::ObjectActivity::value_type)> {};
 
 template <>
 struct is_trivially_serializable<Duration>
@@ -248,28 +244,23 @@ inline void serialize(phys::Orientation3D value, Writer output) {
 }
 
 inline void serialize(phys::ObjectActivity value, Writer output) {
-	phys::ObjectActivity::value_type bits{};
-	bits |= static_cast<phys::ObjectActivity::value_type>((phys::ObjectActivity::value_type{value.isCorrectable} << 7));
-	bits |= static_cast<phys::ObjectActivity::value_type>((phys::ObjectActivity::value_type{value.wasCorrected} << 6));
-	bits |= phys::ObjectActivity::value_type{value.energyLevel};
+	uint32_t bits{};
+	bits |= uint32_t{value.isCorrectable} << 31;
+	bits |= uint32_t{value.wasCorrected} << 30;
+	bits |= uint32_t{value.isActive} << 29;
+	bits |= uint32_t{value.stepsResting};
 	serialize(bits, output);
 }
 
 [[nodiscard]] inline bool deserialize(phys::ObjectActivity& value, SpanReader input) {
-	phys::ObjectActivity::value_type bits{};
+	uint32_t bits{};
 	if (!deserialize(bits, input)) {
 		return false;
 	}
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#endif
-	value.isCorrectable = static_cast<phys::ObjectActivity::value_type>((bits >> 7) & 1);
-	value.wasCorrected = static_cast<phys::ObjectActivity::value_type>((bits >> 6) & 1);
-	value.energyLevel = static_cast<phys::ObjectActivity::value_type>(bits & 0b00111111);
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+	value.isCorrectable = ((bits >> 31) & 1) != 0;
+	value.wasCorrected = ((bits >> 30) & 1) != 0;
+	value.isActive = ((bits >> 29) & 1) != 0;
+	value.stepsResting = static_cast<uint16_t>(bits & uint32_t{0x0000FFFF});
 	return true;
 }
 

@@ -53,7 +53,7 @@
 #     - (optional) "angularDrag": Float (default: 0.5)
 #     - (optional) "frictionCombine": String ("AVERAGE" | "MINIMUM" | "MAXIMUM" | "MULTIPLY", default: "MINIMUM")
 #     - (optional) "restitutionCombine": String ("AVERAGE" | "MINIMUM" | "MAXIMUM" | "MULTIPLY", default: "MAXIMUM")
-#   - "Collectibles" (Objects whose positions mark the positions of collectibles)
+#   - "Collectibles" - Objects whose positions mark the positions of collectibles
 # - objects
 #   - "Player Spawn" (Object whose position and angles determine the spawnpoint)
 #   - (Sun/Point/Spot Light objects)
@@ -324,7 +324,9 @@ if 'Physics Objects' in bpy.data.collections:
         level['physicsObjects'].append(physics_object)
 
 if 'Collectibles' in bpy.data.collections:
-    level['collectibles'] = [convert_position(object.location) for object in bpy.data.collections['Collectibles'].all_objects]
+    for object in bpy.data.collections['Collectibles'].all_objects:
+        collectible = convert_position(object.location)
+        level['collectibles'].append(collectible)
 
 with open(json_output_filepath, 'w') as f:
     f.write(json.dumps(level, indent='\t'))

@@ -343,6 +343,7 @@ void Instances3D::putShadedTextStringInstance(const Model2D::ShaderPipeline& sha
 			.orientation = instance.orientation,
 			.scale = instance.scale,
 			.alignment = instance.alignment,
+			.alignmentOffset = instance.alignmentOffset,
 			.color = instance.color,
 			.distanceOrderingBias = instance.distanceOrderingBias,
 		});
@@ -624,7 +625,7 @@ void Instances3D::putShadedTextInstanceImplementation(SharedPointer<ShaderPipeli
 		shapedGlyph.font->renderGlyph(*device, shapedGlyph.characterSize, shapedGlyph.codePoint);
 	}
 	const mat4 textTransformation = translateRotateScale(instance.position, instance.orientation, vec3{instance.scale, 1.0f});
-	const vec2 alignmentOffset = text.getAlignmentOffset(instance.alignment);
+	const vec2 alignmentOffset = text.getAlignmentOffset(instance.alignment) + instance.alignmentOffset;
 	const Box<2, float> boundingBox = text.getBoundingBox();
 	const float boundingRadius = length(max(boundingBox.max - boundingBox.min - alignmentOffset, -alignmentOffset));
 	SharedPointer<MeshImplementation> meshHandle = renderer3D->getUnitSquareModel2D().getNodes().front().mesh.lock();

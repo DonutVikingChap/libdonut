@@ -572,38 +572,23 @@ template <size_t N>
 }
 
 [[nodiscard]] inline phys::ObjectActivity parseObjectActivity(const json::Value& jsonValue) {
-	if (jsonValue.isNumber()) {
-		const phys::ObjectActivity::EnergyLevel energyLevel = parseNumber<phys::ObjectActivity::EnergyLevel>(jsonValue);
-		if (energyLevel > phys::ObjectActivity::MAX_ENERGY_LEVEL) {
-			throw json::Error{"Value out of range.", jsonValue.getSource()};
-		}
-		return phys::ObjectActivity{energyLevel};
-	}
 	if (jsonValue.isObject()) {
 		phys::ObjectActivity result{};
 		if (const json::Value* const isCorrectableValue = jsonValue.findProperty("isCorrectable")) {
-			result.isCorrectable = (parseBoolean(*isCorrectableValue)) ? 1 : 0;
+			result.isCorrectable = parseBoolean(*isCorrectableValue);
 		}
 		if (const json::Value* const wasCorrectedValue = jsonValue.findProperty("wasCorrected")) {
-			result.wasCorrected = (parseBoolean(*wasCorrectedValue)) ? 1 : 0;
+			result.wasCorrected = parseBoolean(*wasCorrectedValue);
 		}
-		if (const json::Value* const energyLevelValue = jsonValue.findProperty("energyLevel")) {
-			const phys::ObjectActivity::EnergyLevel energyLevel = parseNumber<phys::ObjectActivity::EnergyLevel>(*energyLevelValue);
-			if (energyLevel > phys::ObjectActivity::MAX_ENERGY_LEVEL) {
-				throw json::Error{"Value out of range.", energyLevelValue->getSource()};
-			}
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#endif
-			result.energyLevel = energyLevel;
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+		if (const json::Value* const isActiveValue = jsonValue.findProperty("isActive")) {
+			result.isActive = parseBoolean(*isActiveValue);
+		}
+		if (const json::Value* const stepsRestingValue = jsonValue.findProperty("stepsResting")) {
+			result.stepsResting = parseNumber<uint16_t>(*stepsRestingValue);
 		}
 		return result;
 	}
-	throw json::Error{"Expected a number or an object.", jsonValue.getSource()};
+	throw json::Error{"Expected an object.", jsonValue.getSource()};
 }
 
 [[nodiscard]] inline phys::CollisionLayer parseCollisionLayer(const json::Value& jsonValue) {

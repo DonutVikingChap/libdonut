@@ -1375,6 +1375,7 @@ GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(TurnSeconds, TURN_SECONDS, "turns s",
 GREM_PRIVATE_PHYSICS_DEFINE_UNIT(RadiansPerSecond, RADIANS_PER_SECOND, "rad/s", BaseQuotient<Radians, Seconds>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(DegreesPerSecond, DEGREES_PER_SECOND, "deg/s", BaseQuotient<Degrees, Seconds>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(TurnsPerSecond, TURNS_PER_SECOND, "turns/s", BaseQuotient<Turns, Seconds>)
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(RevolutionsPerMinute, REVOLUTIONS_PER_MINUTE, "RPM", BaseQuotient<Turns, Minutes>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(RadiansPerSecondSquared, RADIANS_PER_SECOND_SQUARED, "rad/s^2", BaseQuotient<Radians, BaseSquare<Seconds>>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(NewtonMeterSeconds, NEWTON_METER_SECONDS, "N m s", BaseProduct<Newton, Meters, Seconds>)
 GREM_PRIVATE_PHYSICS_DEFINE_UNIT(KilogramSquareMetersPerSecond, KILOGRAM_SQUARE_METERS_PER_SECOND, "kg m^s/s", BaseQuotient<KilogramSquareMeters, Seconds>)
@@ -1383,7 +1384,17 @@ GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(KilogramsPerSecond, KILOGRAMS_PER_SEC
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(CubicMetersPerSecond, CUBIC_METERS_PER_SECOND, "m^3/s", BaseQuotient<CubicMeters, Seconds>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(Watts, WATTS, "W", BaseQuotient<KilogramSquareMeters, Cubic<Seconds>>)
 GREM_PRIVATE_PHYSICS_DEFINE_UNIT(KilogramSquareMetersPerSecondCubed, KILOGRAM_SQUARE_METERS_PER_SECOND_CUBED, "kg m^2/s^3", BaseQuotient<KilogramSquareMeters, Cubic<Seconds>>)
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(Kilowatts, KILOWATTS, "kW", BaseMultipleOf<Watts, 1000.0l>)
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(Megawatts, MEGAWATTS, "MW", BaseMultipleOf<Watts, 1000000.0l>)
 GREM_PRIVATE_PHYSICS_DEFINE_UNIT(Joules, JOULES, "J", BaseQuotient<KilogramSquareMeters, BaseSquare<Seconds>>)
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(Kilojoules, KILOJOULES, "kJ", BaseMultipleOf<Joules, 1000.0l>)
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(Megajoules, MEGAJOULES, "MJ", BaseMultipleOf<Joules, 1000000.0l>)
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(KilowattHours, KILOWATT_HOURS, "kW h", BaseProduct<Kilowatts, Hours>)
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(MegawattHours, MEGAWATT_HOURS, "MW h", BaseProduct<Megawatts, Hours>)
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(NewtonPerMeter, NEWTON_PER_METER, "N/m", BaseQuotient<Newton, Meters>);
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(NewtonPerMillimeter, NEWTON_PER_MILLIMETER, "N/mm", BaseQuotient<Newton, Millimeters>);
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(MetersPerNewton, METERS_PER_NEWTON, "m/N", BaseQuotient<Meters, Newton>);
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(MillimetersPerNewton, MILLIMETERS_PER_NEWTON, "mm/N", BaseQuotient<Millimeters, Newton>);
 
 #undef GREM_PRIVATE_PHYSICS_DEFINE_UNIT
 #undef GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT
@@ -3790,7 +3801,7 @@ template <size_t N2, typename UnitT2, detail::quantity_convertible A>
 	constexpr size_t N1 = detail::quantity_rank_v<A>;
 	using UnitT1 = detail::unit_type_t<A>;
 	static_assert(detail::can_multiply<UnitT1, UnitT2>, "Quantities of these units cannot be multiplied.");
-	return Quantity<grem::max(N1, N2), Product<UnitT1, UnitT2>>::reinterpret(detail::toQuantity(a)._private_getUnderlyingValue() * b._private_value);
+	return TensorQuantity<grem::max(N1, N2), Product<UnitT1, UnitT2>>::reinterpret(detail::toQuantity(a)._private_getUnderlyingValue() * b._private_value);
 }
 
 template <size_t N, typename UnitT1, typename UnitT2>
@@ -3816,10 +3827,10 @@ template <detail::quantity_convertible A, size_t N2, typename UnitT2>
 	using UnitT1 = detail::unit_type_t<A>;
 	static_assert(detail::can_multiply<UnitT1, UnitT2>, "Quantities of these units cannot be multiplied.");
 	if constexpr (N1 == 2 && N2 == 2) {
-		return length(Quantity<2, Product<UnitT1, UnitT2>>{
-			cross(a, b[X]),
-			cross(a, b[Y]),
-		});
+		return TensorQuantity<2, Product<UnitT1, UnitT2>>{
+			Quantity<2, Product<UnitT1, UnitT2>>{cross(a, b[X]), 0},
+			Quantity<2, Product<UnitT1, UnitT2>>{0, cross(a, b[Y])},
+		};
 	} else if constexpr (N1 == 3 && N2 == 3) {
 		return TensorQuantity<3, Product<UnitT1, UnitT2>>{
 			cross(a, b[X]),
@@ -3831,9 +3842,7 @@ template <detail::quantity_convertible A, size_t N2, typename UnitT2>
 
 template <size_t N, typename UnitT>
 [[nodiscard]] decltype(auto) getNormalComponent(Quantity<N, UnitT>& v) {
-	if constexpr (N == 1) {
-		return v;
-	} else if constexpr (N == 2) {
+	if constexpr (N == 2) {
 		return v[Y];
 	} else if constexpr (N == 3) {
 		return v[Z];
@@ -3842,9 +3851,7 @@ template <size_t N, typename UnitT>
 
 template <size_t N, typename UnitT>
 [[nodiscard]] decltype(auto) getNormalComponent(const Quantity<N, UnitT>& v) {
-	if constexpr (N == 1) {
-		return v;
-	} else if constexpr (N == 2) {
+	if constexpr (N == 2) {
 		return v[Y];
 	} else if constexpr (N == 3) {
 		return v[Z];
@@ -3853,9 +3860,7 @@ template <size_t N, typename UnitT>
 
 template <size_t N, typename UnitT>
 [[nodiscard]] auto getTangentialComponent(const Quantity<N, UnitT>& v) {
-	if constexpr (N == 1) {
-		return v;
-	} else if constexpr (N == 2) {
+	if constexpr (N == 2) {
 		return v.getX();
 	} else if constexpr (N == 3) {
 		return v.get(X, Y);
@@ -5681,7 +5686,7 @@ using MomentArm3D = MomentArm<3>; ///< Moment arm in 3-dimensional space. Unit: 
  * \tparam N numbers of dimensions of the world space (must be 2 or 3).
  */
 template <size_t N>
-using MomentArmTensor = AngularTensorQuantity<N, Meters>;
+using MomentArmTensor = TensorQuantity<N, Meters>;
 using MomentArmTensor2D = MomentArmTensor<2>; ///< Tensor of moment arm quantities in 2-dimensional space. Unit: Meters.
 using MomentArmTensor3D = MomentArmTensor<3>; ///< Tensor of moment arm quantities in 3-dimensional space. Unit: Meters.
 
@@ -5864,6 +5869,20 @@ using Power = Quantity<1, Watts>;
  * Unit: Joules (AKA kilogram square meters per second squared).
  */
 using Energy = Quantity<1, Joules>;
+
+/**
+ * Stiffness quantity.
+ *
+ * Unit: Newton per meter (AKA kilograms per second squared).
+ */
+using Stiffness = Quantity<1, NewtonPerMeter>;
+
+/**
+ * Compliance quantity.
+ *
+ * Unit: Meters per newton (AKA square seconds per kilogram).
+ */
+using Compliance = Quantity<1, MetersPerNewton>;
 
 namespace literals {
 
@@ -6871,6 +6890,28 @@ using namespace time_literals;
 	return operator""_turns_per_second(value);
 }
 
+[[nodiscard]] consteval AngularVelocity2D operator""_revolutions_per_minute(long double value) {
+	return static_cast<float>(value * 0.10471975511965977462l) * RADIANS_PER_SECOND;
+}
+
+[[nodiscard]] consteval AngularVelocity2D operator""_revolutions_per_minute(unsigned long long value) {
+	return static_cast<float>(static_cast<long double>(value) * 0.10471975511965977462l) * RADIANS_PER_SECOND;
+}
+
+[[nodiscard]] consteval AngularVelocity2D operator""_revolution_per_minute(long double value) {
+	if (value != 1.0l) {
+		throw physics::Error{"Syntax error: Expected \"1.0_revolution_per_minute\". For values other than 1, use the plural form \"_revolutions_per_minute\" instead."};
+	}
+	return operator""_revolutions_per_minute(value);
+}
+
+[[nodiscard]] consteval AngularVelocity2D operator""_revolution_per_minute(unsigned long long value) {
+	if (value != 1ull) {
+		throw physics::Error{"Syntax error: Expected \"1_revolution_per_minute\". For values other than 1, use the plural form \"_revolutions_per_minute\" instead."};
+	}
+	return operator""_revolutions_per_minute(value);
+}
+
 [[nodiscard]] consteval AngularAcceleration2D operator""_radians_per_second_squared(long double value) {
 	return static_cast<float>(value) * RADIANS_PER_SECOND_SQUARED;
 }
@@ -6953,6 +6994,38 @@ using namespace time_literals;
 	return operator""_Watts(value);
 }
 
+[[nodiscard]] consteval Power operator""_kilowatts(long double value) {
+	return static_cast<float>(value * 1000.0l) * WATTS;
+}
+
+[[nodiscard]] consteval Power operator""_kilowatts(unsigned long long value) {
+	return static_cast<float>(static_cast<long double>(value) * 1000.0l) * WATTS;
+}
+
+[[nodiscard]] consteval Power operator""_kilowatt(long double value) {
+	return operator""_kilowatts(value);
+}
+
+[[nodiscard]] consteval Power operator""_kilowatt(unsigned long long value) {
+	return operator""_kilowatts(value);
+}
+
+[[nodiscard]] consteval Power operator""_megawatts(long double value) {
+	return static_cast<float>(value * 1000000.0l) * WATTS;
+}
+
+[[nodiscard]] consteval Power operator""_megawatts(unsigned long long value) {
+	return static_cast<float>(static_cast<long double>(value) * 1000000.0l) * WATTS;
+}
+
+[[nodiscard]] consteval Power operator""_megawatt(long double value) {
+	return operator""_megawatts(value);
+}
+
+[[nodiscard]] consteval Power operator""_megawatt(unsigned long long value) {
+	return operator""_megawatts(value);
+}
+
 [[nodiscard]] consteval Energy operator""_Joules(long double value) {
 	return static_cast<float>(value) * JOULES;
 }
@@ -6967,6 +7040,142 @@ using namespace time_literals;
 
 [[nodiscard]] consteval Energy operator""_Joule(unsigned long long value) {
 	return operator""_Joules(value);
+}
+
+[[nodiscard]] consteval Energy operator""_kilojoules(long double value) {
+	return static_cast<float>(value * 1000.0l) * JOULES;
+}
+
+[[nodiscard]] consteval Energy operator""_kilojoules(unsigned long long value) {
+	return static_cast<float>(static_cast<long double>(value) * 1000.0l) * JOULES;
+}
+
+[[nodiscard]] consteval Energy operator""_kilojoule(long double value) {
+	return operator""_kilojoules(value);
+}
+
+[[nodiscard]] consteval Energy operator""_kilojoule(unsigned long long value) {
+	return operator""_kilojoules(value);
+}
+
+[[nodiscard]] consteval Energy operator""_megajoules(long double value) {
+	return static_cast<float>(value * 1000000.0l) * JOULES;
+}
+
+[[nodiscard]] consteval Energy operator""_megajoules(unsigned long long value) {
+	return static_cast<float>(static_cast<long double>(value) * 1000000.0l) * JOULES;
+}
+
+[[nodiscard]] consteval Energy operator""_megajoule(long double value) {
+	return operator""_megajoules(value);
+}
+
+[[nodiscard]] consteval Energy operator""_megajoule(unsigned long long value) {
+	return operator""_megajoules(value);
+}
+
+[[nodiscard]] consteval Energy operator""_kilowatt_hours(long double value) {
+	return static_cast<float>(value * 3600000.0l) * JOULES;
+}
+
+[[nodiscard]] consteval Energy operator""_kilowatt_hours(unsigned long long value) {
+	return static_cast<float>(static_cast<long double>(value) * 3600000.0l) * JOULES;
+}
+
+[[nodiscard]] consteval Energy operator""_kilowatt_hour(long double value) {
+	if (value != 1.0l) {
+		throw physics::Error{"Syntax error: Expected \"1.0_kilowatt_hour\". For values other than 1, use the plural form \"_kilowatt_hours\" instead."};
+	}
+	return operator""_kilowatt_hours(value);
+}
+
+[[nodiscard]] consteval Energy operator""_kilowatt_hour(unsigned long long value) {
+	if (value != 1ull) {
+		throw physics::Error{"Syntax error: Expected \"1_kilowatt_hour\". For values other than 1, use the plural form \"_kilowatt_hours\" instead."};
+	}
+	return operator""_kilowatt_hours(value);
+}
+
+[[nodiscard]] consteval Energy operator""_megawatt_hours(long double value) {
+	return static_cast<float>(value * 3600000000.0l) * JOULES;
+}
+
+[[nodiscard]] consteval Energy operator""_megawatt_hours(unsigned long long value) {
+	return static_cast<float>(static_cast<long double>(value) * 3600000000.0l) * JOULES;
+}
+
+[[nodiscard]] consteval Energy operator""_megawatt_hour(long double value) {
+	if (value != 1.0l) {
+		throw physics::Error{"Syntax error: Expected \"1.0_megawatt_hour\". For values other than 1, use the plural form \"_megawatt_hours\" instead."};
+	}
+	return operator""_megawatt_hours(value);
+}
+
+[[nodiscard]] consteval Energy operator""_megawatt_hour(unsigned long long value) {
+	if (value != 1ull) {
+		throw physics::Error{"Syntax error: Expected \"1_megawatt_hour\". For values other than 1, use the plural form \"_megawatt_hours\" instead."};
+	}
+	return operator""_megawatt_hours(value);
+}
+
+[[nodiscard]] consteval Stiffness operator""_Newton_per_meter(long double value) {
+	return static_cast<float>(value) * NEWTON_PER_METER;
+}
+
+[[nodiscard]] consteval Stiffness operator""_Newton_per_meter(unsigned long long value) {
+	return static_cast<float>(value) * NEWTON_PER_METER;
+}
+
+[[nodiscard]] consteval Stiffness operator""_Newton_per_millimeter(long double value) {
+	return static_cast<float>(value * 1000.0l) * NEWTON_PER_METER;
+}
+
+[[nodiscard]] consteval Stiffness operator""_Newton_per_millimeter(unsigned long long value) {
+	return static_cast<float>(static_cast<long double>(value) * 1000.0l) * NEWTON_PER_METER;
+}
+
+[[nodiscard]] consteval Compliance operator""_meters_per_Newton(long double value) {
+	return static_cast<float>(value) * METERS_PER_NEWTON;
+}
+
+[[nodiscard]] consteval Compliance operator""_meters_per_Newton(unsigned long long value) {
+	return static_cast<float>(value) * METERS_PER_NEWTON;
+}
+
+[[nodiscard]] consteval Compliance operator""_meter_per_Newton(long double value) {
+	if (value != 1.0l) {
+		throw physics::Error{"Syntax error: Expected \"1.0_meter_per_Newton\". For values other than 1, use the plural form \"_meters_per_Newton\" instead."};
+	}
+	return operator""_meters_per_Newton(value);
+}
+
+[[nodiscard]] consteval Compliance operator""_meter_per_Newton(unsigned long long value) {
+	if (value != 1ull) {
+		throw physics::Error{"Syntax error: Expected \"1_meter_per_Newton\". For values other than 1, use the plural form \"_meters_per_Newton\" instead."};
+	}
+	return operator""_meters_per_Newton(value);
+}
+
+[[nodiscard]] consteval Compliance operator""_millimeters_per_Newton(long double value) {
+	return static_cast<float>(value * 0.001l) * METERS_PER_NEWTON;
+}
+
+[[nodiscard]] consteval Compliance operator""_millimeters_per_Newton(unsigned long long value) {
+	return static_cast<float>(value * 0.001l) * METERS_PER_NEWTON;
+}
+
+[[nodiscard]] consteval Compliance operator""_millimeter_per_Newton(long double value) {
+	if (value != 1.0l) {
+		throw physics::Error{"Syntax error: Expected \"1.0_millimeter_per_Newton\". For values other than 1, use the plural form \"_millimeters_per_Newton\" instead."};
+	}
+	return operator""_millimeters_per_Newton(value);
+}
+
+[[nodiscard]] consteval Compliance operator""_millimeter_per_Newton(unsigned long long value) {
+	if (value != 1ull) {
+		throw physics::Error{"Syntax error: Expected \"1_millimeter_per_Newton\". For values other than 1, use the plural form \"_millimeters_per_Newton\" instead."};
+	}
+	return operator""_millimeters_per_Newton(value);
 }
 
 } // namespace literals

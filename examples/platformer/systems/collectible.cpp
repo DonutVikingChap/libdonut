@@ -9,7 +9,7 @@
 #include "../Audio.hpp"
 #include "../Graphics.hpp"
 #include "../System.hpp"
-#include "../collision_layers.hpp"
+#include "../physics.hpp"
 #include "../shaders.hpp"
 #include "player.hpp"
 
@@ -141,12 +141,12 @@ void collectCollectibles(phys::EntityRegistry3D& registry, Audio& audio, Collect
 		phys::EntityID collectibleID{};
 		phys::EntityID collectorID{};
 		if (registry.hasComponent<Collectible>(collisionEvent.objectIDs.first)) {
-			if (isPlayer(registry, collisionEvent.objectIDs.second)) {
+			if (registry.hasComponent<PlayerTag>(collisionEvent.objectIDs.second)) {
 				collectibleID = collisionEvent.objectIDs.first;
 				collectorID = collisionEvent.objectIDs.second;
 			}
 		} else if (registry.hasComponent<Collectible>(collisionEvent.objectIDs.second)) {
-			if (isPlayer(registry, collisionEvent.objectIDs.first)) {
+			if (registry.hasComponent<PlayerTag>(collisionEvent.objectIDs.first)) {
 				collectibleID = collisionEvent.objectIDs.second;
 				collectorID = collisionEvent.objectIDs.first;
 			}
@@ -172,7 +172,7 @@ void collectCollectibles(phys::EntityRegistry3D& registry, Audio& audio, Collect
 			const phys::LinearVelocity3D targetVelocity = registry.getComponentOr<phys::LinearVelocity3D>(beingCollected.targetEntityID, phys::LinearVelocity3D{});
 			beingCollected.position = moveTowards(beingCollected.position, *targetPosition, max(settings.collection.speed, length(targetVelocity) * 1.1_x) * deltaTime);
 			if (distance2(beingCollected.position, *targetPosition) < length2(settings.collection.targetRadius)) {
-				if (isPlayer(registry, beingCollected.targetEntityID)) {
+				if (registry.hasComponent<PlayerTag>(beingCollected.targetEntityID)) {
 					givePlayerCollectible(registry, resources, beingCollected.targetEntityID);
 				}
 
