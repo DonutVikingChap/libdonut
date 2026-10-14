@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.28)
 project("GREM"
-	VERSION 3.6.0
+	VERSION 3.7.0
 	DESCRIPTION "Game/Rendering Engine Modules for C++"
 	LANGUAGES C CXX)
 
-set(GREM_ABI_VERSION 8) # Incremented when ABI-incompatible changes are made.
+set(GREM_ABI_VERSION 9) # Incremented when ABI-incompatible changes are made.
 
 include(CMakeDependentOption)
 
