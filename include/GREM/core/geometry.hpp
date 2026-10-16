@@ -1626,7 +1626,7 @@ template <typename T>
 	if (intersects(boxA, capsuleCircleA) || intersects(boxA, capsuleCircleB)) {
 		return true;
 	}
-	const Optional<Ray<2, T>> ray = Ray<2, T>::between(b.centerLine.pointA, b.centerLine.pointA);
+	const Optional<Ray<2, T>> ray = Ray<2, T>::between(b.centerLine.pointA, b.centerLine.pointB);
 	if (!ray) {
 		return false;
 	}
